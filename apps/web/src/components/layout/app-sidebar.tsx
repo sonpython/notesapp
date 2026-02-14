@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useFolders } from '@/hooks/use-folders'
 import { useNotes } from '@/hooks/use-notes'
 import { FolderTree } from '@/components/folders/folder-tree'
+import { ThemeToggleButton } from '@/components/ui/theme-toggle-button'
 
 interface NavItem {
   label: string
@@ -155,14 +156,17 @@ export function AppSidebar() {
           <span className="truncate text-xs text-zinc-500">
             {user?.email ?? 'Loading...'}
           </span>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="shrink-0 rounded p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
-            title="Sign out"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <ThemeToggleButton />
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="rounded p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+              title="Sign out"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </div>
     </aside>
