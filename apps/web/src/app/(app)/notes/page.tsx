@@ -7,16 +7,28 @@ import { useNotes } from '@/hooks/use-notes'
 import { useDebounce } from '@/hooks/use-debounce'
 import { NoteList } from '@/components/notes/note-list'
 import { NoteEditor } from '@/components/notes/note-editor'
+import { ResizableDivider } from '@/components/ui/resizable-divider'
+
+const NOTE_LIST_WIDTH_KEY = 'notesapp-note-list-width'
+const DEFAULT_NOTE_LIST_WIDTH = 288 // 72 * 4 = 288px (w-72)
+const MIN_NOTE_LIST_WIDTH = 250
+const MAX_NOTE_LIST_WIDTH = 500
 
 /**
  * Notes page with a 2-column layout: note list (left) and editor (right).
  * Supports creating, selecting, searching, and editing notes.
+ * Panels are resizable via drag divider.
  */
 export default function NotesPage() {
   const searchParams = useSearchParams()
   const { notes, loading, fetchNotes, createNote, updateNote, deleteNote, moveNoteToFolder } = useNotes()
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [noteListWidth, setNoteListWidth] = useState(() => {
+    if (typeof window === 'undefined') return DEFAULT_NOTE_LIST_WIDTH
+    const saved = localStorage.getItem(NOTE_LIST_WIDTH_KEY)
+    return saved ? parseInt(saved, 10) : DEFAULT_NOTE_LIST_WIDTH
+  })
 
   const folderId = searchParams.get('folder') ?? undefined
   const debouncedSearch = useDebounce(searchQuery, 300)
@@ -69,10 +81,20 @@ export default function NotesPage() {
     [moveNoteToFolder, folderId, debouncedSearch, fetchNotes]
   )
 
+  // Handle note list resize
+  const handleNoteListResize = useCallback((newWidth: number) => {
+    const clampedWidth = Math.max(MIN_NOTE_LIST_WIDTH, Math.min(MAX_NOTE_LIST_WIDTH, newWidth))
+    setNoteListWidth(clampedWidth)
+    localStorage.setItem(NOTE_LIST_WIDTH_KEY, clampedWidth.toString())
+  }, [])
+
   return (
     <div className="flex h-screen bg-background">
       {/* Left panel: search, new note, note list */}
-      <div className="w-72 shrink-0 border-r border-border flex flex-col bg-sidebar">
+      <div
+        className="shrink-0 flex flex-col bg-sidebar"
+        style={{ width: noteListWidth }}
+      >
         {/* Header with search and add button */}
         <div className="p-3 border-b border-border space-y-2">
           <div className="flex items-center justify-between">
@@ -113,6 +135,9 @@ export default function NotesPage() {
           )}
         </div>
       </div>
+
+      {/* Resizable divider */}
+      <ResizableDivider onResize={handleNoteListResize} />
 
       {/* Right panel: editor */}
       <div className="flex-1 min-w-0">
