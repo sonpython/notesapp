@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Plus, Search } from 'lucide-react'
 import { useNotes } from '@/hooks/use-notes'
+import { useDebounce } from '@/hooks/use-debounce'
 import { NoteList } from '@/components/notes/note-list'
 import { NoteEditor } from '@/components/notes/note-editor'
 
@@ -18,11 +19,12 @@ export default function NotesPage() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const folderId = searchParams.get('folder') ?? undefined
+  const debouncedSearch = useDebounce(searchQuery, 300)
 
-  // Fetch notes on mount and when folder or search changes
+  // Fetch notes on mount and when folder or debounced search changes
   useEffect(() => {
-    fetchNotes(folderId, searchQuery || undefined)
-  }, [fetchNotes, folderId, searchQuery])
+    fetchNotes(folderId, debouncedSearch || undefined)
+  }, [fetchNotes, folderId, debouncedSearch])
 
   // Find the currently selected note
   const selectedNote = useMemo(
@@ -62,9 +64,9 @@ export default function NotesPage() {
     async (noteId: string, targetFolderId: string | null) => {
       await moveNoteToFolder(noteId, targetFolderId)
       // Refresh notes to update the view
-      await fetchNotes(folderId, searchQuery || undefined)
+      await fetchNotes(folderId, debouncedSearch || undefined)
     },
-    [moveNoteToFolder, folderId, searchQuery, fetchNotes]
+    [moveNoteToFolder, folderId, debouncedSearch, fetchNotes]
   )
 
   return (
