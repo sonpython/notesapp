@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AppSidebar } from './app-sidebar'
 import { AppHeader } from './app-header'
 import { ResizableDivider } from '@/components/ui/resizable-divider'
@@ -19,11 +19,13 @@ interface ResizableAppLayoutProps {
  * Sidebar width is persisted to localStorage.
  */
 export function ResizableAppLayout({ children }: ResizableAppLayoutProps) {
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    if (typeof window === 'undefined') return DEFAULT_SIDEBAR_WIDTH
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH)
+
+  // Load from localStorage after mount to avoid hydration mismatch
+  useEffect(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY)
-    return saved ? parseInt(saved, 10) : DEFAULT_SIDEBAR_WIDTH
-  })
+    if (saved) setSidebarWidth(parseInt(saved, 10))
+  }, [])
 
   const handleSidebarResize = useCallback((newWidth: number) => {
     const clampedWidth = Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, newWidth))

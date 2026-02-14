@@ -24,11 +24,15 @@ export default function NotesPage() {
   const { notes, loading, fetchNotes, createNote, updateNote, deleteNote, moveNoteToFolder } = useNotes()
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [noteListWidth, setNoteListWidth] = useState(() => {
-    if (typeof window === 'undefined') return DEFAULT_NOTE_LIST_WIDTH
+  const [noteListWidth, setNoteListWidth] = useState(DEFAULT_NOTE_LIST_WIDTH)
+  const [mounted, setMounted] = useState(false)
+
+  // Load width from localStorage after mount to avoid hydration mismatch
+  useEffect(() => {
     const saved = localStorage.getItem(NOTE_LIST_WIDTH_KEY)
-    return saved ? parseInt(saved, 10) : DEFAULT_NOTE_LIST_WIDTH
-  })
+    if (saved) setNoteListWidth(parseInt(saved, 10))
+    setMounted(true)
+  }, [])
 
   const folderId = searchParams.get('folder') ?? undefined
   const debouncedSearch = useDebounce(searchQuery, 300)
