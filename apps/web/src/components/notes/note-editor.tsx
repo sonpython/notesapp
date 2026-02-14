@@ -6,8 +6,10 @@ import { markdown } from '@codemirror/lang-markdown'
 import { Pin, Archive, Eye, Edit3, Trash2 } from 'lucide-react'
 import type { Note } from '@/lib/types'
 import { useDebounce } from '@/hooks/use-debounce'
+import { useTags } from '@/hooks/use-tags'
 import { NotePreview } from '@/components/notes/note-preview'
 import { NoteExportMenu } from '@/components/notes/note-export-menu'
+import { TagSelector } from '@/components/tags/tag-selector'
 
 interface NoteEditorProps {
   note: Note | null
@@ -25,9 +27,15 @@ export function NoteEditor({ note, onSave, onDelete, onExportAll }: NoteEditorPr
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [isPreview, setIsPreview] = useState(false)
+  const { tags, fetchTags, createTag, addTagToNote, removeTagFromNote } = useTags()
 
   const debouncedTitle = useDebounce(title, 500)
   const debouncedContent = useDebounce(content, 500)
+
+  // Fetch tags on mount
+  useEffect(() => {
+    fetchTags()
+  }, [fetchTags])
 
   // Sync local state when selected note changes
   useEffect(() => {
@@ -61,6 +69,28 @@ export function NoteEditor({ note, onSave, onDelete, onExportAll }: NoteEditorPr
   const handleDelete = useCallback(() => {
     if (note && onDelete) onDelete(note.id)
   }, [note, onDelete])
+
+  const handleAddTag = useCallback(async (tagId: string) => {
+    if (!note) return
+    await addTagToNote(note.id, [tagId])
+    // Refresh note by triggering parent refetch
+    window.location.reload()
+  }, [note, addTagToNote])
+
+  const handleRemoveTag = useCallback(async (tagId: string) => {
+    if (!note) return
+    await removeTagFromNote(note.id, tagId)
+    // Refresh note by triggering parent refetch
+    window.location.reload()
+  }, [note, removeTagFromNote])
+
+  const handleCreateTag = useCallback(async (name: string, color: string) => {
+    const created = await createTag({ name, color })
+    if (created) {
+      await fetchTags()
+    }
+    return created
+  }, [createTag, fetchTags])
 
   // Empty state placeholder
   if (!note) {
@@ -106,6 +136,17 @@ export function NoteEditor({ note, onSave, onDelete, onExportAll }: NoteEditorPr
             {isPreview ? <Edit3 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </ToolbarButton>
         </div>
+      </div>
+
+      {/* Tags selector */}
+      <div className="px-4 py-2 border-b border-border">
+        <TagSelector
+          selectedTags={note.tags || []}
+          allTags={tags}
+          onAdd={handleAddTag}
+          onRemove={handleRemoveTag}
+          onCreate={handleCreateTag}
+        />
       </div>
 
       {/* Title input */}

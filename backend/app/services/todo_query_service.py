@@ -6,9 +6,11 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import Select
 
 from app.models.todo import Todo
+from app.models.tag import TodoTag
 
 
 def build_todos_list_query(
@@ -18,6 +20,8 @@ def build_todos_list_query(
     priority: int | None = None,
     has_deadline: bool | None = None,
     note_id: UUID | None = None,
+    is_recurring: bool | None = None,
+    tag_ids: list[UUID] | None = None,
 ) -> Select:
     """Build a SELECT for listing top-level todos with optional filters.
 
@@ -43,6 +47,23 @@ def build_todos_list_query(
 
     if note_id is not None:
         stmt = stmt.where(Todo.note_id == note_id)
+
+    if is_recurring is not None:
+        if is_recurring:
+            stmt = stmt.where(Todo.recurrence_type.isnot(None))
+        else:
+            stmt = stmt.where(Todo.recurrence_type.is_(None))
+
+    if tag_ids:
+        # Filter todos that have ANY of the specified tags
+        stmt = stmt.where(
+            Todo.id.in_(
+                select(TodoTag.todo_id).where(TodoTag.tag_id.in_(tag_ids))
+            )
+        )
+
+    # Eager load tags to avoid N+1 queries
+    stmt = stmt.options(selectinload(Todo.tags))
 
     stmt = stmt.order_by(Todo.sort_order.asc(), Todo.created_at.asc())
 

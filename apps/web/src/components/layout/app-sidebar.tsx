@@ -9,12 +9,15 @@ import {
   Settings,
   LogOut,
   Plus,
+  Tag as TagIcon,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useFolders } from '@/hooks/use-folders'
 import { useNotes } from '@/hooks/use-notes'
+import { useTags } from '@/hooks/use-tags'
 import { FolderTree } from '@/components/folders/folder-tree'
 import { ThemeToggleButton } from '@/components/ui/theme-toggle-button'
+import { TagFilterSection } from '@/components/tags/tag-filter-section'
 
 interface NavItem {
   label: string
@@ -45,13 +48,17 @@ export function AppSidebar() {
     deleteFolder,
   } = useFolders()
   const { moveNoteToFolder } = useNotes()
+  const { tags, fetchTags } = useTags()
 
   const selectedFolderId = searchParams.get('folder')
+  const tagIdsParam = searchParams.get('tags')
+  const selectedTagIds = tagIdsParam ? tagIdsParam.split(',') : []
 
-  // Fetch folders on mount
+  // Fetch folders and tags on mount
   useEffect(() => {
     fetchFolders()
-  }, [fetchFolders])
+    fetchTags()
+  }, [fetchFolders, fetchTags])
 
   const handleSignOut = async () => {
     await signOut()
@@ -87,6 +94,26 @@ export function AppSidebar() {
     // For simplicity, we'll let FolderTree handle its own creation state
     // The Plus button in header could trigger tree's internal state
     // For now, user can click "New Folder" button in empty state or context menu
+  }
+
+  const handleToggleTag = (tagId: string) => {
+    const newTagIds = selectedTagIds.includes(tagId)
+      ? selectedTagIds.filter(id => id !== tagId)
+      : [...selectedTagIds, tagId]
+
+    const params = new URLSearchParams(searchParams.toString())
+    if (newTagIds.length > 0) {
+      params.set('tags', newTagIds.join(','))
+    } else {
+      params.delete('tags')
+    }
+    router.push(`${pathname}?${params.toString()}`)
+  }
+
+  const handleClearTagFilters = () => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('tags')
+    router.push(`${pathname}?${params.toString()}`)
   }
 
   return (
@@ -147,6 +174,31 @@ export function AppSidebar() {
           onRenameFolder={handleRenameFolder}
           onDeleteFolder={handleDeleteFolder}
           onMoveNote={moveNoteToFolder}
+        />
+      </div>
+
+      {/* Divider */}
+      <div className="mx-5 my-3 border-t border-zinc-800" />
+
+      {/* Tags section */}
+      <div className="flex items-center justify-between px-5 pb-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          Tags
+        </span>
+        <Link
+          href="/settings?tab=tags"
+          className="rounded p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+          title="Manage Tags"
+        >
+          <TagIcon className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+      <div className="px-3 pb-3">
+        <TagFilterSection
+          tags={tags}
+          selectedTagIds={selectedTagIds}
+          onToggleTag={handleToggleTag}
+          onClearAll={handleClearTagFilters}
         />
       </div>
 

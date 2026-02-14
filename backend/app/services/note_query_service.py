@@ -5,9 +5,11 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import Select
 
 from app.models.note import Note
+from app.models.tag import NoteTag
 from app.schemas.note import NoteUpdate
 
 
@@ -18,6 +20,7 @@ def build_notes_list_query(
     search: str | None = None,
     is_archived: bool | None = None,
     is_pinned: bool | None = None,
+    tag_ids: list[UUID] | None = None,
 ) -> Select:
     """Build a SELECT statement for listing notes with optional filters.
 
@@ -35,6 +38,14 @@ def build_notes_list_query(
     if is_pinned is not None:
         stmt = stmt.where(Note.is_pinned == is_pinned)
 
+    if tag_ids:
+        # Filter notes that have ANY of the specified tags (intersection)
+        stmt = stmt.where(
+            Note.id.in_(
+                select(NoteTag.note_id).where(NoteTag.tag_id.in_(tag_ids))
+            )
+        )
+
     if search:
         search = search.strip()
         if len(search) < 2:
@@ -51,6 +62,9 @@ def build_notes_list_query(
             )
             tsquery = func.plainto_tsquery('english', search)
             stmt = stmt.where(tsvector.op('@@')(tsquery))
+
+    # Eager load tags to avoid N+1 queries
+    stmt = stmt.options(selectinload(Note.tags))
 
     # Pinned notes first, then most recently updated
     stmt = stmt.order_by(Note.is_pinned.desc(), Note.updated_at.desc())

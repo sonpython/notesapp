@@ -70,5 +70,11 @@ class Note(Base):
         passive_deletes=True,
     )
 
+    tags: Mapped[list["Tag"]] = relationship(  # noqa: F821
+        "Tag",
+        secondary="note_tags",
+        back_populates="notes",
+    )
+
     def __repr__(self) -> str:
         return f"<Note id={self.id} title={self.title!r}>"

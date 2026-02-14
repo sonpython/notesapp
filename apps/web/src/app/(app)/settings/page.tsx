@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Settings,
   MessageCircle,
@@ -11,25 +11,33 @@ import {
   Check,
   User,
   LogOut,
+  Tag,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTelegram } from '@/hooks/use-telegram'
+import { useTags } from '@/hooks/use-tags'
+import { TagManagementList } from '@/components/tags/tag-management-list'
 
 /**
  * Settings page with Profile and Telegram Integration sections.
  */
 export default function SettingsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, loading: authLoading, signOut } = useAuth()
   const {
     status, loading: tgLoading, linkCode, botUsername, error,
     fetchStatus, linkTelegram, unlinkTelegram,
   } = useTelegram()
+  const { tags, fetchTags, createTag, updateTag, deleteTag } = useTags()
   const [copied, setCopied] = useState(false)
+
+  const activeTab = searchParams.get('tab') || 'profile'
 
   useEffect(() => {
     fetchStatus()
-  }, [fetchStatus])
+    fetchTags()
+  }, [fetchStatus, fetchTags])
 
   const handleSignOut = async () => {
     await signOut()
@@ -47,6 +55,24 @@ export default function SettingsPage() {
     }
   }
 
+  const handleCreateTag = async (name: string, color: string) => {
+    const tag = await createTag({ name, color })
+    if (tag) await fetchTags()
+    return tag
+  }
+
+  const handleUpdateTag = async (id: string, name: string, color: string) => {
+    const tag = await updateTag(id, { name, color })
+    if (tag) await fetchTags()
+    return tag
+  }
+
+  const handleDeleteTag = async (id: string) => {
+    const success = await deleteTag(id)
+    if (success) await fetchTags()
+    return success
+  }
+
   return (
     <div className="flex-1 overflow-y-auto bg-background p-6 md:p-10">
       <div className="mx-auto max-w-2xl space-y-8">
@@ -56,7 +82,42 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold text-foreground">Settings</h1>
         </div>
 
+        {/* Tab navigation */}
+        <nav className="flex gap-4 border-b border-border">
+          <button
+            onClick={() => router.push('/settings')}
+            className={`pb-2 px-1 text-sm font-medium transition-colors ${
+              activeTab === 'profile'
+                ? 'border-b-2 border-accent text-accent'
+                : 'text-muted hover:text-foreground'
+            }`}
+          >
+            Profile
+          </button>
+          <button
+            onClick={() => router.push('/settings?tab=tags')}
+            className={`pb-2 px-1 text-sm font-medium transition-colors ${
+              activeTab === 'tags'
+                ? 'border-b-2 border-accent text-accent'
+                : 'text-muted hover:text-foreground'
+            }`}
+          >
+            Tags
+          </button>
+          <button
+            onClick={() => router.push('/settings?tab=telegram')}
+            className={`pb-2 px-1 text-sm font-medium transition-colors ${
+              activeTab === 'telegram'
+                ? 'border-b-2 border-accent text-accent'
+                : 'text-muted hover:text-foreground'
+            }`}
+          >
+            Telegram
+          </button>
+        </nav>
+
         {/* Profile section */}
+        {activeTab === 'profile' && (
         <section className="rounded-xl border border-border bg-sidebar p-6">
           <div className="mb-4 flex items-center gap-2">
             <User className="h-5 w-5 text-muted" />
@@ -92,8 +153,26 @@ export default function SettingsPage() {
             </div>
           </div>
         </section>
+        )}
+
+        {/* Tags section */}
+        {activeTab === 'tags' && (
+        <section className="rounded-xl border border-border bg-sidebar p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Tag className="h-5 w-5 text-muted" />
+            <h2 className="text-lg font-semibold text-foreground">Tags</h2>
+          </div>
+          <TagManagementList
+            tags={tags}
+            onCreate={handleCreateTag}
+            onUpdate={handleUpdateTag}
+            onDelete={handleDeleteTag}
+          />
+        </section>
+        )}
 
         {/* Telegram integration section */}
+        {activeTab === 'telegram' && (
         <section className="rounded-xl border border-border bg-sidebar p-6">
           <div className="mb-4 flex items-center gap-2">
             <MessageCircle className="h-5 w-5 text-muted" />
@@ -188,6 +267,7 @@ export default function SettingsPage() {
             </div>
           )}
         </section>
+        )}
       </div>
     </div>
   )

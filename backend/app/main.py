@@ -55,6 +55,7 @@ in the Authorization header: `Bearer <token>`
         {"name": "notes", "description": "Note CRUD operations"},
         {"name": "folders", "description": "Folder management"},
         {"name": "todos", "description": "Todo/task management"},
+        {"name": "tags", "description": "Tag management"},
         {"name": "telegram", "description": "Telegram bot integration"},
     ],
 )
@@ -87,12 +88,13 @@ async def health_check() -> dict[str, str]:
 
 def _register_routers() -> None:
     """Import and include all API routers."""
-    from app.routers import auth, folders, notes, telegram, todos
+    from app.routers import auth, folders, notes, tags, telegram, todos
 
     app.include_router(auth.router)
     app.include_router(notes.router)
     app.include_router(folders.router)
     app.include_router(todos.router)
+    app.include_router(tags.router)
     app.include_router(telegram.router)
 
 

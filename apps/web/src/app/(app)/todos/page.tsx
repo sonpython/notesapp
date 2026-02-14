@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Search, AlertCircle } from 'lucide-react'
 import { useTodos, type TodoFilter } from '@/hooks/use-todos'
 import { TodoList } from '@/components/todos/todo-list'
@@ -18,6 +19,7 @@ const FILTER_TABS: { label: string; value: TodoFilter }[] = [
  * Full-width todo list page with filter tabs, search, and inline creation.
  */
 export default function TodosPage() {
+  const searchParams = useSearchParams()
   const {
     todos, loading, error, filter,
     setFilter, fetchTodos, createTodo,
@@ -25,11 +27,13 @@ export default function TodosPage() {
   } = useTodos()
 
   const [search, setSearch] = useState('')
+  const tagIdsParam = searchParams.get('tags')
+  const tagIds = tagIdsParam ? tagIdsParam.split(',') : undefined
 
-  // Fetch todos on mount and when filter changes
+  // Fetch todos on mount and when filter or tags change
   useEffect(() => {
-    fetchTodos(filter)
-  }, [filter, fetchTodos])
+    fetchTodos(filter, tagIds)
+  }, [filter, tagIds, fetchTodos])
 
   const handleFilterChange = (newFilter: TodoFilter) => {
     setFilter(newFilter)

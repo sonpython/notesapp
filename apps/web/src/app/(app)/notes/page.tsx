@@ -35,12 +35,14 @@ export default function NotesPage() {
   }, [])
 
   const folderId = searchParams.get('folder') ?? undefined
+  const tagIdsParam = searchParams.get('tags')
+  const tagIds = tagIdsParam ? tagIdsParam.split(',') : undefined
   const debouncedSearch = useDebounce(searchQuery, 300)
 
-  // Fetch notes on mount and when folder or debounced search changes
+  // Fetch notes on mount and when folder, tags, or debounced search changes
   useEffect(() => {
-    fetchNotes(folderId, debouncedSearch || undefined)
-  }, [fetchNotes, folderId, debouncedSearch])
+    fetchNotes(folderId, debouncedSearch || undefined, tagIds)
+  }, [fetchNotes, folderId, debouncedSearch, tagIds])
 
   // Find the currently selected note
   const selectedNote = useMemo(

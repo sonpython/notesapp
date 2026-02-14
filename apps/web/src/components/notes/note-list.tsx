@@ -3,6 +3,7 @@
 import { Pin } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import type { Note } from '@/lib/types'
+import { TagPill } from '@/components/tags/tag-pill'
 
 interface NoteListProps {
   notes: Note[]
@@ -86,6 +87,16 @@ export function NoteList({ notes, selectedId, onSelect, onMoveNote }: NoteListPr
             <p className="text-xs text-muted truncate mb-1">
               {getContentPreview(note.content)}
             </p>
+            {note.tags && note.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-1">
+                {note.tags.slice(0, 3).map(tag => (
+                  <TagPill key={tag.id} name={tag.name} color={tag.color} size="sm" />
+                ))}
+                {note.tags.length > 3 && (
+                  <span className="text-[10px] text-muted/70">+{note.tags.length - 3} more</span>
+                )}
+              </div>
+            )}
             <span className="text-[11px] text-muted/70">
               {formatDate(note.updated_at)}
             </span>
