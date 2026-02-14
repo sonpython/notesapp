@@ -41,14 +41,17 @@ async def attach_tags_to_note(
     # Verify tags belong to user
     await verify_tags_belong_to_user(session, tag_ids, user_id)
 
-    # Clear existing tags
-    await session.execute(
-        NoteTag.__table__.delete().where(NoteTag.note_id == note_id)
+    # Get existing tag IDs for this note
+    result = await session.execute(
+        select(NoteTag.tag_id).where(NoteTag.note_id == note_id)
     )
+    existing_tag_ids = {row[0] for row in result.fetchall()}
 
-    # Insert new tag associations
-    values = [{"note_id": note_id, "tag_id": tag_id} for tag_id in tag_ids]
-    await session.execute(NoteTag.__table__.insert().values(values))
+    # Only insert tags that aren't already attached
+    new_tag_ids = [tid for tid in tag_ids if tid not in existing_tag_ids]
+    if new_tag_ids:
+        values = [{"note_id": note_id, "tag_id": tag_id} for tag_id in new_tag_ids]
+        await session.execute(NoteTag.__table__.insert().values(values))
 
 
 async def attach_tags_to_todo(
@@ -64,14 +67,17 @@ async def attach_tags_to_todo(
     # Verify tags belong to user
     await verify_tags_belong_to_user(session, tag_ids, user_id)
 
-    # Clear existing tags
-    await session.execute(
-        TodoTag.__table__.delete().where(TodoTag.todo_id == todo_id)
+    # Get existing tag IDs for this todo
+    result = await session.execute(
+        select(TodoTag.tag_id).where(TodoTag.todo_id == todo_id)
     )
+    existing_tag_ids = {row[0] for row in result.fetchall()}
 
-    # Insert new tag associations
-    values = [{"todo_id": todo_id, "tag_id": tag_id} for tag_id in tag_ids]
-    await session.execute(TodoTag.__table__.insert().values(values))
+    # Only insert tags that aren't already attached
+    new_tag_ids = [tid for tid in tag_ids if tid not in existing_tag_ids]
+    if new_tag_ids:
+        values = [{"todo_id": todo_id, "tag_id": tag_id} for tag_id in new_tag_ids]
+        await session.execute(TodoTag.__table__.insert().values(values))
 
 
 async def detach_tag_from_note(
