@@ -10,9 +10,14 @@ import { useOnlineStatus } from '@/hooks/use-online-status'
  * and auto-hides when all synced.
  */
 export function SyncStatus() {
+  const [mounted, setMounted] = useState(false)
   const { isOnline } = useOnlineStatus()
   const [pendingCount, setPendingCount] = useState(0)
   const [isSyncing, setIsSyncing] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     // TODO: Connect to IndexedDB sync queue to get actual pending count
@@ -53,8 +58,8 @@ export function SyncStatus() {
     }
   }, [isOnline, pendingCount])
 
-  // Don't show if nothing pending and not syncing
-  if (pendingCount === 0 && !isSyncing) {
+  // Prevent hydration mismatch + don't show if nothing pending
+  if (!mounted || (pendingCount === 0 && !isSyncing)) {
     return null
   }
 

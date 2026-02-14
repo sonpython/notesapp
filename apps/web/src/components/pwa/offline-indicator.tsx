@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { CloudOff } from 'lucide-react'
 import { useOnlineStatus } from '@/hooks/use-online-status'
 
@@ -9,9 +10,15 @@ import { useOnlineStatus } from '@/hooks/use-online-status'
  * Automatically hides when online.
  */
 export function OfflineIndicator() {
+  const [mounted, setMounted] = useState(false)
   const { isOnline } = useOnlineStatus()
 
-  if (isOnline) {
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Prevent hydration mismatch - render nothing on server
+  if (!mounted || isOnline) {
     return null
   }
 
