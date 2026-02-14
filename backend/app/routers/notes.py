@@ -85,9 +85,16 @@ async def create_note(
     session: AsyncSession = Depends(get_db),
 ) -> NoteResponse:
     """Create a new note for the current user."""
+    # Auto-generate title from content if empty
+    title = body.title
+    if not title and body.content:
+        # Use first line or first 50 chars
+        first_line = body.content.split('\n')[0].strip()
+        title = first_line[:50] + ('...' if len(first_line) > 50 else '')
+
     note = Note(
         user_id=user_id,
-        title=body.title,
+        title=title or 'Untitled',
         content=body.content,
         folder_id=body.folder_id,
         is_pinned=body.is_pinned,
