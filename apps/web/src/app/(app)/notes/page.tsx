@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Plus, Search } from 'lucide-react'
 import { useNotes } from '@/hooks/use-notes'
+import { createClient } from '@/lib/supabase-browser'
 import { useDebounce } from '@/hooks/use-debounce'
 import { NoteList } from '@/components/notes/note-list'
 import { NoteEditor } from '@/components/notes/note-editor'
@@ -100,9 +101,14 @@ export default function NotesPage() {
   // Handle export all notes as ZIP
   const handleExportAll = useCallback(async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/notes/export/zip`, {
-        credentials: 'include',
-      })
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const headers: HeadersInit = {}
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/notes/export/zip`, { headers })
       if (!response.ok) throw new Error('Export failed')
 
       const blob = await response.blob()

@@ -3,6 +3,9 @@
 import { Download, FileDown, FileText, FolderArchive } from 'lucide-react'
 import { useState } from 'react'
 import type { Note } from '@/lib/types'
+import { createClient } from '@/lib/supabase-browser'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 interface NoteExportMenuProps {
   note: Note | null
@@ -21,10 +24,18 @@ export function NoteExportMenu({ note, onExportAll }: NoteExportMenuProps) {
     if (!note) return
     setIsExporting(true)
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/notes/${note.id}/export/md`, {
-        credentials: 'include',
-      })
-      if (!response.ok) throw new Error('Export failed')
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const headers: HeadersInit = {}
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+      }
+
+      const response = await fetch(`${API_URL}/api/notes/${note.id}/export/md`, { headers })
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Export failed: ${response.status} - ${errorText}`)
+      }
 
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
@@ -38,7 +49,7 @@ export function NoteExportMenu({ note, onExportAll }: NoteExportMenuProps) {
       setIsOpen(false)
     } catch (error) {
       console.error('Markdown export failed:', error)
-      alert('Failed to export markdown')
+      alert(error instanceof Error ? error.message : 'Failed to export markdown')
     } finally {
       setIsExporting(false)
     }
@@ -48,10 +59,18 @@ export function NoteExportMenu({ note, onExportAll }: NoteExportMenuProps) {
     if (!note) return
     setIsExporting(true)
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/notes/${note.id}/export/pdf`, {
-        credentials: 'include',
-      })
-      if (!response.ok) throw new Error('Export failed')
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const headers: HeadersInit = {}
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+      }
+
+      const response = await fetch(`${API_URL}/api/notes/${note.id}/export/pdf`, { headers })
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Export failed: ${response.status} - ${errorText}`)
+      }
 
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
@@ -65,7 +84,7 @@ export function NoteExportMenu({ note, onExportAll }: NoteExportMenuProps) {
       setIsOpen(false)
     } catch (error) {
       console.error('PDF export failed:', error)
-      alert('Failed to export PDF')
+      alert(error instanceof Error ? error.message : 'Failed to export PDF')
     } finally {
       setIsExporting(false)
     }
