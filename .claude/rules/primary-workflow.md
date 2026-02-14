@@ -55,7 +55,14 @@
 - If the `tester` agent reports failed tests, fix them follow the recommendations and repeat from the **Step 3**.
 - **LINEAR:** Debugger MUST create/update Linear issue with root cause analysis. On fix verified, update status → `Done`.
 
-#### 6. Visual Explanations
+#### 6. Release (Auto-trigger after Steps 2-5)
+- After feature complete or bug fixed AND tests pass AND review passes:
+- Delegate to `git-manager` agent with: changed files scope, Linear issue ID, commit type (feat/fix)
+- `git-manager` will: stage → security scan → commit (conventional) → push → update Linear
+- **LINEAR:** git-manager comments push details on the issue, sets status `In Review`
+- If no explicit Linear issue, git-manager searches matching issues by scope
+
+#### 7. Visual Explanations
 When explaining complex code, protocols, or architecture:
 - **When to use:** User asks "explain", "how does X work", "visualize", or topic has 3+ interacting components
 - Use `/preview --explain <topic>` to generate visual explanation with ASCII + Mermaid
