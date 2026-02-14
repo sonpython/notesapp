@@ -40,14 +40,12 @@ export function ResizableAppLayout({ children }: ResizableAppLayoutProps) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar - hidden on mobile */}
-        <div className="hidden lg:block" style={{ width: sidebarWidth }}>
+        <div className="hidden lg:flex" style={{ width: sidebarWidth }}>
           <AppSidebar />
         </div>
 
-        {/* Resizable divider - hidden on mobile */}
-        <div className="hidden lg:block">
-          <ResizableDivider onResize={handleSidebarResize} />
-        </div>
+        {/* Resizable divider - hidden on mobile, must be direct sibling of sidebar for previousElementSibling to work */}
+        <ResizableDivider onResize={handleSidebarResize} className="hidden lg:block" />
 
         {/* Main content area: note list + editor panes rendered by children */}
         <main className="flex flex-1 overflow-hidden">
