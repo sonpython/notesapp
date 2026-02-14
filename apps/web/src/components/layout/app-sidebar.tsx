@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useFolders } from '@/hooks/use-folders'
+import { useNotes } from '@/hooks/use-notes'
 import { FolderTree } from '@/components/folders/folder-tree'
 
 interface NavItem {
@@ -42,6 +43,7 @@ export function AppSidebar() {
     updateFolder,
     deleteFolder,
   } = useFolders()
+  const { moveNoteToFolder } = useNotes()
 
   const selectedFolderId = searchParams.get('folder')
 
@@ -143,6 +145,7 @@ export function AppSidebar() {
           onCreateFolder={handleCreateFolder}
           onRenameFolder={handleRenameFolder}
           onDeleteFolder={handleDeleteFolder}
+          onMoveNote={moveNoteToFolder}
         />
       </div>
 

@@ -12,6 +12,7 @@ interface FolderTreeProps {
   onCreateFolder: (name: string, parentId?: string) => Promise<Folder>
   onRenameFolder: (id: string, name: string) => Promise<Folder>
   onDeleteFolder: (id: string) => Promise<void>
+  onMoveNote?: (noteId: string, folderId: string | null) => Promise<void>
 }
 
 /**
@@ -25,6 +26,7 @@ export function FolderTree({
   onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
+  onMoveNote,
 }: FolderTreeProps) {
   const [isCreatingRoot, setIsCreatingRoot] = useState(false)
   const [newRootName, setNewRootName] = useState('')
@@ -121,6 +123,7 @@ export function FolderTree({
           onRename={onRenameFolder}
           onDelete={onDeleteFolder}
           onCreate={onCreateFolder}
+          onMoveNote={onMoveNote}
         />
       ))}
     </div>

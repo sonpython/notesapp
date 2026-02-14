@@ -13,7 +13,7 @@ import { NoteEditor } from '@/components/notes/note-editor'
  */
 export default function NotesPage() {
   const searchParams = useSearchParams()
-  const { notes, loading, fetchNotes, createNote, updateNote, deleteNote } = useNotes()
+  const { notes, loading, fetchNotes, createNote, updateNote, deleteNote, moveNoteToFolder } = useNotes()
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -57,6 +57,16 @@ export default function NotesPage() {
     [deleteNote, selectedNoteId]
   )
 
+  // Move note to folder handler
+  const handleMoveNote = useCallback(
+    async (noteId: string, targetFolderId: string | null) => {
+      await moveNoteToFolder(noteId, targetFolderId)
+      // Refresh notes to update the view
+      await fetchNotes(folderId, searchQuery || undefined)
+    },
+    [moveNoteToFolder, folderId, searchQuery, fetchNotes]
+  )
+
   return (
     <div className="flex h-screen bg-background">
       {/* Left panel: search, new note, note list */}
@@ -96,6 +106,7 @@ export default function NotesPage() {
               notes={notes}
               selectedId={selectedNoteId}
               onSelect={setSelectedNoteId}
+              onMoveNote={handleMoveNote}
             />
           )}
         </div>

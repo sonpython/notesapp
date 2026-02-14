@@ -13,6 +13,7 @@ interface FolderTreeItemProps {
   onRename: (id: string, name: string) => Promise<Folder>
   onDelete: (id: string) => Promise<void>
   onCreate: (name: string, parentId: string) => Promise<Folder>
+  onMoveNote?: (noteId: string, folderId: string | null) => Promise<void>
 }
 
 /** Hook for managing folder rename state and actions */
@@ -99,9 +100,11 @@ export function FolderTreeItem({
   onRename,
   onDelete,
   onCreate,
+  onMoveNote,
 }: FolderTreeItemProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [isDragOver, setIsDragOver] = useState(false)
 
   const rename = useRename(folder.id, folder.name, onRename)
   const createChild = useCreateChild(folder.id, onCreate)
@@ -121,6 +124,36 @@ export function FolderTreeItem({
     if (success) setIsExpanded(true)
   }
 
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!onMoveNote) return
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+
+    if (!onMoveNote) return
+
+    const noteId = e.dataTransfer.getData('noteId')
+    if (noteId) {
+      try {
+        await onMoveNote(noteId, folder.id)
+      } catch (error) {
+        console.error('Failed to move note:', error)
+      }
+    }
+  }
+
   return (
     <div>
       {/* Folder row */}
@@ -128,8 +161,11 @@ export function FolderTreeItem({
         style={{ paddingLeft: `${paddingLeft}px` }}
         className={`group flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors cursor-pointer ${
           isSelected ? 'bg-zinc-700/60 text-white' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
-        }`}
+        } ${isDragOver ? 'ring-2 ring-yellow-500 bg-zinc-800' : ''}`}
         onClick={() => onSelect(folder.id)}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
       >
         {hasChildren && (
           <button
@@ -188,6 +224,7 @@ export function FolderTreeItem({
               onRename={onRename}
               onDelete={onDelete}
               onCreate={onCreate}
+              onMoveNote={onMoveNote}
             />
           ))}
         </div>
