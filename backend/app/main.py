@@ -32,7 +32,31 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title="NotesApp API",
     version="0.1.0",
+    description="""
+NotesApp API provides endpoints for managing notes, todos, folders, and Telegram integration.
+
+## Features
+- **Notes**: Create, read, update, delete notes with markdown support
+- **Todos**: Task management with priorities, due dates, and reminders
+- **Folders**: Organize notes in nested folder structure
+- **Telegram**: Bot integration for creating todos via chat
+
+## Authentication
+All endpoints (except health and telegram webhook) require a valid Supabase JWT token
+in the Authorization header: `Bearer <token>`
+""",
     lifespan=lifespan,
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+    openapi_tags=[
+        {"name": "health", "description": "Health check endpoints"},
+        {"name": "auth", "description": "Authentication endpoints"},
+        {"name": "notes", "description": "Note CRUD operations"},
+        {"name": "folders", "description": "Folder management"},
+        {"name": "todos", "description": "Todo/task management"},
+        {"name": "telegram", "description": "Telegram bot integration"},
+    ],
 )
 
 # --- Rate limiting ---
