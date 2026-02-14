@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import {
-  Check, Circle, Trash2, Bell,
+  Check, Circle, Trash2, Bell, Repeat,
   ChevronRight, ChevronDown, Plus, Calendar, AlertCircle,
 } from 'lucide-react'
 import { format, isPast } from 'date-fns'
 import type { Todo } from '@/lib/types'
 import { TodoCreateForm } from './todo-create-form'
+import { TagPill } from '@/components/tags/tag-pill'
 
 interface TodoItemProps {
   todo: Todo
@@ -22,6 +23,37 @@ const PRIORITY_COLORS: Record<number, string> = {
   1: 'bg-blue-500',
   2: 'bg-yellow-500',
   3: 'bg-red-500',
+}
+
+/**
+ * Format recurrence info into human-readable label.
+ * Examples: "Every day", "Every 2 weeks (Mon, Wed)", "Monthly"
+ */
+function formatRecurrenceLabel(todo: Todo): string {
+  if (!todo.recurrence_type || todo.recurrence_type === 'none') return ''
+
+  const interval = todo.recurrence_interval || 1
+  const type = todo.recurrence_type
+
+  // Build base label
+  let label = interval === 1 ? '' : `Every ${interval} `
+  if (interval === 1) {
+    label = type === 'daily' ? 'Daily' : type === 'weekly' ? 'Weekly' : 'Monthly'
+  } else {
+    label += `${type}${interval > 1 ? 's' : ''}`
+  }
+
+  // Add weekdays for weekly recurrence
+  if (type === 'weekly' && todo.recurrence_days) {
+    const dayMap: Record<string, string> = {
+      mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu',
+      fri: 'Fri', sat: 'Sat', sun: 'Sun'
+    }
+    const days = todo.recurrence_days.split(',').map(d => dayMap[d] || d).join(', ')
+    label += ` (${days})`
+  }
+
+  return label
 }
 
 /**
@@ -95,6 +127,18 @@ export function TodoItem({ todo, onToggle, onUpdate, onDelete, depth }: TodoItem
           />
         )}
 
+        {/* Tags */}
+        {todo.tags && todo.tags.length > 0 && (
+          <div className="flex items-center gap-1">
+            {todo.tags.slice(0, 2).map(tag => (
+              <TagPill key={tag.id} name={tag.name} color={tag.color} size="sm" />
+            ))}
+            {todo.tags.length > 2 && (
+              <span className="text-[10px] text-muted/70">+{todo.tags.length - 2}</span>
+            )}
+          </div>
+        )}
+
         {/* Title (editable on double-click) */}
         {editing ? (
           <input
@@ -122,6 +166,17 @@ export function TodoItem({ todo, onToggle, onUpdate, onDelete, depth }: TodoItem
         {/* Reminder indicator */}
         {todo.reminder_at && (
           <span title="Reminder set"><Bell size={14} className="shrink-0 text-accent" /></span>
+        )}
+
+        {/* Recurrence badge */}
+        {todo.recurrence_type && todo.recurrence_type !== 'none' && (
+          <span
+            className="flex shrink-0 items-center gap-1 text-xs text-muted"
+            title={formatRecurrenceLabel(todo)}
+          >
+            <Repeat size={12} />
+            <span className="hidden sm:inline">{formatRecurrenceLabel(todo)}</span>
+          </span>
         )}
 
         {/* Deadline */}

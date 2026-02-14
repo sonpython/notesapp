@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react'
 import { Plus, Calendar, Bell } from 'lucide-react'
 import type { Todo } from '@/lib/types'
+import { RecurrenceSelector } from './recurrence-selector'
 
 interface TodoCreateFormProps {
   onCreated: (todo: Todo) => void
@@ -18,6 +19,10 @@ export function TodoCreateForm({ onCreated, parentId }: TodoCreateFormProps) {
   const [priority, setPriority] = useState(0)
   const [deadline, setDeadline] = useState('')
   const [reminderAt, setReminderAt] = useState('')
+  const [recurrenceType, setRecurrenceType] = useState('none')
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1)
+  const [recurrenceDays, setRecurrenceDays] = useState('')
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
   const [showExtras, setShowExtras] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -36,6 +41,16 @@ export function TodoCreateForm({ onCreated, parentId }: TodoCreateFormProps) {
       if (deadline) payload.deadline = deadline
       if (reminderAt) payload.reminder_at = reminderAt
       if (parentId) payload.parent_id = parentId
+      if (recurrenceType !== 'none') {
+        payload.recurrence_type = recurrenceType
+        payload.recurrence_interval = recurrenceInterval
+        if (recurrenceType === 'weekly' && recurrenceDays) {
+          payload.recurrence_days = recurrenceDays
+        }
+        if (recurrenceEndDate) {
+          payload.recurrence_end_date = recurrenceEndDate
+        }
+      }
 
       // onCreated handles the API call via the hook
       onCreated(payload as unknown as Todo)
@@ -45,6 +60,10 @@ export function TodoCreateForm({ onCreated, parentId }: TodoCreateFormProps) {
       setPriority(0)
       setDeadline('')
       setReminderAt('')
+      setRecurrenceType('none')
+      setRecurrenceInterval(1)
+      setRecurrenceDays('')
+      setRecurrenceEndDate('')
       setShowExtras(false)
     } finally {
       setSubmitting(false)
@@ -102,28 +121,43 @@ export function TodoCreateForm({ onCreated, parentId }: TodoCreateFormProps) {
       </div>
 
       {showExtras && (
-        <div className="ml-10 flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-1.5 text-xs text-muted">
-            <Calendar size={12} />
-            <input
-              type="datetime-local"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              className="h-7 rounded border border-border bg-background px-2
-                text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
-            />
-          </label>
+        <div className="ml-10 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-1.5 text-xs text-muted">
+              <Calendar size={12} />
+              <input
+                type="datetime-local"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                className="h-7 rounded border border-border bg-background px-2
+                  text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+            </label>
 
-          <label className="flex items-center gap-1.5 text-xs text-muted">
-            <Bell size={12} />
-            <input
-              type="datetime-local"
-              value={reminderAt}
-              onChange={(e) => setReminderAt(e.target.value)}
-              className="h-7 rounded border border-border bg-background px-2
-                text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
-            />
-          </label>
+            <label className="flex items-center gap-1.5 text-xs text-muted">
+              <Bell size={12} />
+              <input
+                type="datetime-local"
+                value={reminderAt}
+                onChange={(e) => setReminderAt(e.target.value)}
+                className="h-7 rounded border border-border bg-background px-2
+                  text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+            </label>
+          </div>
+
+          <RecurrenceSelector
+            recurrenceType={recurrenceType}
+            interval={recurrenceInterval}
+            days={recurrenceDays}
+            endDate={recurrenceEndDate}
+            onChange={(data) => {
+              setRecurrenceType(data.type)
+              setRecurrenceInterval(data.interval)
+              setRecurrenceDays(data.days)
+              setRecurrenceEndDate(data.endDate)
+            }}
+          />
         </div>
       )}
     </form>
