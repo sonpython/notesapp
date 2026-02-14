@@ -8,16 +8,19 @@ NotesApp is a three-tier full-stack application:
 ┌─────────────────────────────────────────────────────────────┐
 │                      CLIENT TIER                            │
 │  Next.js 16 (React 19) - TailwindCSS v4 - @supabase/ssr    │
+│  Service Worker (PWA), IndexedDB (offline), Theme toggle    │
 │  Runs in browser & server (SSR), serves static assets       │
 └────────────────────────┬────────────────────────────────────┘
-                         │ HTTPS/REST API
+                         │ HTTPS/REST API (online)
                          │ Bearer JWT
+                         │ Offline sync queue
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                  APPLICATION TIER                           │
 │  FastAPI - SQLAlchemy async - asyncpg                       │
 │  Async request handlers, business logic, DB access          │
-│  APScheduler background tasks                               │
+│  APScheduler background tasks, rate limiting (slowapi)      │
+│  Pagination: limit/offset on list endpoints                 │
 └────────────────────────┬────────────────────────────────────┘
                          │ SQL / asyncpg
                          │ Session pool
@@ -25,8 +28,9 @@ NotesApp is a three-tier full-stack application:
 ┌─────────────────────────────────────────────────────────────┐
 │                   DATA TIER                                 │
 │  PostgreSQL 16 - Supabase managed                           │
-│  Tables: notes, todos, folders, telegram_settings           │
-│  Indexes: user_id, created_at, updated_at                   │
+│  Tables: notes, todos, folders, tags, note_tags, todo_tags │
+│          telegram_settings                                   │
+│  Indexes: user_id, created_at, tag searches, reminders      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -37,24 +41,28 @@ NotesApp is a three-tier full-stack application:
 ```
 app/
 ├── layout.tsx (root)
-│   └── Theme setup, fonts, dark mode
+│   └── Theme provider (light/dark/system), fonts, PWA setup
 ├── page.tsx (/)
 │   └── Landing/public page
 ├── login, signup
 │   └── Auth pages
+├── ~offline (PWA fallback page)
 └── (app)/ [Protected routes]
     ├── layout.tsx
-    │   ├── AppSidebar (navigation + folder tree + user menu)
-    │   │   └── FolderTree (expandable, drag-drop, CRUD context menu)
-    │   └── AppHeader (mobile hamburger)
+    │   ├── AppSidebar (navigation + folder tree + user menu + theme toggle)
+    │   ├── AppHeader (mobile hamburger + offline indicator)
+    │   └── OfflineIndicator (sync status badge)
     ├── notes/page.tsx
-    │   ├── NoteList (cards + pinned section)
-    │   ├── NoteEditor (CodeMirror + toolbar)
+    │   ├── NoteList (cards + pinned section, tag filtering)
+    │   ├── NoteEditor (CodeMirror + toolbar + export menu)
+    │   ├── NoteExportMenu (Markdown, PDF, ZIP export)
     │   └── Search (300ms debounce, full-text search)
     ├── todos/page.tsx
-    │   ├── TodoList (recursive with subtasks)
-    │   └── TodoCreateForm (quick input)
+    │   ├── TodoList (recursive, tag filtering, recurrence badge)
+    │   └── TodoCreateForm (with recurrence options)
     └── settings/page.tsx
+        ├── Theme preference selector
+        ├── PWA install prompt
         └── Telegram link status & user profile
 ```
 
@@ -303,53 +311,84 @@ User Signup/Login
 └───────┬──────────────┘
         │ (user_id FK)
         │
-        ├──────────────────────────────────────┐
-        │                                       │
-        ▼                                       ▼
-┌──────────────────────┐            ┌──────────────────────┐
-│      notes           │            │   telegram_settings  │
-├─ id (UUID, PK)      │            ├─ id (UUID, PK)       │
-├─ user_id (FK)       │            ├─ user_id (FK, unique)│
-├─ title              │            ├─ chat_id             │
-├─ content            │            ├─ link_code           │
-├─ folder_id (FK) ────┼──────┐     ├─ is_enabled          │
-├─ is_pinned          │      │     └─ bot_linked_at       │
+        ├──────────────────────────────────────────┐
+        │                                           │
+        ▼                                           ▼
+┌──────────────────────┐              ┌──────────────────────┐
+│      notes           │              │   telegram_settings  │
+├─ id (UUID, PK)      │              ├─ id (UUID, PK)       │
+├─ user_id (FK)       │              ├─ user_id (FK, unique)│
+├─ title              │              ├─ chat_id             │
+├─ content            │              ├─ link_code           │
+├─ folder_id (FK) ────┼──────┐       ├─ is_enabled          │
+├─ is_pinned          │      │       └─ bot_linked_at       │
 ├─ is_archived        │      │
 ├─ created_at         │      │
 └─ updated_at         │      │
-        │              │      │
-        │              │      ▼
-        │              │   ┌──────────────────────┐
-        │              │   │     folders          │
-        │              │   ├─ id (UUID, PK)      │
-        │              │   ├─ user_id (FK)       │
-        │              │   ├─ name               │
-        │              │   ├─ parent_id (FK) ──┐ Self-reference
-        │              │   ├─ icon              │
-        │              │   └─ created_at        │
-        │              │   └─ updated_at        │
-        │              └───────────────────────┘
+    │                 │      │
+    │ ┌─────────────┐ │      │
+    │ │ note_tags   │ │      │
+    │ │ (junction)  │ │      │
+    │ └─────────────┘ │      │
+    │       ▲          │      │
+    │       └──────┐   │      │
+    │              │   │      ▼
+    │          ┌──────────────────────┐
+    │          │     tags             │
+    │          ├─ id (UUID, PK)       │
+    │          ├─ user_id (FK)        │
+    │          ├─ name (unique)       │
+    │          ├─ color               │
+    │          └─ created_at          │
+    │              ▲                  │
+    │              │                  │
+    │          ┌──────────────────────┐
+    │          │  todo_tags (junction)│
+    │          └──────────────────────┘
+    │              ▲
+    │              │
+        │       │
+        │       ▼
+        │   ┌──────────────────────┐
+        │   │     folders          │
+        │   ├─ id (UUID, PK)       │
+        │   ├─ user_id (FK)        │
+        │   ├─ name                │
+        │   ├─ parent_id (FK) ────┐ Self-reference
+        │   ├─ icon               │
+        │   └─ created_at         │
+        │   └─ updated_at         │
+        └───────────────────────┘
         │
         ├──────────────────────────────────────┐
         │                                       │
         ▼                                       ▼
-┌──────────────────────┐            ┌──────────────────────┐
-│       todos          │            │    todos (child)     │
-├─ id (UUID, PK)      │            ├─ parent_id (FK) ────┐
-├─ user_id (FK)       │            │                      │
-├─ title              │            └─ Self-reference ────┘
-├─ description        │
-├─ is_completed       │
-├─ completed_at       │
-├─ deadline           │
-├─ parent_id (FK) ────┼──────┐
-├─ note_id (FK) ──────┼──────┼──→ notes
-├─ priority           │      │
-├─ reminder_at        │      │
-├─ reminder_sent      │      │
-└─ created_at         │      │
-└─ updated_at         │      │
-                      └──────┘
+┌──────────────────────────────────┐  ┌──────────────────────┐
+│       todos                      │  │   todos (child)      │
+├─ id (UUID, PK)                  │  ├─ parent_id (FK) ────┐
+├─ user_id (FK)                   │  │                      │
+├─ title                          │  └─ Self-reference ────┘
+├─ description                    │
+├─ is_completed                   │
+├─ completed_at                   │
+├─ deadline                       │
+├─ priority                       │
+├─ parent_id (FK) ────┐           │
+├─ note_id (FK) ──────┼──────────→ notes
+├─ recurrence_type    │           │
+├─ recurrence_interval│           │
+├─ recurrence_days    │           │
+├─ recurrence_end_date│           │
+├─ recurrence_parent_id (FK) ─────┘
+├─ reminder_at                    │
+├─ reminder_sent                  │
+├─ created_at                     │
+└─ updated_at                     │
+                                  │
+    ┌─────────────────────────────┘
+    │ (tags via todo_tags junction)
+    ▼
+  (tags table as above)
 ```
 
 ## API Contract
@@ -384,6 +423,40 @@ Content-Type: application/json
   "detail": "Note not found"
 }
 ```
+
+## PWA & Offline Architecture
+
+### Service Worker
+- Caches static assets (JS, CSS, images) for offline access
+- Network-first strategy: try online, fallback to cache
+- Periodic sync for pending changes (when offline → online)
+
+### IndexedDB Offline Storage
+```
+notes_store
+  - pk: id (UUID)
+  - notes: [{ id, title, content, folder_id, is_pinned, ... }]
+
+todos_store
+  - pk: id (UUID)
+  - todos: [{ id, title, is_completed, deadline, ... }]
+
+folders_store
+  - pk: id (UUID)
+  - folders: [{ id, name, parent_id, ... }]
+
+sync_queue
+  - pk: id (UUID)
+  - pending: [{ type: 'create'|'update'|'delete', entity, timestamp }]
+```
+
+### Offline Sync Flow
+1. User makes changes while offline
+2. Changes stored in IndexedDB + added to sync_queue
+3. Online status regained → offline-sync-engine triggers
+4. Process sync_queue: retry failed ops, batch API calls
+5. Remove synced items from queue, merge API responses
+6. UI updates optimistically throughout
 
 ## Database Schema
 
@@ -421,13 +494,20 @@ CREATE TABLE todos (
   sort_order INTEGER NOT NULL DEFAULT 0,
   reminder_at TIMESTAMP WITH TIME ZONE,
   reminder_sent BOOLEAN NOT NULL DEFAULT false,
+  -- Recurrence fields (AZD-18)
+  recurrence_type VARCHAR(20),  -- 'daily', 'weekly', 'monthly', NULL=none
+  recurrence_interval INTEGER DEFAULT 1,
+  recurrence_days VARCHAR(20),  -- Weekday numbers or day of month
+  recurrence_end_date TIMESTAMP WITH TIME ZONE,
+  recurrence_parent_id UUID REFERENCES todos(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 
   INDEX idx_todos_user_id (user_id),
   INDEX idx_todos_parent_id (parent_id),
   INDEX idx_todos_note_id (note_id),
-  INDEX idx_todos_reminder_at (reminder_at, reminder_sent)
+  INDEX idx_todos_reminder_at (reminder_at, reminder_sent),
+  INDEX idx_todos_recurrence_parent_id (recurrence_parent_id)
 );
 ```
 
@@ -444,6 +524,39 @@ CREATE TABLE folders (
 
   INDEX idx_folders_user_id (user_id),
   INDEX idx_folders_parent_id (parent_id)
+);
+```
+
+### tags table (AZD-19)
+```sql
+CREATE TABLE tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  name VARCHAR(50) NOT NULL,
+  color VARCHAR(7) NOT NULL DEFAULT '#6b7280',
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+  UNIQUE (user_id, name),
+  INDEX idx_tags_user_id (user_id)
+);
+```
+
+### note_tags & todo_tags junction tables (AZD-19)
+```sql
+CREATE TABLE note_tags (
+  note_id UUID PRIMARY KEY,
+  tag_id UUID PRIMARY KEY,
+  FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE,
+  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE,
+  INDEX idx_note_tags_tag_id (tag_id)
+);
+
+CREATE TABLE todo_tags (
+  todo_id UUID PRIMARY KEY,
+  tag_id UUID PRIMARY KEY,
+  FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE,
+  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE,
+  INDEX idx_todo_tags_tag_id (tag_id)
 );
 ```
 

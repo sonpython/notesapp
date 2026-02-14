@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase**: Core + Enhancements Complete (3/3 complete)
-**Last Updated**: 2026-02-14
-**Overall Progress**: ~75%
+**Phase**: Core + Enhancements + Advanced (3/4 started, Phase 4: 60% complete)
+**Last Updated**: 2026-02-15
+**Overall Progress**: ~85%
 
 ## Phase 1: Core Features (100% Complete)
 
@@ -153,23 +153,37 @@
 - [ ] XSS prevention check
 - **Status**: Not started
 
-## Phase 4: Advanced Features (0% Complete)
+## Phase 4: Advanced Features (60% Complete)
 
 ### User Experience
-- [ ] Full-text search on notes
+- [x] Full-text search on notes (PostgreSQL tsvector)
 - [ ] Note templates
 - [ ] Quick capture widget
-- [ ] Dark/light theme toggle
+- [x] Dark/light/system theme toggle (AZD-16)
 - [ ] Note sharing (with permissions)
 - [ ] Collaborative editing (real-time)
 
 ### Features
 - [ ] Todo time tracking
-- [ ] Todo recurring (daily, weekly, etc.)
-- [ ] Note export (PDF, Markdown)
+- [x] Todo recurring (daily, weekly, monthly) (AZD-18)
+- [x] Note export (Markdown, PDF, ZIP) (AZD-17)
 - [ ] Data backup & restore
-- [ ] Tags/labels system
+- [x] Tags/labels system for notes & todos (AZD-19)
 - [ ] Analytics dashboard
+
+### Performance & Quality
+- [x] Database indexes optimization (AZD-13)
+- [x] API pagination (limit/offset) (AZD-13)
+- [x] API rate limiting (slowapi)
+- [x] Backend test infrastructure (pytest, 22 tests)
+- [x] Frontend test infrastructure (vitest)
+
+### Mobile & Platforms
+- [ ] React Native mobile app
+- [ ] iOS app (native)
+- [ ] Android app (native)
+- [x] PWA/offline support (service worker, IndexedDB, sync) (AZD-20)
+- [ ] Web clipper browser extension
 
 ### Integration
 - [ ] Slack integration
@@ -177,13 +191,6 @@
 - [ ] WhatsApp integration
 - [ ] Email sync (incoming)
 - [ ] Calendar integration
-
-### Mobile & Platforms
-- [ ] React Native mobile app
-- [ ] iOS app (native)
-- [ ] Android app (native)
-- [ ] PWA/offline support
-- [ ] Web clipper browser extension
 
 ### Backend Enhancements
 - [ ] Redis caching layer
@@ -208,29 +215,28 @@
 ## Known Issues & Gaps
 
 ### Critical (Block Release)
-- No automated test suite (0% coverage)
-- No CI/CD pipeline (manual testing)
 - Production deployment not configured
 - No error logging/monitoring
+- Limited test coverage (backend: 22 tests, frontend: in progress)
 
-### High Priority (Before Beta)
-- Reminders only via Telegram (no email)
+### High Priority (Before v1)
+- Reminders only via Telegram (no email/push notifications)
 - No data backup/recovery process
-- No automated test suite (0% coverage)
-- No CI/CD pipeline
-
-### Medium Priority (Before v1)
 - No user profile customization
 - No note sharing/collaboration
-- No performance monitoring
-- No rate limiting on endpoints
 - No audit logging
 
+### Medium Priority (Future)
+- No performance monitoring dashboard
+- No Slack/Discord/WhatsApp integration
+- Note templates not implemented
+- No collaborative editing (real-time sync)
+
 ### Low Priority (Future)
-- Dark/light theme toggle (dark only)
 - Mobile app (web-responsive only)
-- Offline-first PWA support
-- Advanced search filters
+- Web clipper browser extension
+- Calendar integration
+- Email sync (incoming)
 
 ## Success Criteria
 

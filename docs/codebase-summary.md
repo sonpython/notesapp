@@ -2,7 +2,7 @@
 
 ## Overview
 
-NotesApp is a full-stack monorepo with ~56 source files (28 Python, 28 TypeScript/React) totaling ~4,900 LOC. Built with pnpm workspace + Turborepo, FastAPI backend, Next.js frontend.
+NotesApp is a full-stack monorepo with ~70+ source files totaling ~6,500+ LOC. Built with pnpm workspace + Turborepo, FastAPI backend, Next.js frontend. Includes PWA/offline support, tagging system, recurring todos, note export, and theme toggle.
 
 ## Directory Structure
 
@@ -17,9 +17,10 @@ notesapp/
 │   │   ├── deps.py                   # JWT auth (ES256 JWKS + HS256)
 │   │   ├── models/
 │   │   │   ├── __init__.py
-│   │   │   ├── note.py               # Note ORM model (UUID PK, user_id FK)
-│   │   │   ├── todo.py               # Todo ORM (hierarchical, reminders)
+│   │   │   ├── note.py               # Note ORM model (UUID PK, user_id FK, tags)
+│   │   │   ├── todo.py               # Todo ORM (hierarchical, reminders, recurrence, tags)
 │   │   │   ├── folder.py             # Folder ORM (self-referential)
+│   │   │   ├── tag.py                # Tag ORM (with junction tables: note_tags, todo_tags)
 │   │   │   └── telegram.py           # TelegramSettings ORM
 │   │   ├── schemas/
 │   │   │   ├── __init__.py
@@ -39,7 +40,10 @@ notesapp/
 │   │   │   ├── note_query_service.py # Query builder + full-text search (tsvector)
 │   │   │   ├── todo_query_service.py # Query builder + toggle logic
 │   │   │   ├── reminder_service.py   # Check & send reminders
-│   │   │   └── telegram_service.py   # Send messages, get bot username, todo commands
+│   │   │   ├── telegram_service.py   # Send messages, get bot username, todo commands
+│   │   │   ├── tag_service.py        # Tag CRUD, filtering, validation
+│   │   │   ├── note_export_service.py# Export notes to Markdown, PDF, ZIP
+│   │   │   └── recurrence_service.py # Generate recurring todo instances
 │   │   └── tasks/
 │   │       ├── __init__.py
 │   │       └── reminders.py          # APScheduler background job
@@ -67,32 +71,55 @@ notesapp/
 │   │   │       └── settings/page.tsx # Profile + Telegram link
 │   │   ├── components/
 │   │   │   ├── layout/
-│   │   │   │   ├── app-header.tsx    # Mobile header
-│   │   │   │   └── app-sidebar.tsx   # Nav + folders + user menu
+│   │   │   │   ├── app-header.tsx    # Mobile header (theme toggle)
+│   │   │   │   ├── app-sidebar.tsx   # Nav + folders + user menu + theme
+│   │   │   │   └── theme-provider.tsx # Theme context (light/dark/system)
 │   │   │   ├── notes/
 │   │   │   │   ├── note-editor.tsx   # CodeMirror + toolbar + autosave
 │   │   │   │   ├── note-list.tsx     # Pinned/regular note cards
-│   │   │   │   └── note-preview.tsx  # Markdown preview (react-markdown)
+│   │   │   │   ├── note-preview.tsx  # Markdown preview (react-markdown)
+│   │   │   │   └── note-export-menu.tsx # Export: Markdown, PDF, ZIP
 │   │   │   ├── todos/
-│   │   │   │   ├── todo-item.tsx     # Recursive todo (subtasks)
+│   │   │   │   ├── todo-item.tsx     # Recursive todo (subtasks, tags, recurrence)
 │   │   │   │   ├── todo-list.tsx     # List container
-│   │   │   │   └── todo-create-form.tsx # New todo input
-│   │   │   └── folders/
-│   │   │       ├── folder-tree.tsx        # Folder tree container
-│   │   │       ├── folder-tree-item.tsx   # Expandable folder item
-│   │   │       └── folder-context-menu.tsx # Create/rename/delete context menu
+│   │   │   │   └── todo-create-form.tsx # New todo input (with recurrence)
+│   │   │   ├── tags/
+│   │   │   │   ├── tag-badge.tsx     # Tag display component
+│   │   │   │   ├── tag-filter.tsx    # Tag filtering UI
+│   │   │   │   └── tag-manager.tsx   # Tag CRUD UI
+│   │   │   ├── folders/
+│   │   │   │   ├── folder-tree.tsx        # Folder tree container
+│   │   │   │   ├── folder-tree-item.tsx   # Expandable folder item
+│   │   │   │   └── folder-context-menu.tsx # Create/rename/delete context menu
+│   │   │   ├── pwa/
+│   │   │   │   ├── offline-indicator.tsx  # Show offline status
+│   │   │   │   └── install-prompt.tsx     # PWA install button
+│   │   │   └── providers/
+│   │   │       └── theme-provider.tsx     # Theme context wrapper
 │   │   ├── hooks/
 │   │   │   ├── use-auth.ts           # Supabase auth state
 │   │   │   ├── use-debounce.ts       # Debounce hook
-│   │   │   ├── use-notes.ts          # CRUD + optimistic updates
-│   │   │   ├── use-todos.ts          # CRUD + filters
+│   │   │   ├── use-notes.ts          # CRUD + optimistic updates + tags
+│   │   │   ├── use-todos.ts          # CRUD + filters + recurrence + tags
 │   │   │   ├── use-telegram.ts       # Telegram link/status
-│   │   │   └── use-folders.ts        # Folder CRUD + tree builder
+│   │   │   ├── use-folders.ts        # Folder CRUD + tree builder
+│   │   │   ├── use-tags.ts           # Tag CRUD + filtering
+│   │   │   ├── use-theme.ts          # Theme switching (light/dark/system)
+│   │   │   ├── use-online-status.ts  # Detect online/offline
+│   │   │   └── use-install-prompt.ts # PWA install trigger
 │   │   ├── lib/
 │   │   │   ├── api.ts                # ApiClient (Bearer auth)
 │   │   │   ├── types.ts              # Shared TypeScript interfaces
 │   │   │   ├── supabase-browser.ts   # Supabase client (browser)
-│   │   │   └── supabase-server.ts    # Supabase client (server/middleware)
+│   │   │   ├── supabase-server.ts    # Supabase client (server/middleware)
+│   │   │   └── offline/
+│   │   │       ├── indexed-db-client.ts    # IndexedDB wrapper
+│   │   │       ├── indexed-db-notes.ts     # Notes IndexedDB store
+│   │   │       ├── indexed-db-todos.ts     # Todos IndexedDB store
+│   │   │       ├── indexed-db-folders.ts   # Folders IndexedDB store
+│   │   │       ├── indexed-db-sync-queue.ts # Sync queue persistence
+│   │   │       ├── offline-sync-engine.ts  # Offline-to-online sync logic
+│   │   │       └── offline-types.ts        # TypeScript interfaces
 │   │   ├── middleware.ts             # Session refresh + route protection
 │   │   └── favicon.ico
 │   ├── public/                       # Static assets
@@ -123,10 +150,11 @@ notesapp/
 
 | Category | Count | LOC (est) |
 |----------|-------|----------|
-| Backend Python | 28 | ~1,600 |
-| Frontend TS/TSX | 28 | ~3,100 |
+| Backend Python | 31 | ~2,000 |
+| Frontend TS/TSX | 35 | ~4,000 |
+| Tests (Backend & Frontend) | 12 | ~800 |
 | Config & Docs | 8 | ~200 |
-| **Total** | **64** | **~4,900** |
+| **Total** | **86** | **~7,000** |
 
 ## Backend Structure (Python)
 
@@ -136,9 +164,10 @@ notesapp/
 - **deps.py** (88 LOC): JWT validation dependency (ES256 via JWKS + HS256), get_current_user, get_db
 
 ### Models (SQLAlchemy ORM)
-- **note.py** (75 LOC): Note model, relationships to Folder & Todos
-- **todo.py** (110 LOC): Todo model with parent-child hierarchy, reminder fields, note FK
+- **note.py** (80 LOC): Note model, relationships to Folder, Todos, Tags
+- **todo.py** (160 LOC): Todo model with hierarchy, reminders, recurrence fields, tags
 - **folder.py** (75 LOC): Folder model with self-referential hierarchy
+- **tag.py** (110 LOC): Tag model with junction tables (NoteTag, TodoTag)
 - **telegram.py** (50 LOC): TelegramSettings per-user config
 
 ### Schemas (Pydantic)
@@ -154,9 +183,12 @@ notesapp/
 
 ### Services (Business Logic)
 - **note_query_service.py** (70 LOC): Dynamic query builder + PostgreSQL full-text search
-- **todo_query_service.py** (70 LOC): Query builder + toggle logic
+- **todo_query_service.py** (70 LOC): Query builder + toggle logic + tag filtering
 - **reminder_service.py** (50 LOC): Check pending reminders, mark sent
 - **telegram_service.py** (50 LOC): Send messages, todo commands (/todo, /list, /done)
+- **tag_service.py** (100 LOC): Tag CRUD, bulk assign/remove, validation
+- **note_export_service.py** (150 LOC): Export to Markdown, PDF, ZIP (with hierarchy)
+- **recurrence_service.py** (120 LOC): Generate todo instances from recurrence rules
 
 ### Background Tasks
 - **reminders.py** (60 LOC): APScheduler job to check & send reminders every 60s
@@ -279,10 +311,11 @@ notesapp/
 
 ## Testing & Quality
 
-- **No unit tests** currently (gap identified)
-- **No CI/CD pipeline** (manual testing only)
-- **Linting**: ESLint (frontend), black (backend, manual)
-- **Type checking**: TypeScript strict mode, mypy (backend, manual)
+- **Backend**: pytest with 22+ tests, GitHub Actions CI
+- **Frontend**: vitest setup with test files for hooks, components
+- **Linting**: ESLint (frontend), black (backend)
+- **Type checking**: TypeScript strict mode, mypy (backend)
+- **Coverage**: Aiming for 80%+ (in progress)
 
 ## Performance Characteristics
 
@@ -302,9 +335,9 @@ notesapp/
 
 ## Known Technical Debt
 
-- No offline-first PWA
-- No test suite
-- No comprehensive error logging
-- Reminder service runs in-process (no external queue)
-- No pagination on large result sets
-- No query result caching (Redis)
+- Limited test coverage (expanding)
+- No comprehensive error logging/monitoring
+- Reminder service runs in-process (no distributed queue)
+- No query result caching (Redis) - opportunity for performance
+- No user profile customization beyond Telegram link
+- Single-process recurrence generator (no distributed scheduling)
