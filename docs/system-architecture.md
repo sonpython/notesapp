@@ -44,11 +44,13 @@ app/
 │   └── Auth pages
 └── (app)/ [Protected routes]
     ├── layout.tsx
-    │   ├── AppSidebar (nav + folders + user menu)
+    │   ├── AppSidebar (navigation + folder tree + user menu)
+    │   │   └── FolderTree (expandable, drag-drop, CRUD context menu)
     │   └── AppHeader (mobile hamburger)
     ├── notes/page.tsx
     │   ├── NoteList (cards + pinned section)
-    │   └── NoteEditor (CodeMirror + toolbar)
+    │   ├── NoteEditor (CodeMirror + toolbar)
+    │   └── Search (300ms debounce, full-text search)
     ├── todos/page.tsx
     │   ├── TodoList (recursive with subtasks)
     │   └── TodoCreateForm (quick input)
@@ -67,29 +69,34 @@ FastAPI App (main.py)
    ├─ /auth → auth.py
    │  └─ get_current_user (JWT validation)
    ├─ /notes → notes.py
-   │  ├─ get_notes (with filters)
+   │  ├─ get_notes (filters: folder, archive, search)
    │  ├─ create_note
    │  ├─ update_note
    │  └─ delete_note
    ├─ /folders → folders.py
+   │  ├─ CRUD endpoints
+   │  └─ Nested folder support
    ├─ /todos → todos.py
+   │  ├─ CRUD endpoints
    │  └─ toggle_todo (completion)
    └─ /telegram → telegram.py
+      ├─ link/unlink endpoints
+      ├─ status endpoint
       ├─ webhook handler
-      └─ link/unlink endpoints
+      └─ command handlers (/todo, /list, /done)
 
 Each Router calls:
 ├─ Services (business logic)
-│  ├─ note_query_service.py
+│  ├─ note_query_service.py (full-text search: tsvector/tsquery)
 │  ├─ todo_query_service.py
 │  ├─ reminder_service.py
-│  └─ telegram_service.py
+│  └─ telegram_service.py (todo commands)
 ├─ Schemas (validation)
 │  └─ Pydantic models
 └─ Models (ORM)
    ├─ Note (SQLAlchemy)
    ├─ Todo
-   ├─ Folder
+   ├─ Folder (self-referential)
    └─ TelegramSettings
 
 Background Tasks:
@@ -163,6 +170,92 @@ Todo deadline approaching
   │
   └─ User receives Telegram notification
      └─ Chat notification on phone
+```
+
+### Full-Text Search Flow
+
+```
+User searches for notes
+  │
+  ├─ Frontend: notes/page.tsx
+  │  └─ searchQuery state + useDebounce (300ms)
+  │     └─ fetchNotes(folderId, debouncedSearch)
+  │
+  ▼ HTTP Request
+  GET /api/notes?search=<query>&folder_id=<id>
+
+Backend processing:
+  │
+  ├─ note_query_service.py
+  │  └─ If search provided:
+  │     ├─ Convert search to PostgreSQL plainto_tsquery
+  │     ├─ Use to_tsvector() on notes.content
+  │     └─ WHERE tsvector @@ tsquery
+  │
+  ├─ Query executes
+  │  └─ SELECT * FROM notes WHERE user_id=? AND content_tsvector @@ tsquery
+  │
+  └─ Return matching notes with user_id filter
+
+Frontend displays results
+  └─ Real-time as user types (debounced)
+```
+
+### Folder Tree & Drag-Drop Flow
+
+```
+User clicks folder in tree or drags note to folder
+  │
+  ├─ Frontend: use-folders.ts hook
+  │  ├─ getFolders() - fetch all user folders
+  │  ├─ buildFolderTree() - parent_id -> child relationships
+  │  └─ onDragDropNote() - move note to folder
+  │
+  ├─ FolderTreeItem component
+  │  ├─ Expandable/collapsible (parent_id)
+  │  ├─ Drag-drop enabled for notes
+  │  └─ Context menu for CRUD
+  │
+  ▼ HTTP Request
+  PUT /api/notes/<id> { folder_id: <target_folder_id> }
+
+Backend:
+  │
+  ├─ notes.py router
+  │  └─ update_note_handler()
+  │     └─ UPDATE notes SET folder_id=?, updated_at=NOW()
+  │
+  └─ Return updated note
+
+Frontend:
+  └─ Optimistic UI update (instant feedback)
+```
+
+### Telegram Todo Commands Flow
+
+```
+User sends /todo Create project plan via Telegram
+  │
+  ├─ Telegram Bot API webhook receives message
+  │  └─ POST /api/telegram/webhook
+  │
+  ├─ Backend parsing
+  │  ├─ Extract chat_id
+  │  ├─ Validate user (query telegram_settings by chat_id)
+  │  └─ Extract command and args
+  │
+  ├─ Command handlers:
+  │  ├─ /start <link_code> → _handle_start()
+  │  │  └─ Link telegram account (store chat_id)
+  │  ├─ /todo <title> → _handle_todo()
+  │  │  └─ Create todo (INSERT todos)
+  │  ├─ /list → _handle_list()
+  │  │  └─ Query active todos (WHERE is_completed=false)
+  │  └─ /done <n> → _handle_done()
+  │     └─ Mark todo complete (UPDATE todos SET is_completed=true)
+  │
+  └─ Send Telegram response (confirmation or list)
+     └─ User sees response in chat
 ```
 
 ### Authentication & Session Flow

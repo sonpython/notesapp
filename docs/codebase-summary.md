@@ -2,7 +2,7 @@
 
 ## Overview
 
-NotesApp is a full-stack monorepo with ~50 source files (28 Python, 26 TypeScript/React) totaling ~4,100 LOC. Built with pnpm workspace + Turborepo, FastAPI backend, Next.js frontend.
+NotesApp is a full-stack monorepo with ~56 source files (28 Python, 28 TypeScript/React) totaling ~4,900 LOC. Built with pnpm workspace + Turborepo, FastAPI backend, Next.js frontend.
 
 ## Directory Structure
 
@@ -36,10 +36,10 @@ notesapp/
 │   │   │   └── telegram.py           # Link/unlink/status/webhook
 │   │   ├── services/
 │   │   │   ├── __init__.py
-│   │   │   ├── note_query_service.py # Query builder for notes
+│   │   │   ├── note_query_service.py # Query builder + full-text search (tsvector)
 │   │   │   ├── todo_query_service.py # Query builder + toggle logic
 │   │   │   ├── reminder_service.py   # Check & send reminders
-│   │   │   └── telegram_service.py   # Send messages, get bot username
+│   │   │   └── telegram_service.py   # Send messages, get bot username, todo commands
 │   │   └── tasks/
 │   │       ├── __init__.py
 │   │       └── reminders.py          # APScheduler background job
@@ -73,16 +73,21 @@ notesapp/
 │   │   │   │   ├── note-editor.tsx   # CodeMirror + toolbar + autosave
 │   │   │   │   ├── note-list.tsx     # Pinned/regular note cards
 │   │   │   │   └── note-preview.tsx  # Markdown preview (react-markdown)
-│   │   │   └── todos/
-│   │   │       ├── todo-item.tsx     # Recursive todo (subtasks)
-│   │   │       ├── todo-list.tsx     # List container
-│   │   │       └── todo-create-form.tsx # New todo input
+│   │   │   ├── todos/
+│   │   │   │   ├── todo-item.tsx     # Recursive todo (subtasks)
+│   │   │   │   ├── todo-list.tsx     # List container
+│   │   │   │   └── todo-create-form.tsx # New todo input
+│   │   │   └── folders/
+│   │   │       ├── folder-tree.tsx        # Folder tree container
+│   │   │       ├── folder-tree-item.tsx   # Expandable folder item
+│   │   │       └── folder-context-menu.tsx # Create/rename/delete context menu
 │   │   ├── hooks/
 │   │   │   ├── use-auth.ts           # Supabase auth state
 │   │   │   ├── use-debounce.ts       # Debounce hook
 │   │   │   ├── use-notes.ts          # CRUD + optimistic updates
 │   │   │   ├── use-todos.ts          # CRUD + filters
-│   │   │   └── use-telegram.ts       # Telegram link/status
+│   │   │   ├── use-telegram.ts       # Telegram link/status
+│   │   │   └── use-folders.ts        # Folder CRUD + tree builder
 │   │   ├── lib/
 │   │   │   ├── api.ts                # ApiClient (Bearer auth)
 │   │   │   ├── types.ts              # Shared TypeScript interfaces
@@ -118,10 +123,10 @@ notesapp/
 
 | Category | Count | LOC (est) |
 |----------|-------|----------|
-| Backend Python | 28 | ~1,500 |
-| Frontend TS/TSX | 26 | ~2,500 |
+| Backend Python | 28 | ~1,600 |
+| Frontend TS/TSX | 28 | ~3,100 |
 | Config & Docs | 8 | ~200 |
-| **Total** | **62** | **~4,200** |
+| **Total** | **64** | **~4,900** |
 
 ## Backend Structure (Python)
 
@@ -145,13 +150,13 @@ notesapp/
 - **notes.py** (100 LOC): CRUD endpoints, filter by folder/archive/pinned
 - **folders.py** (80 LOC): CRUD endpoints
 - **todos.py** (120 LOC): CRUD, toggle completion, filter by status/priority
-- **telegram.py** (90 LOC): Link, unlink, status, webhook handler
+- **telegram.py** (180 LOC): Link, unlink, status, webhook + command handlers
 
 ### Services (Business Logic)
-- **note_query_service.py** (60 LOC): Dynamic query builder for notes filtering
+- **note_query_service.py** (70 LOC): Dynamic query builder + PostgreSQL full-text search
 - **todo_query_service.py** (70 LOC): Query builder + toggle logic
 - **reminder_service.py** (50 LOC): Check pending reminders, mark sent
-- **telegram_service.py** (40 LOC): Send Telegram messages, get bot username
+- **telegram_service.py** (50 LOC): Send messages, todo commands (/todo, /list, /done)
 
 ### Background Tasks
 - **reminders.py** (60 LOC): APScheduler job to check & send reminders every 60s
@@ -173,13 +178,16 @@ notesapp/
 
 ### Components
 - **app-header.tsx** (80 LOC): Mobile hamburger menu
-- **app-sidebar.tsx** (150 LOC): Navigation, folder tree, user menu
+- **app-sidebar.tsx** (150 LOC): Navigation, real folder tree, user menu
 - **note-editor.tsx** (150 LOC): CodeMirror editor, toolbar, auto-save
 - **note-list.tsx** (100 LOC): Note cards grid/list view
 - **note-preview.tsx** (80 LOC): Markdown preview with react-markdown
 - **todo-item.tsx** (150 LOC): Recursive todo renderer (subtasks)
 - **todo-list.tsx** (100 LOC): Todo container with filter buttons
 - **todo-create-form.tsx** (100 LOC): New todo input form
+- **folder-tree.tsx** (128 LOC): Folder tree container with drag-drop
+- **folder-tree-item.tsx** (213 LOC): Expandable folder with drag-drop
+- **folder-context-menu.tsx** (84 LOC): Create/rename/delete menu
 
 ### Hooks
 - **use-auth.ts** (50 LOC): Supabase session management
@@ -187,6 +195,7 @@ notesapp/
 - **use-notes.ts** (120 LOC): CRUD operations, optimistic updates, caching
 - **use-todos.ts** (110 LOC): CRUD, filtering, completion toggle
 - **use-telegram.ts** (80 LOC): Link/unlink/status operations
+- **use-folders.ts** (131 LOC): Folder CRUD, tree building, parentage
 
 ### Lib & Utilities
 - **api.ts** (60 LOC): ApiClient class (GET, POST, PUT, DELETE with auth headers)
@@ -293,9 +302,9 @@ notesapp/
 
 ## Known Technical Debt
 
-- Folder UI stubbed (API complete, minimal frontend)
-- No full-text search implementation
 - No offline-first PWA
 - No test suite
 - No comprehensive error logging
 - Reminder service runs in-process (no external queue)
+- No pagination on large result sets
+- No query result caching (Redis)

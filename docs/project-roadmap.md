@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase**: Core + Telegram Integration (2/3 complete)
-**Last Updated**: 2024-02-14
-**Overall Progress**: ~65%
+**Phase**: Core + Enhancements Complete (3/3 complete)
+**Last Updated**: 2026-02-14
+**Overall Progress**: ~75%
 
 ## Phase 1: Core Features (100% Complete)
 
@@ -25,9 +25,9 @@
 - [x] API endpoints (CRUD)
 - [x] Cascading delete (folder → notes)
 - [x] Database schema
-- [ ] Frontend UI (stubbed - basic folder dropdown only)
-- [ ] Folder tree visualization (planned)
-- [ ] Drag-drop reorganization (future)
+- [x] Frontend UI (folder tree with CRUD context menu)
+- [x] Folder tree visualization (expand/collapse)
+- [x] Drag-drop notes to folders
 
 ### Todos
 - [x] Create todos with title, description, deadline
@@ -66,7 +66,7 @@
 - [x] Dark theme default
 - [x] Responsive design (desktop + mobile)
 
-## Phase 2: Enhancement (70% Complete)
+## Phase 2: Enhancement (100% Complete)
 
 ### Telegram Integration
 - [x] Telegram bot API integration
@@ -77,7 +77,7 @@
 - [x] Webhook endpoint for bot messages
 - [x] Telegram service layer
 - [x] Settings page UI
-- [ ] Telegram commands (todo creation via bot) — planned
+- [x] Telegram commands (/todo, /list, /done)
 
 ### Reminders
 - [x] Deadline field on todos
@@ -97,7 +97,7 @@
 - [x] Filter todos by priority
 - [x] Filter notes by folder
 - [x] Filter notes by archive status
-- [ ] Full-text search (planned)
+- [x] Full-text search (PostgreSQL tsvector/tsquery)
 - [ ] Bulk operations (future)
 
 ### API Polish
@@ -197,8 +197,8 @@
 | Milestone | Phase | Target Date | Status |
 |-----------|-------|-------------|--------|
 | Core features complete | 1 | 2024-01-31 | Complete ✓ |
-| Telegram integration | 2 | 2024-02-15 | In Progress |
-| First beta release | 2 | 2024-02-28 | Planned |
+| Telegram integration & enhancements | 2 | 2026-02-14 | Complete ✓ |
+| First beta release | 2 | 2026-03-15 | Planned |
 | Test suite (50%+) | 3 | 2024-03-15 | Planned |
 | CI/CD pipeline | 3 | 2024-03-31 | Planned |
 | Production ready | 3 | 2024-04-30 | Planned |
@@ -214,10 +214,10 @@
 - No error logging/monitoring
 
 ### High Priority (Before Beta)
-- Folder UI is stubbed (API complete, minimal UI)
-- No full-text search capability
 - Reminders only via Telegram (no email)
 - No data backup/recovery process
+- No automated test suite (0% coverage)
+- No CI/CD pipeline
 
 ### Medium Priority (Before v1)
 - No user profile customization
