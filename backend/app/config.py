@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     # --- CORS ---
     CORS_ORIGINS: str = "http://localhost:3000"
 
+    # --- Rate Limiting ---
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_DEFAULT: str = "60/minute"  # Default for authenticated endpoints
+    RATE_LIMIT_AUTH: str = "5/minute"  # Stricter for auth endpoints (login, signup)
+    RATE_LIMIT_WEBHOOK: str = "30/minute"  # For telegram webhook
+
     @property
     def cors_origin_list(self) -> list[str]:
         """Return CORS origins as a list, split on commas."""
