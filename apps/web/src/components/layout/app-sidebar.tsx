@@ -1,16 +1,19 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useEffect } from 'react'
 import {
   FileText,
   CheckSquare,
   Settings,
   LogOut,
   Plus,
-  FolderIcon,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
+import { useFolders } from '@/hooks/use-folders'
+import { useNotes } from '@/hooks/use-notes'
+import { FolderTree } from '@/components/folders/folder-tree'
 
 interface NavItem {
   label: string
@@ -31,11 +34,58 @@ const navItems: NavItem[] = [
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, signOut } = useAuth()
+  const {
+    folderTree,
+    fetchFolders,
+    createFolder,
+    updateFolder,
+    deleteFolder,
+  } = useFolders()
+  const { moveNoteToFolder } = useNotes()
+
+  const selectedFolderId = searchParams.get('folder')
+
+  // Fetch folders on mount
+  useEffect(() => {
+    fetchFolders()
+  }, [fetchFolders])
 
   const handleSignOut = async () => {
     await signOut()
     router.push('/login')
+  }
+
+  const handleSelectFolder = (id: string | null) => {
+    if (id) {
+      router.push(`/notes?folder=${id}`)
+    } else {
+      router.push('/notes')
+    }
+  }
+
+  const handleCreateFolder = async (name: string, parentId?: string) => {
+    return createFolder(name, parentId)
+  }
+
+  const handleRenameFolder = async (id: string, name: string) => {
+    return updateFolder(id, { name })
+  }
+
+  const handleDeleteFolder = async (id: string) => {
+    await deleteFolder(id)
+    // If deleted folder was selected, navigate to all notes
+    if (selectedFolderId === id) {
+      router.push('/notes')
+    }
+  }
+
+  const handleNewFolderClick = () => {
+    // Trigger root folder creation by setting a flag
+    // For simplicity, we'll let FolderTree handle its own creation state
+    // The Plus button in header could trigger tree's internal state
+    // For now, user can click "New Folder" button in empty state or context menu
   }
 
   return (
@@ -86,9 +136,17 @@ export function AppSidebar() {
         </button>
       </div>
 
-      {/* Folder list placeholder - scrollable area */}
+      {/* Folder list - scrollable area */}
       <div className="flex-1 overflow-y-auto px-3">
-        <FolderTreePlaceholder />
+        <FolderTree
+          folders={folderTree}
+          selectedFolderId={selectedFolderId}
+          onSelectFolder={handleSelectFolder}
+          onCreateFolder={handleCreateFolder}
+          onRenameFolder={handleRenameFolder}
+          onDeleteFolder={handleDeleteFolder}
+          onMoveNote={moveNoteToFolder}
+        />
       </div>
 
       {/* User section at bottom */}
@@ -108,25 +166,5 @@ export function AppSidebar() {
         </div>
       </div>
     </aside>
-  )
-}
-
-/**
- * Placeholder for the folder tree. Displays an empty-state hint
- * when no folders exist yet.
- */
-function FolderTreePlaceholder() {
-  return (
-    <div className="flex flex-col items-center gap-2 py-6 text-center">
-      <FolderIcon className="h-8 w-8 text-zinc-700" />
-      <p className="text-xs text-zinc-600">No folders yet</p>
-      <button
-        type="button"
-        className="flex items-center gap-1.5 rounded-md bg-zinc-800 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-300"
-      >
-        <Plus className="h-3 w-3" />
-        New Folder
-      </button>
-    </div>
   )
 }

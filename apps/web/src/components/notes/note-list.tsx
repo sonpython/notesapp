@@ -8,6 +8,7 @@ interface NoteListProps {
   notes: Note[]
   selectedId: string | null
   onSelect: (id: string) => void
+  onMoveNote?: (noteId: string, folderId: string | null) => Promise<void>
 }
 
 /** Extracts the first non-empty line of content as a preview snippet. */
@@ -32,8 +33,9 @@ function formatDate(dateString: string): string {
 /**
  * Scrollable list of note items sorted with pinned notes first.
  * Each item shows title, content preview, and relative date.
+ * Supports drag-and-drop to move notes to folders.
  */
-export function NoteList({ notes, selectedId, onSelect }: NoteListProps) {
+export function NoteList({ notes, selectedId, onSelect, onMoveNote }: NoteListProps) {
   // Sort: pinned first, then by updated_at descending
   const sortedNotes = [...notes].sort((a, b) => {
     if (a.is_pinned && !b.is_pinned) return -1
@@ -49,6 +51,11 @@ export function NoteList({ notes, selectedId, onSelect }: NoteListProps) {
     )
   }
 
+  const handleDragStart = (e: React.DragEvent, noteId: string) => {
+    e.dataTransfer.setData('noteId', noteId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
   return (
     <div className="overflow-y-auto h-full">
       {sortedNotes.map(note => {
@@ -57,6 +64,8 @@ export function NoteList({ notes, selectedId, onSelect }: NoteListProps) {
           <button
             key={note.id}
             onClick={() => onSelect(note.id)}
+            draggable={!!onMoveNote}
+            onDragStart={(e) => handleDragStart(e, note.id)}
             className={`
               w-full text-left px-4 py-3 border-b border-border
               transition-colors cursor-pointer

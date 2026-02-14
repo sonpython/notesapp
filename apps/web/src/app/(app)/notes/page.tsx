@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Plus, Search } from 'lucide-react'
 import { useNotes } from '@/hooks/use-notes'
 import { NoteList } from '@/components/notes/note-list'
@@ -11,14 +12,17 @@ import { NoteEditor } from '@/components/notes/note-editor'
  * Supports creating, selecting, searching, and editing notes.
  */
 export default function NotesPage() {
-  const { notes, loading, fetchNotes, createNote, updateNote, deleteNote } = useNotes()
+  const searchParams = useSearchParams()
+  const { notes, loading, fetchNotes, createNote, updateNote, deleteNote, moveNoteToFolder } = useNotes()
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Fetch notes on mount and when search changes
+  const folderId = searchParams.get('folder') ?? undefined
+
+  // Fetch notes on mount and when folder or search changes
   useEffect(() => {
-    fetchNotes(undefined, searchQuery || undefined)
-  }, [fetchNotes, searchQuery])
+    fetchNotes(folderId, searchQuery || undefined)
+  }, [fetchNotes, folderId, searchQuery])
 
   // Find the currently selected note
   const selectedNote = useMemo(
@@ -51,6 +55,16 @@ export default function NotesPage() {
       if (selectedNoteId === id) setSelectedNoteId(null)
     },
     [deleteNote, selectedNoteId]
+  )
+
+  // Move note to folder handler
+  const handleMoveNote = useCallback(
+    async (noteId: string, targetFolderId: string | null) => {
+      await moveNoteToFolder(noteId, targetFolderId)
+      // Refresh notes to update the view
+      await fetchNotes(folderId, searchQuery || undefined)
+    },
+    [moveNoteToFolder, folderId, searchQuery, fetchNotes]
   )
 
   return (
@@ -92,6 +106,7 @@ export default function NotesPage() {
               notes={notes}
               selectedId={selectedNoteId}
               onSelect={setSelectedNoteId}
+              onMoveNote={handleMoveNote}
             />
           )}
         </div>
