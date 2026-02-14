@@ -1,0 +1,46 @@
+"""Application configuration loaded from environment variables via pydantic-settings."""
+
+from __future__ import annotations
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Central configuration for the NotesApp backend.
+
+    All values are loaded from a `.env` file located in the backend root
+    directory or from real environment variables.
+    """
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    # --- Database ---
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/notesapp"
+
+    # --- Supabase ---
+    SUPABASE_URL: str = ""
+    SUPABASE_ANON_KEY: str = ""
+    SUPABASE_JWT_SECRET: str = ""
+
+    # --- Telegram (optional) ---
+    TELEGRAM_BOT_TOKEN: str | None = None
+
+    # --- CORS ---
+    CORS_ORIGINS: str = "http://localhost:3000"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """Return CORS origins as a list, split on commas."""
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+
+
+settings = Settings()
+
+
+def get_settings() -> Settings:
+    """Return the global settings instance."""
+    return settings
