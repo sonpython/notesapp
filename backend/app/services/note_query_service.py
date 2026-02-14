@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.sql import Select
 
 from app.models.note import Note
@@ -21,8 +21,8 @@ def build_notes_list_query(
 ) -> Select:
     """Build a SELECT statement for listing notes with optional filters.
 
-    Applies search via ``ilike`` on title and content, and orders by
-    is_pinned DESC then updated_at DESC.
+    Uses PostgreSQL full-text search (tsvector/tsquery) for better results.
+    Falls back to ilike for very short queries.
     """
     stmt = select(Note).where(Note.user_id == user_id)
 
@@ -36,10 +36,21 @@ def build_notes_list_query(
         stmt = stmt.where(Note.is_pinned == is_pinned)
 
     if search:
-        pattern = f"%{search}%"
-        stmt = stmt.where(
-            Note.title.ilike(pattern) | Note.content.ilike(pattern)
-        )
+        search = search.strip()
+        if len(search) < 2:
+            # Short queries: fallback to ilike
+            pattern = f"%{search}%"
+            stmt = stmt.where(
+                Note.title.ilike(pattern) | Note.content.ilike(pattern)
+            )
+        else:
+            # Full-text search on title and content
+            tsvector = func.to_tsvector(
+                'english',
+                func.coalesce(Note.title, '') + ' ' + func.coalesce(Note.content, '')
+            )
+            tsquery = func.plainto_tsquery('english', search)
+            stmt = stmt.where(tsvector.op('@@')(tsquery))
 
     # Pinned notes first, then most recently updated
     stmt = stmt.order_by(Note.is_pinned.desc(), Note.updated_at.desc())
