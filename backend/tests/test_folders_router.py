@@ -9,7 +9,11 @@ async def test_list_folders_empty(auth_client: AsyncClient) -> None:
     """List folders returns empty list when no folders exist."""
     response = await auth_client.get("/api/folders/")
     assert response.status_code == 200
-    assert response.json() == []
+    data = response.json()
+    assert data["items"] == []
+    assert data["total"] == 0
+    assert data["limit"] == 50
+    assert data["offset"] == 0
 
 
 @pytest.mark.asyncio
@@ -70,7 +74,7 @@ async def test_delete_folder(auth_client: AsyncClient) -> None:
 
     # Verify deleted
     list_resp = await auth_client.get("/api/folders/")
-    folder_ids = [f["id"] for f in list_resp.json()]
+    folder_ids = [f["id"] for f in list_resp.json()["items"]]
     assert folder_id not in folder_ids
 
 

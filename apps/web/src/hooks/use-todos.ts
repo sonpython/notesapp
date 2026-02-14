@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { api } from '@/lib/api'
-import type { Todo } from '@/lib/types'
+import type { Todo, PaginatedResponse } from '@/lib/types'
 
 /** Filter type for todo list views */
 export type TodoFilter = 'all' | 'active' | 'completed' | 'overdue'
@@ -14,6 +14,10 @@ interface CreateTodoData {
   deadline?: string
   parent_id?: string
   reminder_at?: string
+  recurrence_type?: string
+  recurrence_interval?: number
+  recurrence_days?: string
+  recurrence_end_date?: string
 }
 
 interface UpdateTodoData {
@@ -23,6 +27,10 @@ interface UpdateTodoData {
   deadline?: string
   is_completed?: boolean
   reminder_at?: string
+  recurrence_type?: string
+  recurrence_interval?: number
+  recurrence_days?: string
+  recurrence_end_date?: string
 }
 
 /**
@@ -35,22 +43,60 @@ export function useTodos() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<TodoFilter>('all')
+  const [total, setTotal] = useState(0)
+  const [offset, setOffset] = useState(0)
+  const [limit] = useState(50)
+  const [currentTagIds, setCurrentTagIds] = useState<string[] | undefined>()
 
-  const fetchTodos = useCallback(async (activeFilter?: TodoFilter) => {
+  const hasMore = todos.length < total
+
+  const fetchTodos = useCallback(async (activeFilter?: TodoFilter, tagIds?: string[]) => {
     setLoading(true)
     setError(null)
+    setOffset(0)
+    setCurrentTagIds(tagIds)
     try {
       const filterParam = activeFilter || filter
-      const query = filterParam !== 'all' ? `?filter=${filterParam}` : ''
-      const data = await api.get<Todo[]>(`/api/todos${query}`)
-      setTodos(data)
+      const params = new URLSearchParams()
+      if (filterParam !== 'all') params.set('filter', filterParam)
+      if (tagIds && tagIds.length > 0) params.set('tag_ids', tagIds.join(','))
+      params.set('limit', limit.toString())
+      params.set('offset', '0')
+      const query = params.toString()
+      const data = await api.get<PaginatedResponse<Todo>>(`/api/todos${query ? `?${query}` : ''}`)
+      setTodos(data.items)
+      setTotal(data.total)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch todos'
       setError(message)
     } finally {
       setLoading(false)
     }
-  }, [filter])
+  }, [filter, limit])
+
+  const loadMore = useCallback(async () => {
+    if (loading || !hasMore) return
+    setLoading(true)
+    setError(null)
+    try {
+      const newOffset = offset + limit
+      const params = new URLSearchParams()
+      if (filter !== 'all') params.set('filter', filter)
+      if (currentTagIds && currentTagIds.length > 0) params.set('tag_ids', currentTagIds.join(','))
+      params.set('limit', limit.toString())
+      params.set('offset', newOffset.toString())
+      const query = params.toString()
+      const data = await api.get<PaginatedResponse<Todo>>(`/api/todos${query ? `?${query}` : ''}`)
+      setTodos(prev => [...prev, ...data.items])
+      setTotal(data.total)
+      setOffset(newOffset)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load more todos'
+      setError(message)
+    } finally {
+      setLoading(false)
+    }
+  }, [loading, hasMore, offset, limit, filter, currentTagIds])
 
   const createTodo = useCallback(async (data: CreateTodoData): Promise<Todo | null> => {
     setError(null)
@@ -101,8 +147,8 @@ export function useTodos() {
   }, [todos, updateTodo])
 
   return {
-    todos, loading, error, filter,
-    setFilter, fetchTodos, createTodo,
+    todos, loading, error, filter, total, hasMore,
+    setFilter, fetchTodos, loadMore, createTodo,
     updateTodo, deleteTodo, toggleTodo,
   }
 }

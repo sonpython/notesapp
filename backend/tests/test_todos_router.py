@@ -9,7 +9,11 @@ async def test_list_todos_empty(auth_client: AsyncClient) -> None:
     """List todos returns empty list when no todos exist."""
     response = await auth_client.get("/api/todos/")
     assert response.status_code == 200
-    assert response.json() == []
+    data = response.json()
+    assert data["items"] == []
+    assert data["total"] == 0
+    assert data["limit"] == 50
+    assert data["offset"] == 0
 
 
 @pytest.mark.asyncio
@@ -80,10 +84,10 @@ async def test_filter_todos_by_completion(auth_client: AsyncClient) -> None:
 
     # Filter incomplete
     response = await auth_client.get("/api/todos/", params={"is_completed": "false"})
-    todos = response.json()
-    assert all(t["is_completed"] is False for t in todos)
+    data = response.json()
+    assert all(t["is_completed"] is False for t in data["items"])
 
     # Filter completed
     response = await auth_client.get("/api/todos/", params={"is_completed": "true"})
-    todos = response.json()
-    assert all(t["is_completed"] is True for t in todos)
+    data = response.json()
+    assert all(t["is_completed"] is True for t in data["items"])

@@ -9,7 +9,11 @@ async def test_list_notes_empty(auth_client: AsyncClient) -> None:
     """List notes returns empty list when no notes exist."""
     response = await auth_client.get("/api/notes/")
     assert response.status_code == 200
-    assert response.json() == []
+    data = response.json()
+    assert data["items"] == []
+    assert data["total"] == 0
+    assert data["limit"] == 50
+    assert data["offset"] == 0
 
 
 @pytest.mark.asyncio
@@ -35,8 +39,9 @@ async def test_create_and_list_notes(auth_client: AsyncClient) -> None:
 
     response = await auth_client.get("/api/notes/")
     assert response.status_code == 200
-    notes = response.json()
-    assert len(notes) == 2
+    data = response.json()
+    assert len(data["items"]) == 2
+    assert data["total"] == 2
 
 
 @pytest.mark.asyncio
@@ -103,9 +108,9 @@ async def test_filter_notes_by_pinned(auth_client: AsyncClient) -> None:
 
     response = await auth_client.get("/api/notes/", params={"is_pinned": "true"})
     assert response.status_code == 200
-    notes = response.json()
-    assert len(notes) == 1
-    assert notes[0]["title"] == "Pinned"
+    data = response.json()
+    assert len(data["items"]) == 1
+    assert data["items"][0]["title"] == "Pinned"
 
 
 @pytest.mark.asyncio
@@ -120,12 +125,12 @@ async def test_filter_notes_by_archived(auth_client: AsyncClient) -> None:
 
     # Filter archived
     response = await auth_client.get("/api/notes/", params={"is_archived": "true"})
-    notes = response.json()
-    assert len(notes) == 1
-    assert notes[0]["title"] == "Archived"
+    data = response.json()
+    assert len(data["items"]) == 1
+    assert data["items"][0]["title"] == "Archived"
 
     # Filter not archived (default behavior shows non-archived)
     response = await auth_client.get("/api/notes/", params={"is_archived": "false"})
-    notes = response.json()
-    assert len(notes) == 1
-    assert notes[0]["title"] == "Active"
+    data = response.json()
+    assert len(data["items"]) == 1
+    assert data["items"][0]["title"] == "Active"
