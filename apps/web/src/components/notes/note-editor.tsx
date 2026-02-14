@@ -7,11 +7,13 @@ import { Pin, Archive, Eye, Edit3, Trash2 } from 'lucide-react'
 import type { Note } from '@/lib/types'
 import { useDebounce } from '@/hooks/use-debounce'
 import { NotePreview } from '@/components/notes/note-preview'
+import { NoteExportMenu } from '@/components/notes/note-export-menu'
 
 interface NoteEditorProps {
   note: Note | null
   onSave: (id: string, data: { title?: string; content?: string; is_pinned?: boolean; is_archived?: boolean }) => void
   onDelete?: (id: string) => void
+  onExportAll?: () => Promise<void>
 }
 
 /**
@@ -19,7 +21,7 @@ interface NoteEditorProps {
  * preview toggle, and action toolbar (pin, archive, delete).
  * Auto-saves changes after 500ms debounce.
  */
-export function NoteEditor({ note, onSave, onDelete }: NoteEditorProps) {
+export function NoteEditor({ note, onSave, onDelete, onExportAll }: NoteEditorProps) {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [isPreview, setIsPreview] = useState(false)
@@ -94,13 +96,16 @@ export function NoteEditor({ note, onSave, onDelete }: NoteEditorProps) {
             </ToolbarButton>
           )}
         </div>
-        <ToolbarButton
-          onClick={() => setIsPreview(prev => !prev)}
-          active={isPreview}
-          title={isPreview ? 'Edit' : 'Preview'}
-        >
-          {isPreview ? <Edit3 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-        </ToolbarButton>
+        <div className="flex items-center gap-1">
+          <NoteExportMenu note={note} onExportAll={onExportAll} />
+          <ToolbarButton
+            onClick={() => setIsPreview(prev => !prev)}
+            active={isPreview}
+            title={isPreview ? 'Edit' : 'Preview'}
+          >
+            {isPreview ? <Edit3 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </ToolbarButton>
+        </div>
       </div>
 
       {/* Title input */}

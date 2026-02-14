@@ -92,6 +92,29 @@ export default function NotesPage() {
     localStorage.setItem(NOTE_LIST_WIDTH_KEY, clampedWidth.toString())
   }, [])
 
+  // Handle export all notes as ZIP
+  const handleExportAll = useCallback(async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/notes/export/zip`, {
+        credentials: 'include',
+      })
+      if (!response.ok) throw new Error('Export failed')
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'notes_export.zip'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Bulk export failed:', error)
+      throw error
+    }
+  }, [])
+
   return (
     <div className="flex h-screen bg-background">
       {/* Left panel: search, new note, note list */}
@@ -149,6 +172,7 @@ export default function NotesPage() {
           note={selectedNote}
           onSave={handleSave}
           onDelete={handleDelete}
+          onExportAll={handleExportAll}
         />
       </div>
     </div>
