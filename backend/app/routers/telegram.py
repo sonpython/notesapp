@@ -5,7 +5,7 @@ from __future__ import annotations
 import secrets
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +20,7 @@ from app.schemas.telegram import (
     TelegramWebhookPayload,
 )
 from app.services.telegram_service import send_telegram_message
+from app.rate_limiter import limiter, WEBHOOK_RATE_LIMIT
 
 router = APIRouter(prefix="/api/telegram", tags=["telegram"])
 
@@ -103,7 +104,9 @@ async def unlink_telegram(
 
 
 @router.post("/webhook", status_code=200)
+@limiter.limit(WEBHOOK_RATE_LIMIT)
 async def telegram_webhook(
+    request: Request,
     payload: TelegramWebhookPayload,
     session: AsyncSession = Depends(get_db),
 ) -> dict:

@@ -8,8 +8,12 @@ from collections.abc import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import settings
+from app.rate_limiter import limiter
 from app.tasks.reminders import start_scheduler, stop_scheduler
 
 logger = logging.getLogger(__name__)
@@ -30,6 +34,11 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# --- Rate limiting ---
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # --- CORS middleware ---
 app.add_middleware(
