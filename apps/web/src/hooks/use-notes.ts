@@ -12,6 +12,7 @@ interface UseNotesReturn {
   createNote: (data: Partial<Note>) => Promise<Note>
   updateNote: (id: string, data: Partial<Note>) => Promise<Note>
   deleteNote: (id: string) => Promise<void>
+  moveNoteToFolder: (noteId: string, folderId: string | null) => Promise<void>
 }
 
 /**
@@ -77,5 +78,17 @@ export function useNotes(): UseNotesReturn {
     }
   }, [])
 
-  return { notes, loading, error, fetchNotes, createNote, updateNote, deleteNote }
+  const moveNoteToFolder = useCallback(async (noteId: string, folderId: string | null): Promise<void> => {
+    try {
+      await api.put(`/api/notes/${noteId}`, { folder_id: folderId })
+      // Refresh to update the note's folder
+      setNotes(prev => prev.map(n => (n.id === noteId ? { ...n, folder_id: folderId } : n)))
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to move note'
+      setError(message)
+      throw err
+    }
+  }, [])
+
+  return { notes, loading, error, fetchNotes, createNote, updateNote, deleteNote, moveNoteToFolder }
 }
