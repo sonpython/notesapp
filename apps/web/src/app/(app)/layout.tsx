@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { ResizableAppLayout } from '@/components/layout/resizable-app-layout'
+import { InstallBanner } from '@/components/pwa/install-banner'
 
 /**
  * Authenticated app layout with 3-column structure:
@@ -22,5 +23,10 @@ export default async function AppLayout({
     redirect('/login')
   }
 
-  return <ResizableAppLayout>{children}</ResizableAppLayout>
+  return (
+    <>
+      <ResizableAppLayout>{children}</ResizableAppLayout>
+      <InstallBanner />
+    </>
+  )
 }

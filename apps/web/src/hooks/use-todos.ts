@@ -3,6 +3,8 @@
 import { useState, useCallback } from 'react'
 import { api } from '@/lib/api'
 import type { Todo, PaginatedResponse } from '@/lib/types'
+import * as todosDB from '@/lib/offline/indexed-db-todos'
+import * as syncQueue from '@/lib/offline/indexed-db-sync-queue'
 
 /** Filter type for todo list views */
 export type TodoFilter = 'all' | 'active' | 'completed' | 'overdue'
@@ -47,6 +49,7 @@ export function useTodos() {
   const [offset, setOffset] = useState(0)
   const [limit] = useState(50)
   const [currentTagIds, setCurrentTagIds] = useState<string[] | undefined>()
+  const [fromCache, setFromCache] = useState(false)
 
   const hasMore = todos.length < total
 
@@ -66,9 +69,24 @@ export function useTodos() {
       const data = await api.get<PaginatedResponse<Todo>>(`/api/todos${query ? `?${query}` : ''}`)
       setTodos(data.items)
       setTotal(data.total)
+      setFromCache(false)
+      // Write-through to IndexedDB
+      await todosDB.putManyTodos(data.items).catch(console.error)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch todos'
       setError(message)
+      // Offline fallback: load from IndexedDB
+      if (!navigator.onLine) {
+        try {
+          const cached = await todosDB.getAllTodos()
+          setTodos(cached)
+          setTotal(cached.length)
+          setFromCache(true)
+          setError(null)
+        } catch (cacheErr) {
+          console.error('[use-todos] Failed to load from cache:', cacheErr)
+        }
+      }
     } finally {
       setLoading(false)
     }
@@ -90,6 +108,8 @@ export function useTodos() {
       setTodos(prev => [...prev, ...data.items])
       setTotal(data.total)
       setOffset(newOffset)
+      // Write-through to IndexedDB
+      await todosDB.putManyTodos(data.items).catch(console.error)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load more todos'
       setError(message)
@@ -100,6 +120,47 @@ export function useTodos() {
 
   const createTodo = useCallback(async (data: CreateTodoData): Promise<Todo | null> => {
     setError(null)
+
+    // Offline: queue + local optimistic update
+    if (!navigator.onLine) {
+      const tempTodo: Todo = {
+        id: crypto.randomUUID(),
+        user_id: '',
+        title: data.title,
+        description: data.description || null,
+        priority: data.priority || 3,
+        deadline: data.deadline || null,
+        is_completed: false,
+        completed_at: null,
+        parent_id: data.parent_id || null,
+        note_id: null,
+        sort_order: 0,
+        reminder_at: data.reminder_at || null,
+        reminder_sent: false,
+        recurrence_type: data.recurrence_type || null,
+        recurrence_interval: data.recurrence_interval || null,
+        recurrence_days: data.recurrence_days || null,
+        recurrence_end_date: data.recurrence_end_date || null,
+        recurrence_parent_id: null,
+        tags: [],
+        children: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+      await todosDB.putTodo(tempTodo)
+      await syncQueue.enqueue({
+        entity_type: 'todo',
+        operation: 'create',
+        entity_id: tempTodo.id,
+        payload: data as unknown as Record<string, unknown>,
+        timestamp: Date.now(),
+        retry_count: 0,
+      })
+      await fetchTodos()
+      return tempTodo
+    }
+
+    // Online: normal API call
     try {
       const todo = await api.post<Todo>('/api/todos', data)
       await fetchTodos()
@@ -116,6 +177,29 @@ export function useTodos() {
     data: UpdateTodoData
   ): Promise<Todo | null> => {
     setError(null)
+
+    // Offline: queue + local optimistic update
+    if (!navigator.onLine) {
+      const existing = await todosDB.getTodoById(id)
+      if (!existing) {
+        setError('Todo not found in local cache')
+        return null
+      }
+      const updated: Todo = { ...existing, ...data, updated_at: new Date().toISOString() }
+      await todosDB.putTodo(updated)
+      await syncQueue.enqueue({
+        entity_type: 'todo',
+        operation: 'update',
+        entity_id: id,
+        payload: data as unknown as Record<string, unknown>,
+        timestamp: Date.now(),
+        retry_count: 0,
+      })
+      await fetchTodos()
+      return updated
+    }
+
+    // Online: normal API call
     try {
       const todo = await api.put<Todo>(`/api/todos/${id}`, data)
       await fetchTodos()
@@ -129,6 +213,23 @@ export function useTodos() {
 
   const deleteTodo = useCallback(async (id: string): Promise<boolean> => {
     setError(null)
+
+    // Offline: queue + local optimistic update
+    if (!navigator.onLine) {
+      await todosDB.deleteTodoLocal(id)
+      await syncQueue.enqueue({
+        entity_type: 'todo',
+        operation: 'delete',
+        entity_id: id,
+        payload: null,
+        timestamp: Date.now(),
+        retry_count: 0,
+      })
+      await fetchTodos()
+      return true
+    }
+
+    // Online: normal API call
     try {
       await api.delete(`/api/todos/${id}`)
       await fetchTodos()
@@ -147,7 +248,7 @@ export function useTodos() {
   }, [todos, updateTodo])
 
   return {
-    todos, loading, error, filter, total, hasMore,
+    todos, loading, error, filter, total, hasMore, fromCache,
     setFilter, fetchTodos, loadMore, createTodo,
     updateTodo, deleteTodo, toggleTodo,
   }

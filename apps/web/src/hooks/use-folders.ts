@@ -3,6 +3,8 @@
 import { useState, useCallback, useMemo } from 'react'
 import { api } from '@/lib/api'
 import type { Folder, PaginatedResponse } from '@/lib/types'
+import * as foldersDB from '@/lib/offline/indexed-db-folders'
+import * as syncQueue from '@/lib/offline/indexed-db-sync-queue'
 
 interface UseFoldersReturn {
   folders: Folder[]
@@ -11,6 +13,7 @@ interface UseFoldersReturn {
   error: string | null
   total: number
   hasMore: boolean
+  fromCache: boolean
   fetchFolders: () => Promise<void>
   loadMore: () => Promise<void>
   createFolder: (name: string, parentId?: string) => Promise<Folder>
@@ -62,6 +65,7 @@ export function useFolders(): UseFoldersReturn {
   const [total, setTotal] = useState(0)
   const [offset, setOffset] = useState(0)
   const [limit] = useState(50)
+  const [fromCache, setFromCache] = useState(false)
 
   const hasMore = folders.length < total
 
@@ -80,9 +84,24 @@ export function useFolders(): UseFoldersReturn {
       const data = await api.get<PaginatedResponse<Folder>>(`/api/folders?${query}`)
       setFolders(data.items)
       setTotal(data.total)
+      setFromCache(false)
+      // Write-through to IndexedDB
+      await foldersDB.putManyFolders(data.items).catch(console.error)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch folders'
       setError(message)
+      // Offline fallback: load from IndexedDB
+      if (!navigator.onLine) {
+        try {
+          const cached = await foldersDB.getAllFolders()
+          setFolders(cached)
+          setTotal(cached.length)
+          setFromCache(true)
+          setError(null)
+        } catch (cacheErr) {
+          console.error('[use-folders] Failed to load from cache:', cacheErr)
+        }
+      }
     } finally {
       setLoading(false)
     }
@@ -102,6 +121,8 @@ export function useFolders(): UseFoldersReturn {
       setFolders(prev => [...prev, ...data.items])
       setTotal(data.total)
       setOffset(newOffset)
+      // Write-through to IndexedDB
+      await foldersDB.putManyFolders(data.items).catch(console.error)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load more folders'
       setError(message)
@@ -112,6 +133,33 @@ export function useFolders(): UseFoldersReturn {
 
   const createFolder = useCallback(async (name: string, parentId?: string): Promise<Folder> => {
     setError(null)
+
+    // Offline: queue + local optimistic update
+    if (!navigator.onLine) {
+      const tempFolder: Folder = {
+        id: crypto.randomUUID(),
+        user_id: '',
+        name,
+        parent_id: parentId || null,
+        icon: null,
+        children: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+      await foldersDB.putFolder(tempFolder)
+      await syncQueue.enqueue({
+        entity_type: 'folder',
+        operation: 'create',
+        entity_id: tempFolder.id,
+        payload: { name, parent_id: parentId || null },
+        timestamp: Date.now(),
+        retry_count: 0,
+      })
+      await fetchFolders()
+      return tempFolder
+    }
+
+    // Online: normal API call
     try {
       const created = await api.post<Folder>('/api/folders', {
         name,
@@ -131,6 +179,27 @@ export function useFolders(): UseFoldersReturn {
     data: { name?: string; parent_id?: string | null }
   ): Promise<Folder> => {
     setError(null)
+
+    // Offline: queue + local optimistic update
+    if (!navigator.onLine) {
+      const existing = await foldersDB.getFolderById(id)
+      if (!existing) throw new Error('Folder not found in local cache')
+
+      const updated: Folder = { ...existing, ...data, updated_at: new Date().toISOString() }
+      await foldersDB.putFolder(updated)
+      await syncQueue.enqueue({
+        entity_type: 'folder',
+        operation: 'update',
+        entity_id: id,
+        payload: data as Record<string, unknown>,
+        timestamp: Date.now(),
+        retry_count: 0,
+      })
+      await fetchFolders()
+      return updated
+    }
+
+    // Online: normal API call
     try {
       const updated = await api.put<Folder>(`/api/folders/${id}`, data)
       await fetchFolders()
@@ -144,6 +213,23 @@ export function useFolders(): UseFoldersReturn {
 
   const deleteFolder = useCallback(async (id: string): Promise<void> => {
     setError(null)
+
+    // Offline: queue + local optimistic update
+    if (!navigator.onLine) {
+      await foldersDB.deleteFolderLocal(id)
+      await syncQueue.enqueue({
+        entity_type: 'folder',
+        operation: 'delete',
+        entity_id: id,
+        payload: null,
+        timestamp: Date.now(),
+        retry_count: 0,
+      })
+      await fetchFolders()
+      return
+    }
+
+    // Online: normal API call
     try {
       await api.delete(`/api/folders/${id}`)
       await fetchFolders()
@@ -161,6 +247,7 @@ export function useFolders(): UseFoldersReturn {
     error,
     total,
     hasMore,
+    fromCache,
     fetchFolders,
     loadMore,
     createFolder,

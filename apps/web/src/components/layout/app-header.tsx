@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { ThemeToggleButton } from '@/components/ui/theme-toggle-button'
+import { OfflineIndicator } from '@/components/pwa/offline-indicator'
+import { SyncStatus } from '@/components/pwa/sync-status'
 
 /**
  * Mobile/tablet header with menu toggle for the sidebar.
@@ -18,6 +20,8 @@ export function AppHeader() {
       <header className="flex h-12 items-center justify-between border-b border-border bg-background px-4 lg:hidden">
         <h1 className="text-sm font-semibold text-foreground">NotesApp</h1>
         <div className="flex items-center gap-2">
+          <OfflineIndicator />
+          <SyncStatus />
           <ThemeToggleButton />
           <button
             type="button"

@@ -12,10 +12,13 @@ import {
   User,
   LogOut,
   Tag,
+  Download,
+  Share,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTelegram } from '@/hooks/use-telegram'
 import { useTags } from '@/hooks/use-tags'
+import { useInstallPrompt } from '@/hooks/use-install-prompt'
 import { TagManagementList } from '@/components/tags/tag-management-list'
 
 /**
@@ -30,6 +33,7 @@ export default function SettingsPage() {
     fetchStatus, linkTelegram, unlinkTelegram,
   } = useTelegram()
   const { tags, fetchTags, createTag, updateTag, deleteTag } = useTags()
+  const { canInstall, isInstalled, isIOS, install } = useInstallPrompt()
   const [copied, setCopied] = useState(false)
 
   const activeTab = searchParams.get('tab') || 'profile'
@@ -114,6 +118,16 @@ export default function SettingsPage() {
           >
             Telegram
           </button>
+          <button
+            onClick={() => router.push('/settings?tab=pwa')}
+            className={`pb-2 px-1 text-sm font-medium transition-colors ${
+              activeTab === 'pwa'
+                ? 'border-b-2 border-accent text-accent'
+                : 'text-muted hover:text-foreground'
+            }`}
+          >
+            Install App
+          </button>
         </nav>
 
         {/* Profile section */}
@@ -168,6 +182,69 @@ export default function SettingsPage() {
             onUpdate={handleUpdateTag}
             onDelete={handleDeleteTag}
           />
+        </section>
+        )}
+
+        {/* PWA Install section */}
+        {activeTab === 'pwa' && (
+        <section className="rounded-xl border border-border bg-sidebar p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Download className="h-5 w-5 text-muted" />
+            <h2 className="text-lg font-semibold text-foreground">
+              Install NotesApp
+            </h2>
+          </div>
+
+          {isInstalled ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-green-400">
+                <Check className="h-4 w-4" />
+                <span>App is installed</span>
+              </div>
+              <p className="text-sm text-muted">
+                NotesApp is installed and can be used offline. You can access it
+                from your home screen or app launcher.
+              </p>
+            </div>
+          ) : canInstall ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted">
+                Install NotesApp for a better experience with offline access,
+                faster performance, and easier access from your home screen.
+              </p>
+              <button
+                type="button"
+                onClick={install}
+                className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90"
+              >
+                <Download className="h-4 w-4" />
+                Install App
+              </button>
+            </div>
+          ) : isIOS ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted">
+                To install NotesApp on your iPhone or iPad:
+              </p>
+              <ol className="list-decimal space-y-2 pl-5 text-sm text-muted">
+                <li>Tap the Share button <Share className="inline h-3.5 w-3.5" /> in Safari</li>
+                <li>Scroll down and tap &ldquo;Add to Home Screen&rdquo;</li>
+                <li>Tap &ldquo;Add&rdquo; to confirm</li>
+              </ol>
+              <p className="text-sm text-muted">
+                Once installed, you can use NotesApp offline and access it from
+                your home screen.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted">
+                NotesApp can be installed as a standalone app for offline access
+                and better performance. Install option will appear when using a
+                compatible browser (Chrome, Edge, Safari on iOS).
+              </p>
+            </div>
+          )}
         </section>
         )}
 

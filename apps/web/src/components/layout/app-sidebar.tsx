@@ -18,6 +18,8 @@ import { useTags } from '@/hooks/use-tags'
 import { FolderTree } from '@/components/folders/folder-tree'
 import { ThemeToggleButton } from '@/components/ui/theme-toggle-button'
 import { TagFilterSection } from '@/components/tags/tag-filter-section'
+import { OfflineIndicator } from '@/components/pwa/offline-indicator'
+import { SyncStatus } from '@/components/pwa/sync-status'
 
 interface NavItem {
   label: string
@@ -204,6 +206,12 @@ export function AppSidebar() {
 
       {/* User section at bottom */}
       <div className="border-t border-zinc-800 px-4 py-3">
+        {/* Status indicators */}
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <OfflineIndicator />
+          <SyncStatus />
+        </div>
+
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-xs text-zinc-500">
             {user?.email ?? 'Loading...'}
