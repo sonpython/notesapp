@@ -85,16 +85,10 @@ async def create_note(
     session: AsyncSession = Depends(get_db),
 ) -> NoteResponse:
     """Create a new note for the current user."""
-    # Auto-generate title from content if empty
-    title = body.title
-    if not title and body.content:
-        # Use first line or first 50 chars
-        first_line = body.content.split('\n')[0].strip()
-        title = first_line[:50] + ('...' if len(first_line) > 50 else '')
-
+    # Title starts empty - auto-generation happens on subsequent saves
     note = Note(
         user_id=user_id,
-        title=title or 'Untitled',
+        title=body.title or '',
         content=body.content,
         folder_id=body.folder_id,
         is_pinned=body.is_pinned,
@@ -151,11 +145,13 @@ async def update_note(
     if str(note.user_id) != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # Auto-generate title from content if note has no title
-    if body.content and not note.title and body.title is None:
-        first_line = body.content.split('\n')[0].strip()
-        if first_line:
-            body.title = first_line[:50] + ('...' if len(first_line) > 50 else '')
+    # Auto-generate title from content if note has no title and user didn't set one
+    if not note.title and body.title is None:
+        content = body.content if body.content is not None else note.content
+        if content:
+            first_line = content.split('\n')[0].strip()
+            if first_line:
+                body.title = first_line[:50] + ('...' if len(first_line) > 50 else '')
 
     apply_note_update(note, body)
     await session.commit()
