@@ -151,6 +151,12 @@ async def update_note(
     if str(note.user_id) != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    # Auto-generate title from content if note has no title
+    if body.content and not note.title and body.title is None:
+        first_line = body.content.split('\n')[0].strip()
+        if first_line:
+            body.title = first_line[:50] + ('...' if len(first_line) > 50 else '')
+
     apply_note_update(note, body)
     await session.commit()
 
