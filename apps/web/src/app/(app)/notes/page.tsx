@@ -36,7 +36,10 @@ export default function NotesPage() {
 
   const folderId = searchParams.get('folder') ?? undefined
   const tagIdsParam = searchParams.get('tags')
-  const tagIds = tagIdsParam ? tagIdsParam.split(',') : undefined
+  const tagIds = useMemo(
+    () => (tagIdsParam ? tagIdsParam.split(',') : undefined),
+    [tagIdsParam]
+  )
   const debouncedSearch = useDebounce(searchQuery, 300)
 
   // Fetch notes on mount and when folder, tags, or debounced search changes

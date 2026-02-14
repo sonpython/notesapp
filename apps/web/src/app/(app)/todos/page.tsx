@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Search, AlertCircle } from 'lucide-react'
 import { useTodos, type TodoFilter } from '@/hooks/use-todos'
@@ -28,7 +28,10 @@ export default function TodosPage() {
 
   const [search, setSearch] = useState('')
   const tagIdsParam = searchParams.get('tags')
-  const tagIds = tagIdsParam ? tagIdsParam.split(',') : undefined
+  const tagIds = useMemo(
+    () => (tagIdsParam ? tagIdsParam.split(',') : undefined),
+    [tagIdsParam]
+  )
 
   // Fetch todos on mount and when filter or tags change
   useEffect(() => {
