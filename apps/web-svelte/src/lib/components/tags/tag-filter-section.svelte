@@ -12,7 +12,7 @@
   let { tags, selectedTagIds, ontoggleTag, onclearAll }: Props = $props();
 </script>
 
-{#if tags.length === 0}
+{#if !tags?.length}
   <div class="text-xs text-zinc-500 italic px-2">No tags yet</div>
 {:else}
   <div class="space-y-2">
@@ -32,7 +32,7 @@
       {/each}
     </div>
 
-    {#if selectedTagIds.length > 0}
+    {#if selectedTagIds?.length > 0}
       <button
         onclick={onclearAll}
         class="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-400 transition-colors px-2"

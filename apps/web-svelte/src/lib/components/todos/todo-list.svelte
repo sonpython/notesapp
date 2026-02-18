@@ -12,7 +12,7 @@
   let { todos, ontoggle, onupdate, ondelete }: Props = $props();
 </script>
 
-{#if todos.length === 0}
+{#if !todos?.length}
   <div class="flex flex-col items-center justify-center py-16 text-muted">
     <p class="text-sm">No todos yet. Create one above.</p>
   </div>

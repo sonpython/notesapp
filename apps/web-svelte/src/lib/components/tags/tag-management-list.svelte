@@ -111,7 +111,7 @@
   {/if}
 
   <!-- Tags list -->
-  {#if tags.length === 0}
+  {#if !tags?.length}
     <div class="text-center py-8 text-zinc-500 text-sm">
       No tags created yet. Add your first tag to get started.
     </div>

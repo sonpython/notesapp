@@ -46,7 +46,7 @@
   }
 </script>
 
-{#if sortedNotes.length === 0}
+{#if !sortedNotes?.length}
   <div class="flex items-center justify-center h-full text-muted text-sm">No notes yet</div>
 {:else}
   <div class="overflow-y-auto h-full">

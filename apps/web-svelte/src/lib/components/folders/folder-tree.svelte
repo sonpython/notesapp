@@ -27,7 +27,7 @@
   let newRootName = $state('');
   let rootInput = $state<HTMLInputElement | null>(null);
 
-  const isEmpty = $derived(folders.length === 0 && !isCreatingRoot);
+  const isEmpty = $derived(!folders?.length && !isCreatingRoot);
 
   // Focus root input when it appears
   $effect(() => {

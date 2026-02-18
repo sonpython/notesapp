@@ -143,7 +143,7 @@
 				</button>
 			{/each}
 		</div>
-		{#if selectedTagIds.length > 0}
+		{#if selectedTagIds?.length > 0}
 			<button
 				type="button"
 				onclick={clearTagFilters}
