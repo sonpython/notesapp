@@ -21,6 +21,7 @@ class TelegramWebhookPayload(BaseModel):
     """Simplified Telegram webhook update"""
     update_id: int
     message: dict | None = None
+    callback_query: dict | None = None  # For inline keyboard button clicks
 
 
 # --- Backup settings schemas ---

@@ -128,20 +128,48 @@
 		{:else if activeTab === 'about'}
 			<div class="max-w-md space-y-4">
 				<h2 class="text-lg font-semibold text-foreground">About</h2>
-				<div class="rounded-lg border border-border bg-sidebar p-4 space-y-2">
+				<div class="rounded-lg border border-border bg-sidebar p-4 space-y-3">
 					<div class="flex items-center justify-between text-sm">
 						<span class="text-muted">App</span>
 						<span class="font-medium text-foreground">NotesApp</span>
 					</div>
 					<div class="flex items-center justify-between text-sm">
 						<span class="text-muted">Version</span>
-						<span class="font-medium text-foreground">1.0.0</span>
+						<span class="font-medium text-foreground">2.0.0</span>
 					</div>
-					<div class="flex items-center justify-between text-sm">
-						<span class="text-muted">Stack</span>
-						<span class="font-medium text-foreground">SvelteKit + FastAPI</span>
+					<div class="border-t border-border pt-3 mt-2">
+						<p class="text-xs text-muted mb-2">Tech Stack</p>
+						<div class="space-y-1.5 text-xs">
+							<div class="flex justify-between">
+								<span class="text-muted">Frontend</span>
+								<span class="text-foreground">SvelteKit 2 + TailwindCSS 4</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-muted">Backend</span>
+								<span class="text-foreground">FastAPI + SQLAlchemy</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-muted">Database</span>
+								<span class="text-foreground">PostgreSQL (Supabase)</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-muted">Auth</span>
+								<span class="text-foreground">WebAuthn / Passkeys</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-muted">Encryption</span>
+								<span class="text-foreground">AES-256-GCM + PRF</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-muted">Bot</span>
+								<span class="text-foreground">Telegram Bot API</span>
+							</div>
+						</div>
 					</div>
 				</div>
+				<p class="text-xs text-muted text-center">
+					Made with ❤️ by Michael Phan
+				</p>
 			</div>
 		{/if}
 	</div>

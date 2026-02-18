@@ -10,17 +10,35 @@ logger = logging.getLogger(__name__)
 TELEGRAM_MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
 
-async def send_telegram_message(chat_id: str, text: str) -> bool:
+async def send_telegram_message(
+    chat_id: str,
+    text: str,
+    reply_markup: dict | None = None,
+) -> bool:
     """Send a message to a Telegram chat. Returns True on success."""
     settings = get_settings()
     if not settings.TELEGRAM_BOT_TOKEN:
         return False
     url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload: dict = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
     async with httpx.AsyncClient() as client:
-        response = await client.post(
-            url,
-            json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"},
-        )
+        response = await client.post(url, json=payload)
+        return response.status_code == 200
+
+
+async def answer_callback_query(callback_query_id: str, text: str | None = None) -> bool:
+    """Answer a callback query to remove the loading indicator."""
+    settings = get_settings()
+    if not settings.TELEGRAM_BOT_TOKEN:
+        return False
+    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
+    payload: dict = {"callback_query_id": callback_query_id}
+    if text:
+        payload["text"] = text
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=payload)
         return response.status_code == 200
 
 

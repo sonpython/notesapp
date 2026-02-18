@@ -6,12 +6,13 @@ import secrets
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user
+from app.models.note import Note
 from app.models.telegram import TelegramSettings
 from app.models.todo import Todo
 from app.schemas.telegram import (
@@ -19,7 +20,7 @@ from app.schemas.telegram import (
     TelegramStatusResponse,
     TelegramWebhookPayload,
 )
-from app.services.telegram_service import send_telegram_message
+from app.services.telegram_service import send_telegram_message, answer_callback_query
 from app.rate_limiter import limiter, WEBHOOK_RATE_LIMIT
 
 router = APIRouter(prefix="/api/telegram", tags=["telegram"])
@@ -121,7 +122,13 @@ async def telegram_webhook(
     - /todo <title> - Create a new todo
     - /list - List active todos
     - /done <number> - Mark todo complete (by list number)
+    - /search <query> - Search notes by title/content
     """
+    # Handle callback queries (inline keyboard button clicks)
+    if payload.callback_query:
+        await _handle_callback_query(session, payload.callback_query)
+        return {"ok": True}
+
     message = payload.message
     if message is None:
         return {"ok": True}
@@ -168,6 +175,15 @@ async def telegram_webhook(
             await send_telegram_message(chat_id, "Usage: `/done 1`")
         return {"ok": True}
 
+    # /search <query> - Search notes
+    if text.startswith("/search "):
+        query = text[8:].strip()
+        if query:
+            await _handle_search(session, chat_id, user_id, query)
+        else:
+            await send_telegram_message(chat_id, "Usage: `/search keyword`")
+        return {"ok": True}
+
     return {"ok": True}
 
 
@@ -189,7 +205,7 @@ async def _handle_start(session: AsyncSession, chat_id: str, code: str) -> None:
         record.link_code = None
         record.bot_linked_at = datetime.now(timezone.utc)
         await session.commit()
-        await send_telegram_message(chat_id, "✅ Liên kết thành công!\n\nCommands:\n/todo <title> - Tạo todo\n/list - Xem danh sách\n/done <n> - Hoàn thành")
+        await send_telegram_message(chat_id, "✅ Liên kết thành công!\n\nCommands:\n/search <query> - Tìm kiếm note\n/todo <title> - Tạo todo\n/list - Xem danh sách todo\n/done <n> - Hoàn thành todo")
     else:
         await send_telegram_message(chat_id, "❌ Mã không hợp lệ hoặc đã hết hạn.\n\nVui lòng tạo mã mới trong Settings → Telegram.")
 
@@ -245,3 +261,87 @@ async def _handle_done(session: AsyncSession, chat_id: str, user_id: str, num: i
     todo.completed_at = datetime.now(timezone.utc)
     await session.commit()
     await send_telegram_message(chat_id, f"✅ Completed: *{title}*")
+
+
+async def _handle_search(session: AsyncSession, chat_id: str, user_id: str, query: str) -> None:
+    """Search notes by title or content."""
+    search_pattern = f"%{query}%"
+    stmt = select(Note).where(
+        Note.user_id == user_id,
+        Note.is_archived == False,  # noqa: E712
+        or_(
+            Note.title.ilike(search_pattern),
+            Note.content.ilike(search_pattern),
+        ),
+    ).order_by(Note.updated_at.desc()).limit(10)
+    result = await session.execute(stmt)
+    notes = list(result.scalars().all())
+
+    if not notes:
+        await send_telegram_message(chat_id, f"🔍 Không tìm thấy note nào với từ khóa: *{query}*")
+        return
+
+    # Build inline keyboard with note titles
+    keyboard = []
+    for note in notes:
+        title = note.title or "Untitled"
+        # Truncate long titles
+        if len(title) > 40:
+            title = title[:37] + "..."
+        keyboard.append([{
+            "text": f"📝 {title}",
+            "callback_data": f"view_note:{note.id}",
+        }])
+
+    reply_markup = {"inline_keyboard": keyboard}
+    await send_telegram_message(
+        chat_id,
+        f"🔍 Tìm thấy {len(notes)} note với từ khóa: *{query}*\n\nChọn note để xem nội dung:",
+        reply_markup=reply_markup,
+    )
+
+
+async def _handle_callback_query(session: AsyncSession, callback_query: dict) -> None:
+    """Handle inline keyboard button clicks."""
+    callback_id = callback_query.get("id")
+    data = callback_query.get("data", "")
+    chat_id = str(callback_query.get("message", {}).get("chat", {}).get("id"))
+
+    if not chat_id:
+        return
+
+    # Acknowledge the callback
+    await answer_callback_query(callback_id)
+
+    # Get user_id from chat_id
+    user_id = await _get_user_id(session, chat_id)
+    if user_id is None:
+        await send_telegram_message(chat_id, "⚠️ Vui lòng liên kết tài khoản trước.")
+        return
+
+    # Handle view_note callback
+    if data.startswith("view_note:"):
+        note_id = data[10:]  # Remove "view_note:" prefix
+        await _handle_view_note(session, chat_id, user_id, note_id)
+
+
+async def _handle_view_note(session: AsyncSession, chat_id: str, user_id: str, note_id: str) -> None:
+    """Display note content."""
+    stmt = select(Note).where(Note.id == note_id, Note.user_id == user_id)
+    result = await session.execute(stmt)
+    note = result.scalar_one_or_none()
+
+    if not note:
+        await send_telegram_message(chat_id, "⚠️ Note không tồn tại hoặc bạn không có quyền xem.")
+        return
+
+    title = note.title or "Untitled"
+    content = note.content or "(Không có nội dung)"
+
+    # Truncate very long content for Telegram (4096 char limit)
+    if len(content) > 3500:
+        content = content[:3500] + "\n\n_...nội dung bị cắt ngắn..._"
+
+    # Format message
+    message = f"📝 *{title}*\n\n{content}"
+    await send_telegram_message(chat_id, message)
