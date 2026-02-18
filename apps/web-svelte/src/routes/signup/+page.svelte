@@ -10,6 +10,7 @@
 	async function handleSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		error = null;
+		console.log('[SIGNUP] Form submitted');
 
 		const trimmedName = displayName.trim();
 		if (!trimmedName) {
@@ -17,17 +18,23 @@
 			return;
 		}
 
-		if (!isPasskeySupported()) {
+		const supported = isPasskeySupported();
+		console.log('[SIGNUP] Passkey supported:', supported);
+		if (!supported) {
 			error = 'Your browser does not support passkeys. Please use a modern browser.';
 			return;
 		}
 
 		loading = true;
 		try {
+			console.log('[SIGNUP] Calling registerPasskey...');
 			await registerPasskey(trimmedName);
+			console.log('[SIGNUP] Success! Redirecting to /notes');
 			goto('/notes');
 		} catch (err) {
+			console.error('[SIGNUP] Error caught:', err);
 			if (err instanceof Error) {
+				console.error('[SIGNUP] Error name:', err.name, 'message:', err.message);
 				if (err.name === 'NotAllowedError') {
 					error = 'Passkey creation was cancelled. Please try again.';
 				} else {

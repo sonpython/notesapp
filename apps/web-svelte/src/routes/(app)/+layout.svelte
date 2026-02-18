@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import type { Snippet } from 'svelte';
+	import { onMount } from 'svelte';
 	import { authStore } from '$lib/stores/auth-store.svelte';
+	import ResizableAppLayout from '$lib/components/layout/resizable-app-layout.svelte';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -10,6 +11,6 @@
 	});
 </script>
 
-<div class="flex min-h-screen bg-background">
+<ResizableAppLayout>
 	{@render children()}
-</div>
+</ResizableAppLayout>

@@ -42,31 +42,54 @@ export function isPasskeySupported(): boolean {
  * Register a new user with a passkey.
  */
 export async function registerPasskey(displayName: string): Promise<AuthUser> {
+	console.log('[DEBUG] registerPasskey started', { displayName, API_URL });
+
+	// Step 1: Get registration options
+	console.log('[DEBUG] Step 1: Fetching registration options...');
 	const optionsRes = await fetch(`${API_URL}/api/auth/register/options`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ display_name: displayName }),
 		credentials: 'include'
 	});
+	console.log('[DEBUG] Options response status:', optionsRes.status);
+
 	if (!optionsRes.ok) {
 		const error = await optionsRes.json().catch(() => ({}));
+		console.error('[DEBUG] Options fetch failed:', error);
 		throw new Error(error.detail || 'Failed to get registration options');
 	}
 	const { options, challenge_id }: RegisterOptionsResponse = await optionsRes.json();
+	console.log('[DEBUG] Step 1 complete - got options:', { challenge_id, rp: options.rp });
 
-	const credential = await startRegistration({ optionsJSON: options });
+	// Step 2: Start WebAuthn registration ceremony
+	console.log('[DEBUG] Step 2: Starting WebAuthn registration ceremony...');
+	try {
+		const credential = await startRegistration({ optionsJSON: options });
+		console.log('[DEBUG] Step 2 complete - got credential:', { id: credential.id, type: credential.type });
 
-	const verifyRes = await fetch(`${API_URL}/api/auth/register/verify`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ credential, challenge_id }),
-		credentials: 'include'
-	});
-	if (!verifyRes.ok) {
-		const error = await verifyRes.json().catch(() => ({}));
-		throw new Error(error.detail || 'Registration verification failed');
+		// Step 3: Verify registration
+		console.log('[DEBUG] Step 3: Verifying registration...');
+		const verifyRes = await fetch(`${API_URL}/api/auth/register/verify`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ credential, challenge_id }),
+			credentials: 'include'
+		});
+		console.log('[DEBUG] Verify response status:', verifyRes.status);
+
+		if (!verifyRes.ok) {
+			const error = await verifyRes.json().catch(() => ({}));
+			console.error('[DEBUG] Verify failed:', error);
+			throw new Error(error.detail || 'Registration verification failed');
+		}
+		const user = await verifyRes.json();
+		console.log('[DEBUG] Step 3 complete - user created:', user);
+		return user;
+	} catch (err) {
+		console.error('[DEBUG] WebAuthn error:', err);
+		throw err;
 	}
-	return verifyRes.json();
 }
 
 /**

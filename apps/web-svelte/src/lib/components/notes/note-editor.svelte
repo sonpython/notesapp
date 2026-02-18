@@ -1,0 +1,203 @@
+<script lang="ts">
+  /**
+   * Full note editor with title input, CodeMirror markdown editor,
+   * preview toggle, and action toolbar (pin, archive, delete).
+   * Auto-saves changes after 500 ms debounce.
+   */
+  import { Pin, Archive, Eye, Edit3, Trash2 } from 'lucide-svelte';
+  import CodeMirror from 'svelte-codemirror-editor';
+  import { markdown } from '@codemirror/lang-markdown';
+  import type { Note } from '$lib/types';
+  import { TagsStore } from '$lib/stores/tags-store.svelte';
+  import NotePreview from './note-preview.svelte';
+  import NoteExportMenu from './note-export-menu.svelte';
+  import TagSelector from '$lib/components/tags/tag-selector.svelte';
+  import { api } from '$lib/api';
+
+  interface Props {
+    note: Note | null;
+    onsave: (id: string, data: { title?: string; content?: string; is_pinned?: boolean; is_archived?: boolean }) => void;
+    ondelete?: (id: string) => void;
+    onexportAll?: () => Promise<void>;
+  }
+
+  let { note, onsave, ondelete, onexportAll }: Props = $props();
+
+  const tagsStore = new TagsStore();
+
+  let title = $state('');
+  let content = $state('');
+  let isPreview = $state(false);
+
+  // Debounce timers
+  let titleTimer: ReturnType<typeof setTimeout> | null = null;
+  let contentTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Sync local state when selected note changes
+  $effect(() => {
+    if (note) {
+      title = note.title;
+      content = note.content;
+      isPreview = false;
+    }
+  });
+
+  // Fetch tags on mount
+  $effect(() => {
+    tagsStore.fetchTags();
+  });
+
+  // Auto-save title with debounce
+  $effect(() => {
+    const t = title; // track reactive dependency
+    if (!note || t === note.title) return;
+    if (titleTimer) clearTimeout(titleTimer);
+    titleTimer = setTimeout(() => {
+      if (note) onsave(note.id, { title: t });
+    }, 500);
+    return () => { if (titleTimer) clearTimeout(titleTimer); };
+  });
+
+  // Auto-save content with debounce
+  $effect(() => {
+    const c = content; // track reactive dependency
+    if (!note || c === note.content) return;
+    if (contentTimer) clearTimeout(contentTimer);
+    contentTimer = setTimeout(() => {
+      if (note) onsave(note.id, { content: c });
+    }, 500);
+    return () => { if (contentTimer) clearTimeout(contentTimer); };
+  });
+
+  function handleTogglePin() {
+    if (note) onsave(note.id, { is_pinned: !note.is_pinned });
+  }
+
+  function handleToggleArchive() {
+    if (note) onsave(note.id, { is_archived: !note.is_archived });
+  }
+
+  function handleDelete() {
+    if (note && ondelete) ondelete(note.id);
+  }
+
+  async function handleAddTag(tagId: string) {
+    if (!note) return;
+    try {
+      await api.post(`/api/notes/${note.id}/tags`, { tag_ids: [tagId] });
+      await tagsStore.fetchTags();
+    } catch (err) {
+      console.error('Failed to add tag:', err);
+    }
+  }
+
+  async function handleRemoveTag(tagId: string) {
+    if (!note) return;
+    try {
+      await api.delete(`/api/notes/${note.id}/tags/${tagId}`);
+      await tagsStore.fetchTags();
+    } catch (err) {
+      console.error('Failed to remove tag:', err);
+    }
+  }
+
+  async function handleCreateTag(name: string, color: string) {
+    try {
+      return await tagsStore.createTag(name, color);
+    } catch {
+      return null;
+    }
+  }
+
+  const cmExtensions = [markdown()];
+</script>
+
+{#if !note}
+  <div class="flex items-center justify-center h-full text-muted">
+    <p class="text-lg">Select a note to start editing</p>
+  </div>
+{:else}
+  <div class="flex flex-col h-full">
+    <!-- Toolbar -->
+    <div class="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
+      <div class="flex items-center gap-1">
+        <button
+          onclick={handleTogglePin}
+          title={note.is_pinned ? 'Unpin' : 'Pin'}
+          class="p-1.5 rounded-md transition-colors cursor-pointer {note.is_pinned ? 'text-accent bg-accent/10' : 'text-muted hover:text-foreground hover:bg-sidebar'}"
+        >
+          <Pin class="w-4 h-4" />
+        </button>
+        <button
+          onclick={handleToggleArchive}
+          title={note.is_archived ? 'Unarchive' : 'Archive'}
+          class="p-1.5 rounded-md transition-colors cursor-pointer {note.is_archived ? 'text-accent bg-accent/10' : 'text-muted hover:text-foreground hover:bg-sidebar'}"
+        >
+          <Archive class="w-4 h-4" />
+        </button>
+        {#if ondelete}
+          <button
+            onclick={handleDelete}
+            title="Delete"
+            class="p-1.5 rounded-md transition-colors cursor-pointer text-muted hover:text-foreground hover:bg-sidebar"
+          >
+            <Trash2 class="w-4 h-4" />
+          </button>
+        {/if}
+      </div>
+      <div class="flex items-center gap-1">
+        <NoteExportMenu {note} onexportAll={onexportAll} />
+        <button
+          onclick={() => (isPreview = !isPreview)}
+          title={isPreview ? 'Edit' : 'Preview'}
+          class="p-1.5 rounded-md transition-colors cursor-pointer {isPreview ? 'text-accent bg-accent/10' : 'text-muted hover:text-foreground hover:bg-sidebar'}"
+        >
+          {#if isPreview}
+            <Edit3 class="w-4 h-4" />
+          {:else}
+            <Eye class="w-4 h-4" />
+          {/if}
+        </button>
+      </div>
+    </div>
+
+    <!-- Tags selector -->
+    <div class="px-4 py-2 border-b border-border">
+      <TagSelector
+        selectedTags={note.tags ?? []}
+        allTags={tagsStore.tags}
+        onadd={handleAddTag}
+        onremove={handleRemoveTag}
+        oncreate={handleCreateTag}
+      />
+    </div>
+
+    <!-- Title input -->
+    <input
+      type="text"
+      bind:value={title}
+      placeholder="Untitled"
+      class="w-full px-4 py-3 text-2xl font-bold bg-transparent border-none outline-none text-foreground placeholder:text-muted/50"
+    />
+
+    <!-- Editor or Preview -->
+    <div class="flex-1 overflow-y-auto px-4 pb-4">
+      {#if isPreview}
+        <NotePreview {content} />
+      {:else}
+        <CodeMirror
+          bind:value={content}
+          extensions={cmExtensions}
+          placeholder="Start writing..."
+          class="min-h-full text-base"
+          lineWrapping
+          styles={{
+            '&': { background: 'transparent', height: '100%' },
+            '.cm-content': { fontFamily: 'inherit' },
+            '.cm-line': { lineHeight: '1.6' },
+          }}
+        />
+      {/if}
+    </div>
+  </div>
+{/if}

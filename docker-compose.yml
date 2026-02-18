@@ -27,19 +27,16 @@ services:
     command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   web:
-    image: node:22-alpine
+    image: oven/bun:1
     working_dir: /app
     ports:
-      - "3001:3000"
+      - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8001
-    env_file:
-      - ./apps/web/.env.local
+      - PUBLIC_API_URL=http://localhost:8001
     volumes:
-      - ./apps/web:/app
+      - ./apps/web-svelte:/app
       - /app/node_modules
-      - /app/.next
-    command: sh -c "corepack enable && pnpm install && pnpm dev"
+    command: sh -c "bun install && bun run dev --host 0.0.0.0"
     depends_on:
       - backend
 

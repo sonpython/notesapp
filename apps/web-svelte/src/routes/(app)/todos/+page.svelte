@@ -1,15 +1,162 @@
 <script lang="ts">
-	import { CheckSquare } from 'lucide-svelte';
+	/**
+	 * Todos page - filterable list with create form.
+	 * URL params: tags (comma-separated IDs), filter (all|active|completed|overdue).
+	 */
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import { TodosStore, type TodoFilter } from '$lib/stores/todos-store.svelte';
+	import { TagsStore } from '$lib/stores/tags-store.svelte';
+	import TodoList from '$lib/components/todos/todo-list.svelte';
+	import TodoCreateForm from '$lib/components/todos/todo-create-form.svelte';
+	import TagFilterSection from '$lib/components/tags/tag-filter-section.svelte';
+	import type { Todo } from '$lib/types';
+
+	const todosStore = new TodosStore();
+	const tagsStore = new TagsStore();
+
+	// Derive URL params reactively
+	const tagParam = $derived($page.url.searchParams.get('tags') ?? '');
+	const selectedTagIds = $derived(tagParam ? tagParam.split(',').filter(Boolean) : []);
+	const activeFilter = $derived<TodoFilter>(
+		($page.url.searchParams.get('filter') as TodoFilter) ?? 'all'
+	);
+
+	// Fetch todos when URL params change
+	$effect(() => {
+		todosStore.fetchTodos(activeFilter, selectedTagIds.length ? selectedTagIds : undefined);
+	});
+
+	onMount(() => {
+		tagsStore.fetchTags();
+	});
+
+	const FILTERS: { value: TodoFilter; label: string }[] = [
+		{ value: 'all', label: 'All' },
+		{ value: 'active', label: 'Active' },
+		{ value: 'completed', label: 'Done' },
+		{ value: 'overdue', label: 'Overdue' }
+	];
+
+	function setFilter(filter: TodoFilter) {
+		const params = new URLSearchParams($page.url.searchParams);
+		if (filter === 'all') {
+			params.delete('filter');
+		} else {
+			params.set('filter', filter);
+		}
+		goto(`?${params.toString()}`, { replaceState: true });
+	}
+
+	function toggleTag(tagId: string) {
+		const params = new URLSearchParams($page.url.searchParams);
+		const current = tagParam ? tagParam.split(',').filter(Boolean) : [];
+		const next = current.includes(tagId)
+			? current.filter((id) => id !== tagId)
+			: [...current, tagId];
+		if (next.length) {
+			params.set('tags', next.join(','));
+		} else {
+			params.delete('tags');
+		}
+		goto(`?${params.toString()}`, { replaceState: true });
+	}
+
+	function clearTagFilters() {
+		const params = new URLSearchParams($page.url.searchParams);
+		params.delete('tags');
+		goto(`?${params.toString()}`, { replaceState: true });
+	}
+
+	async function handleCreated(todo: Todo) {
+		await todosStore.createTodo({
+			title: todo.title,
+			description: todo.description ?? undefined,
+			priority: todo.priority,
+			deadline: todo.deadline ?? undefined,
+			parent_id: todo.parent_id ?? undefined,
+			reminder_at: todo.reminder_at ?? undefined,
+			recurrence_type: todo.recurrence_type ?? undefined,
+			recurrence_interval: todo.recurrence_interval ?? undefined,
+			recurrence_days: todo.recurrence_days ?? undefined,
+			recurrence_end_date: todo.recurrence_end_date ?? undefined
+		});
+	}
+
+	async function handleToggle(id: string) {
+		await todosStore.toggleTodo(id);
+	}
+
+	async function handleUpdate(id: string, data: Record<string, unknown>) {
+		await todosStore.updateTodo(id, data);
+	}
+
+	async function handleDelete(id: string) {
+		await todosStore.deleteTodo(id);
+	}
 </script>
 
 <svelte:head>
 	<title>Todos - NotesApp</title>
 </svelte:head>
 
-<div class="flex-1 flex items-center justify-center">
-	<div class="text-center">
-		<CheckSquare class="mx-auto h-12 w-12 text-muted mb-4" />
-		<h1 class="text-2xl font-bold text-foreground mb-2">Todos</h1>
-		<p class="text-muted">Todos page - components coming in Phase 4</p>
+<div class="flex h-full w-full flex-col overflow-hidden">
+	<!-- Toolbar: filter tabs -->
+	<div class="flex items-center gap-1 border-b border-border px-4 py-2">
+		{#each FILTERS as f (f.value)}
+			<button
+				onclick={() => setFilter(f.value)}
+				class="rounded-md px-3 py-1 text-sm transition-colors {activeFilter === f.value
+					? 'bg-accent/15 font-medium text-accent'
+					: 'text-muted hover:text-foreground'}"
+			>
+				{f.label}
+			</button>
+		{/each}
+
+		{#if todosStore.loading}
+			<span class="ml-auto text-xs text-muted">Loading...</span>
+		{:else}
+			<span class="ml-auto text-xs text-muted">{todosStore.total} item{todosStore.total !== 1 ? 's' : ''}</span>
+		{/if}
+	</div>
+
+	<div class="flex flex-1 overflow-hidden">
+		<!-- Main content -->
+		<div class="flex flex-1 flex-col overflow-y-auto p-4">
+			<!-- Create form -->
+			<div class="mb-4">
+				<TodoCreateForm oncreated={handleCreated} />
+			</div>
+
+			<!-- Error state -->
+			{#if todosStore.error}
+				<p class="mb-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+					{todosStore.error}
+				</p>
+			{/if}
+
+			<!-- Todo list -->
+			<TodoList
+				todos={todosStore.todos}
+				ontoggle={handleToggle}
+				onupdate={handleUpdate}
+				ondelete={handleDelete}
+			/>
+		</div>
+
+		<!-- Right sidebar: tag filters (desktop) -->
+		{#if tagsStore.tags?.length > 0}
+			<div class="hidden w-52 shrink-0 border-l border-border p-4 xl:block">
+				<p class="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Filter by tag</p>
+				<TagFilterSection
+					tags={tagsStore.tags}
+					selectedTagIds={selectedTagIds}
+					ontoggleTag={toggleTag}
+					onclearAll={clearTagFilters}
+				/>
+			</div>
+		{/if}
 	</div>
 </div>
