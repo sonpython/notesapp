@@ -4,7 +4,6 @@
 	 * Sidebar width is persisted to localStorage.
 	 */
 	import type { Snippet } from 'svelte';
-	import { PanelLeftClose, PanelLeft } from 'lucide-svelte';
 	import AppSidebar from './app-sidebar.svelte';
 	import AppHeader from './app-header.svelte';
 	import ResizableDivider from '$lib/components/ui/resizable-divider.svelte';
@@ -49,24 +48,12 @@
 	<AppHeader />
 
 	<div class="flex flex-1 overflow-hidden">
-		<!-- Desktop sidebar - hidden on mobile, collapsible -->
+		<!-- Desktop sidebar - hidden on mobile -->
+		<div class="hidden lg:flex" style="width: {sidebarCollapsed ? '56px' : sidebarWidth + 'px'};">
+			<AppSidebar oncollapse={toggleSidebar} collapsed={sidebarCollapsed} />
+		</div>
 		{#if !sidebarCollapsed}
-			<div class="hidden lg:flex" style="width: {sidebarWidth}px;">
-				<AppSidebar oncollapse={toggleSidebar} />
-			</div>
 			<ResizableDivider onresize={handleSidebarResize} class="hidden lg:block" />
-		{:else}
-			<!-- Collapsed: show expand button -->
-			<div class="hidden border-r border-border bg-sidebar p-2 lg:block">
-				<button
-					type="button"
-					onclick={toggleSidebar}
-					class="rounded p-1.5 text-muted transition-colors hover:bg-background hover:text-foreground"
-					title="Show sidebar"
-				>
-					<PanelLeft class="h-4 w-4" />
-				</button>
-			</div>
 		{/if}
 
 		<!-- Main content -->
