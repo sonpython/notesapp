@@ -89,14 +89,14 @@ export async function deriveKeyFromPasskey(): Promise<PrfKeyResult> {
 		challenge_id: string;
 	};
 
-	// Add PRF extension to the options
+	// Add PRF extension to the options (first must be ArrayBuffer)
 	const prfOptions = {
 		...options,
 		extensions: {
 			...options.extensions,
 			prf: {
 				eval: {
-					first: bufferToBase64url(PRF_SALT)
+					first: PRF_SALT.buffer
 				}
 			}
 		}
@@ -121,7 +121,7 @@ export async function deriveKeyFromPasskey(): Promise<PrfKeyResult> {
 
 	// Extract PRF result from client extension results
 	// @ts-expect-error - PRF extension types not fully defined
-	const prfResult = credential.clientExtensionResults?.prf?.results?.first;
+	const prfResult = credential.clientExtensionResults?.prf?.results?.first as ArrayBuffer | undefined;
 
 	if (!prfResult) {
 		throw new Error(
@@ -130,7 +130,7 @@ export async function deriveKeyFromPasskey(): Promise<PrfKeyResult> {
 	}
 
 	// PRF output is ArrayBuffer, convert to Uint8Array
-	const prfOutput = base64urlToBuffer(prfResult);
+	const prfOutput = new Uint8Array(prfResult);
 
 	// Derive AES-GCM key from PRF output using HKDF
 	const keyMaterial = await crypto.subtle.importKey(
