@@ -185,7 +185,9 @@ async def _handle_start(session: AsyncSession, chat_id: str, code: str) -> None:
         record.link_code = None
         record.bot_linked_at = datetime.now(timezone.utc)
         await session.commit()
-        await send_telegram_message(chat_id, "✅ Account linked! Commands:\n/todo <title>\n/list\n/done <n>")
+        await send_telegram_message(chat_id, "✅ Liên kết thành công!\n\nCommands:\n/todo <title> - Tạo todo\n/list - Xem danh sách\n/done <n> - Hoàn thành")
+    else:
+        await send_telegram_message(chat_id, "❌ Mã không hợp lệ hoặc đã hết hạn.\n\nVui lòng tạo mã mới trong Settings → Telegram.")
 
 
 async def _handle_todo(session: AsyncSession, chat_id: str, user_id: str, title: str) -> None:

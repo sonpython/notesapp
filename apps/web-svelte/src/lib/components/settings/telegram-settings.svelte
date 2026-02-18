@@ -150,13 +150,17 @@
 		<!-- Not linked - show link flow -->
 		<div class="rounded-lg border border-border bg-sidebar p-4 space-y-3">
 			<p class="text-sm text-muted">Link your Telegram to receive reminders and backup data.</p>
+			<p class="text-sm">
+				Chat với bot: <a href="https://t.me/notesappx_bot" target="_blank" class="text-accent hover:underline">@NotesAppX</a>
+			</p>
 			{#if linkCode}
 				<div class="rounded bg-accent/10 p-3">
-					<p class="text-xs text-muted mb-1">Send this to @NotesAppBot:</p>
+					<p class="text-xs text-muted mb-1">Gửi lệnh này cho bot:</p>
 					<code class="text-lg font-mono text-accent">/start {linkCode}</code>
 				</div>
+				<p class="text-xs text-muted">Bot sẽ phản hồi khi link thành công.</p>
 				<button onclick={loadData} class="text-xs text-accent hover:underline">
-					I've linked → Refresh
+					Đã link xong → Refresh
 				</button>
 			{:else}
 				<button
@@ -164,7 +168,7 @@
 					disabled={actionLoading}
 					class="rounded-lg bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90 disabled:opacity-50"
 				>
-					{actionLoading ? 'Loading...' : 'Generate Link Code'}
+					{actionLoading ? 'Loading...' : 'Tạo mã liên kết'}
 				</button>
 			{/if}
 		</div>
