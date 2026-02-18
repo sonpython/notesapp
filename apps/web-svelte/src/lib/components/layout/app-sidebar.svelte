@@ -46,7 +46,7 @@
 			<a href="/notes" class="p-2 text-zinc-400 hover:text-white" title="Notes">
 				<FileText class="h-5 w-5" />
 			</a>
-			<a href="/todos" class="p-2 text-zinc-400 hover:text-white" title="Todos">
+			<a href="/todos?filter=active" class="p-2 text-zinc-400 hover:text-white" title="Todos">
 				<CheckSquare class="h-5 w-5" />
 			</a>
 			<a href="/settings" class="p-2 text-zinc-400 hover:text-white" title="Settings">

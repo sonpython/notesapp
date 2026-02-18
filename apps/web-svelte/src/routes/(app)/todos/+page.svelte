@@ -11,9 +11,11 @@
 	import TodoList from '$lib/components/todos/todo-list.svelte';
 	import TodoCreateForm from '$lib/components/todos/todo-create-form.svelte';
 	import TagFilterSection from '$lib/components/tags/tag-filter-section.svelte';
+	import { Filter } from 'lucide-svelte';
 	import type { Todo } from '$lib/types';
 
 	const todosStore = new TodosStore();
+	let showTagFilter = $state(false);
 	const tagsStore = new TagsStore();
 
 	// Derive URL params reactively
@@ -115,48 +117,51 @@
 			</button>
 		{/each}
 
-		{#if todosStore.loading}
-			<span class="ml-auto text-xs text-muted">Loading...</span>
-		{:else}
-			<span class="ml-auto text-xs text-muted">{todosStore.total} item{todosStore.total !== 1 ? 's' : ''}</span>
-		{/if}
+		<!-- Tag filter button -->
+		<div class="relative ml-auto flex items-center gap-2">
+			{#if selectedTagIds.length > 0}
+				<button onclick={clearTagFilters} class="text-xs text-muted hover:text-foreground">
+					Clear ({selectedTagIds.length})
+				</button>
+			{/if}
+			<button
+				onclick={() => (showTagFilter = !showTagFilter)}
+				class="flex items-center gap-1 rounded-md px-2 py-1 text-sm {selectedTagIds.length > 0 ? 'bg-accent/15 text-accent' : 'text-muted hover:text-foreground'}"
+			>
+				<Filter class="h-3.5 w-3.5" />
+				Tags
+			</button>
+			{#if showTagFilter}
+				<div class="absolute right-0 top-full mt-1 z-50 w-48 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg p-2">
+					<TagFilterSection
+						tags={tagsStore.tags ?? []}
+						selectedTagIds={selectedTagIds}
+						ontoggleTag={toggleTag}
+						onclearAll={clearTagFilters}
+					/>
+				</div>
+			{/if}
+		</div>
+		<span class="text-xs text-muted">{todosStore.total} item{todosStore.total !== 1 ? 's' : ''}</span>
 	</div>
 
-	<div class="flex flex-1 overflow-hidden">
-		<!-- Main content -->
-		<div class="flex flex-1 flex-col overflow-y-auto p-4">
-			<!-- Create form -->
-			<div class="mb-4">
-				<TodoCreateForm oncreated={handleCreated} />
-			</div>
-
-			<!-- Error state -->
-			{#if todosStore.error}
-				<p class="mb-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
-					{todosStore.error}
-				</p>
-			{/if}
-
-			<!-- Todo list -->
-			<TodoList
-				todos={todosStore.todos}
-				ontoggle={handleToggle}
-				onupdate={handleUpdate}
-				ondelete={handleDelete}
-			/>
+	<!-- Main content -->
+	<div class="flex-1 overflow-y-auto p-4">
+		<div class="mb-4">
+			<TodoCreateForm oncreated={handleCreated} />
 		</div>
 
-		<!-- Right sidebar: tag filters (desktop) -->
-		{#if tagsStore.tags?.length > 0}
-			<div class="hidden w-52 shrink-0 border-l border-border p-4 xl:block">
-				<p class="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Filter by tag</p>
-				<TagFilterSection
-					tags={tagsStore.tags}
-					selectedTagIds={selectedTagIds}
-					ontoggleTag={toggleTag}
-					onclearAll={clearTagFilters}
-				/>
-			</div>
+		{#if todosStore.error}
+			<p class="mb-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+				{todosStore.error}
+			</p>
 		{/if}
+
+		<TodoList
+			todos={todosStore.todos}
+			ontoggle={handleToggle}
+			onupdate={handleUpdate}
+			ondelete={handleDelete}
+		/>
 	</div>
 </div>

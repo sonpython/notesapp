@@ -22,7 +22,7 @@
 	let isCreatingFolder = $state(false);
 
 	const navItems = [
-		{ label: 'Todos', href: '/todos', icon: CheckSquare },
+		{ label: 'Todos', href: '/todos?filter=active', icon: CheckSquare },
 		{ label: 'Settings', href: '/settings', icon: Settings },
 	] as const;
 
