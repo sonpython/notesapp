@@ -34,7 +34,29 @@
       "Bash(git -C /Users/michaelphan/projects/notesapp status -s)",
       "Bash(gh repo create:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "mcp__linear__get_issue",
+      "mcp__linear__update_issue",
+      "Bash(git checkout:*)",
+      "Bash(node:*)",
+      "Bash(pnpm --filter @notesapp/web build:*)",
+      "mcp__linear__create_comment",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(git pull:*)",
+      "Bash(source:*)",
+      "Bash(python -c:*)",
+      "Bash(command -v:*)",
+      "Bash(test:*)",
+      "Bash(pnpm tsc:*)",
+      "mcp__linear__list_issues",
+      "Bash(mcp list-tools:*)",
+      "Bash(.venv/bin/pytest tests/test_health.py -v)",
+      "Bash(.venv/bin/pytest:*)",
+      "Bash(.venv/bin/alembic upgrade:*)",
+      "Bash(.venv/bin/alembic current:*)",
+      "Bash(.venv/bin/alembic downgrade:*)"
     ]
   }
 }

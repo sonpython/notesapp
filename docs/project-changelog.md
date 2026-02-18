@@ -14,6 +14,78 @@ All notable changes to NotesApp are documented here. Format follows [Keep a Chan
 - Mobile apps (React Native, native iOS/Android)
 - Web clipper browser extension
 - Analytics dashboard
+- Phase 4 completion (final SvelteKit migration tasks)
+
+---
+
+## [0.5.0] - 2026-02-18
+
+### Added: SvelteKit Frontend Migration (Phases 1-3 Complete)
+
+#### Frontend Framework Migration
+- **SvelteKit 2 + Svelte 5 primary frontend** (in progress)
+  - New apps/web-svelte/ directory with full feature parity to Next.js
+  - Rune-based reactive stores (svelte.ts files)
+  - Server-side hooks (hooks.server.ts)
+  - TailwindCSS v4 integration
+  - Vitest setup for component/store testing
+
+#### Authentication: Passkey WebAuthn
+- **Migration from Supabase to local passkey auth**
+  - WebAuthn/FIDO2 registration and authentication
+  - Passkey credential storage in database
+  - HS256 JWT session tokens (local JWT_SECRET)
+  - No third-party auth dependency
+  - HttpOnly cookie + localStorage fallback
+  - User model + credential model (SQLAlchemy)
+  - WebAuthn registration API: POST /api/auth/register
+  - WebAuthn authentication API: POST /api/auth/authenticate
+  - Updated deps.py for HS256 validation (removed Supabase JWKS)
+
+#### Backend Changes
+- **Auth Models**: User & Credential tables for local auth
+- **Auth Schemas**: PasskeyRegistration, PasskeyAuthentication schemas
+- **JWT Auth**: HS256 only, passkey-backed user sessions
+- **Note Export Service**: Lazy import of WeasyPrint (reduce startup time)
+- **Removed**: Duplicate Alembic migration files (consolidated to single 20260213 migration)
+
+#### Frontend Structure - SvelteKit
+- **Stores**: auth, notes, todos, folders, tags, online-status (all Svelte stores)
+- **Routes**: Landing, login, signup, notes, todos, settings, offline (same as Next.js)
+- **Offline Support**: IndexedDB + sync engine (ported from Next.js)
+- **UI Components**: Same feature set as Next.js (notes editor, todos, folders, tags)
+- **Styling**: TailwindCSS v4, dark/light/system theme toggle
+
+#### Next.js App (Deprecated)
+- **Status**: Legacy app kept for reference during migration
+- **Path**: apps/web/ (will be removed in v1.0)
+- **Note**: Outdated Supabase auth, kept for comparison only
+
+### Changed
+- Backend auth system (Supabase → local HS256 passkey)
+- Frontend primary (Next.js → SvelteKit)
+- Database schema (added user & credential tables)
+- JWT validation (ES256 JWKS → HS256 HS256_secret)
+
+### Technical Details
+- **Files Added**: ~28 SvelteKit routes/components, auth models & schemas, webauthn services
+- **Files Removed**: Duplicate Alembic migration
+- **Database Tables**: 2 new (user, credential)
+- **API Changes**: POST /auth/register, POST /auth/authenticate, removed Supabase dependencies
+- **Dependencies**: Added webauthn, @simplewebauthn/browser, removed @supabase packages
+- **Code**: ~2,500 LOC added (SvelteKit), ~500 LOC removed (deprecated code)
+
+### Testing
+- SvelteKit routes functional (pages load correctly)
+- WebAuthn registration and login flows tested
+- API JWT validation updated for HS256
+- Offline support ported and functional
+- PWA service worker functional with new auth
+
+### Migration Path
+- Phases 1-3 complete: Core features, auth, offline support
+- Phase 4 in progress: Advanced features, full test coverage
+- v1.0: Next.js app removed, SvelteKit as primary frontend
 
 ---
 
@@ -265,7 +337,8 @@ All notable changes to NotesApp are documented here. Format follows [Keep a Chan
 | 0.2.0 | 2026-01-14 | Phase 2: Telegram + Reminders |
 | 0.3.0 | 2026-01-31 | Phase 3: Testing & CI/CD |
 | 0.4.0 | 2026-02-15 | Phase 4: Advanced Features (60%) |
-| 1.0.0 | TBD | Production Ready (Phase 4 100%) |
+| 0.5.0 | 2026-02-18 | SvelteKit Migration (Phases 1-3 complete, passkey auth) |
+| 1.0.0 | TBD | Production Ready (SvelteKit primary, Phase 4 100%) |
 
 ## Breaking Changes
 

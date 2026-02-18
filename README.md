@@ -51,8 +51,9 @@ pnpm lint:web         # Lint frontend only
 
 ### Stack
 - **Backend**: FastAPI + SQLAlchemy async + asyncpg + Alembic (Python 3.13)
-- **Frontend**: Next.js 16 (App Router) + React 19 + TailwindCSS v4
-- **Database**: PostgreSQL (local or Supabase as data backend)
+- **Frontend (Primary)**: SvelteKit 2 + Svelte 5 + TailwindCSS v4 (in progress, Phases 1-3 done)
+- **Frontend (Legacy)**: Next.js 16 (deprecated, kept for reference)
+- **Database**: PostgreSQL (local or managed)
 - **Auth**: Passkey-only (WebAuthn/FIDO2) with local HS256 JWT sessions
 - **Infrastructure**: pnpm monorepo + Turborepo, Docker Compose
 
@@ -70,27 +71,40 @@ pnpm lint:web         # Lint frontend only
 ├── backend/
 │   ├── app/
 │   │   ├── main.py              # FastAPI app, CORS, scheduler
-│   │   ├── config.py            # Settings from .env
+│   │   ├── config.py            # Settings from .env (JWT_SECRET, WEBAUTHN_*)
 │   │   ├── database.py          # SQLAlchemy async engine & session
-│   │   ├── deps.py              # JWT auth dependency
-│   │   ├── models/              # SQLAlchemy ORM models
-│   │   ├── schemas/             # Pydantic request/response schemas
-│   │   ├── routers/             # API endpoints
+│   │   ├── deps.py              # JWT auth dependency (HS256)
+│   │   ├── models/              # SQLAlchemy ORM models (+ user, credential for auth)
+│   │   ├── schemas/             # Pydantic request/response schemas (+ auth schemas)
+│   │   ├── routers/             # API endpoints (+ /auth/register, /auth/authenticate)
 │   │   ├── services/            # Business logic
 │   │   └── tasks/               # Background jobs (APScheduler)
 │   ├── alembic/                 # Database migrations
 │   ├── Dockerfile               # Backend container
 │   └── pyproject.toml           # Python dependencies (uv)
-├── apps/web/
+├── apps/web-svelte/             # SvelteKit 2 frontend (PRIMARY)
+│   ├── src/
+│   │   ├── routes/              # SvelteKit routes (pages)
+│   │   ├── lib/
+│   │   │   ├── stores/          # Svelte reactive stores
+│   │   │   ├── api.ts           # API client (Bearer auth)
+│   │   │   ├── auth-api.ts      # WebAuthn/passkey API
+│   │   │   ├── types.ts         # TypeScript interfaces
+│   │   │   └── offline/         # IndexedDB + sync engine
+│   │   ├── hooks.server.ts      # Server-side hooks
+│   │   └── app.d.ts             # App types
+│   ├── static/                  # Static assets
+│   ├── package.json             # Node dependencies
+│   ├── svelte.config.js         # SvelteKit config
+│   └── vite.config.ts           # Vite config
+├── apps/web/                    # Next.js 16 frontend (DEPRECATED - for reference)
 │   ├── src/
 │   │   ├── app/                 # Next.js App Router pages
 │   │   ├── components/          # React components
-│   │   ├── hooks/               # Custom React hooks
-│   │   ├── lib/                 # Utilities (API client, Supabase, types)
-│   │   ├── middleware.ts        # Session refresh, route protection
-│   │   └── globals.css          # TailwindCSS v4 styles
+│   │   ├── hooks/               # Custom React hooks (Supabase auth, deprecated)
+│   │   └── lib/                 # Utilities
 │   ├── package.json             # Node dependencies
-│   └── next.config.ts           # Next.js config
+│   └── [config files]
 ├── docker-compose.yml           # Local dev environment
 ├── pnpm-workspace.yaml          # Monorepo config
 ├── turbo.json                   # Turborepo config
@@ -179,15 +193,27 @@ bot_linked_at: datetime (nullable)
 created_at: datetime
 ```
 
-## Auth Flow
+## Auth Flow (WebAuthn Passkey)
 
-1. User registers with display name, creates passkey (Face ID/Touch ID/PIN)
-2. Backend creates user + credential, issues HS256 JWT as HttpOnly cookie
-3. Login: user authenticates with passkey, backend validates and issues JWT cookie
-4. Frontend calls API with `credentials: 'include'`, cookie sent automatically
-5. Backend validates JWT from cookie (or Bearer header for API clients)
-6. All database queries filtered by `user_id` from JWT `sub` claim
-7. Logout clears the session cookie
+1. User navigates to /signup, enters display name
+2. Frontend prompts for passkey creation (Face ID, Touch ID, PIN, security key, etc.)
+3. Backend stores credential in database (user + credential tables)
+4. Backend issues HS256 JWT session token (HttpOnly cookie)
+5. User redirected to /notes (protected route)
+
+**Login Flow:**
+1. User navigates to /login
+2. Frontend prompts for passkey authentication
+3. Backend verifies challenge response
+4. Backend issues HS256 JWT session token
+5. User redirected to /notes
+
+**API Requests:**
+1. Frontend includes Authorization: Bearer token (or uses HttpOnly cookie)
+2. Backend validates HS256 JWT signature using JWT_SECRET
+3. Extracts user_id from `sub` claim
+4. All database queries filtered by user_id
+5. Logout clears the session cookie
 
 ## Configuration
 

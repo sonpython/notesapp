@@ -2,17 +2,18 @@
 
 ## High-Level Overview
 
-NotesApp is a three-tier full-stack application:
+NotesApp is a three-tier full-stack application with multi-frontend support:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      CLIENT TIER                            │
-│  Next.js 16 (React 19) - TailwindCSS v4 - @supabase/ssr    │
-│  Service Worker (PWA), IndexedDB (offline), Theme toggle    │
-│  Runs in browser & server (SSR), serves static assets       │
-└────────────────────────┬────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│                      CLIENT TIER                                   │
+│  Primary: SvelteKit 2 (Svelte 5) - TailwindCSS v4                 │
+│  Legacy: Next.js 16 (React 19) - TailwindCSS v4 (deprecated)      │
+│  Service Worker (PWA), IndexedDB (offline), Theme toggle          │
+│  SSR (SvelteKit) / SSR+RSC (Next.js), serves static assets        │
+└────────────────────────┬─────────────────────────────────────────┘
                          │ HTTPS/REST API (online)
-                         │ Bearer JWT
+                         │ Bearer JWT (HS256 passkey-backed)
                          │ Offline sync queue
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -36,7 +37,94 @@ NotesApp is a three-tier full-stack application:
 
 ## Component Architecture
 
-### Frontend (Next.js App Router)
+### Frontend (SvelteKit 2 - Primary)
+
+> **Status**: Phases 1-3 migration complete. Svelte stores + routes match Next.js feature parity.
+
+```
+routes/
+├── +layout.svelte (root)
+│   └── Theme provider + auth state
+├── +page.svelte (/)
+│   └── Landing/public page
+├── login/+page.svelte
+│   └── WebAuthn passkey login
+├── signup/+page.svelte
+│   └── WebAuthn passkey registration
+└── (app)/ [Protected routes]
+   ├── +layout.svelte
+   │   ├── AppSidebar (navigation + folder tree + user menu + theme toggle)
+   │   ├── AppHeader (mobile hamburger + offline indicator)
+   │   └── ThemeProvider (light/dark/system)
+   ├── notes/+page.svelte
+   │   ├── NoteList (cards + pinned section, tag filtering)
+   │   ├── NoteEditor (CodeMirror + toolbar + export menu)
+   │   └── NoteExportMenu (Markdown, PDF, ZIP export)
+   ├── todos/+page.svelte
+   │   ├── TodoList (recursive, tag filtering, recurrence badge)
+   │   └── TodoCreateForm (with recurrence options)
+   └── settings/+page.svelte
+       ├── Theme preference selector
+       ├── PWA install prompt
+       └── Telegram link status & user profile
+
+lib/
+├── stores/ (Svelte stores)
+│   ├── auth-store.svelte.ts (passkey auth state)
+│   ├── notes-store.svelte.ts (CRUD + caching)
+│   ├── todos-store.svelte.ts (CRUD + filters)
+│   ├── folders-store.svelte.ts (tree builder)
+│   ├── tags-store.svelte.ts (CRUD + filtering)
+│   ├── online-status.svelte.ts (connectivity state)
+│
+├── utils/
+│   ├── debounce.svelte.ts
+│
+├── api.ts (API client with Bearer auth)
+├── auth-api.ts (Passkey/WebAuthn API)
+├── types.ts (TypeScript interfaces)
+│
+└── offline/
+   ├── indexed-db-client.ts (IndexedDB wrapper)
+   ├── indexed-db-notes.ts (Notes store)
+   ├── indexed-db-todos.ts (Todos store)
+   ├── indexed-db-folders.ts (Folders store)
+   ├── indexed-db-sync-queue.ts (Pending ops)
+   ├── offline-sync-engine.ts (Offline↔online sync)
+   └── offline-types.ts (TypeScript interfaces)
+```
+
+### Frontend (Next.js App Router - Legacy)
+
+> **Status**: Deprecated. Kept for reference during SvelteKit migration. Will be removed in v1.0.
+
+```
+app/
+├── layout.tsx (root)
+│   └── Theme provider (light/dark/system), fonts, PWA setup
+├── page.tsx (/)
+│   └── Landing/public page
+├── login, signup
+│   └── Supabase auth pages (deprecated)
+├── ~offline (PWA fallback page)
+└── (app)/ [Protected routes]
+    ├── layout.tsx
+    │   ├── AppSidebar (navigation + folder tree + user menu + theme toggle)
+    │   ├── AppHeader (mobile hamburger + offline indicator)
+    │   └── OfflineIndicator (sync status badge)
+    ├── notes/page.tsx
+    │   ├── NoteList (cards + pinned section, tag filtering)
+    │   ├── NoteEditor (CodeMirror + toolbar + export menu)
+    │   ├── NoteExportMenu (Markdown, PDF, ZIP export)
+    │   └── Search (300ms debounce, full-text search)
+    ├── todos/page.tsx
+    │   ├── TodoList (recursive, tag filtering, recurrence badge)
+    │   └── TodoCreateForm (with recurrence options)
+    └── settings/page.tsx
+        ├── Theme preference selector
+        ├── PWA install prompt
+        └── Telegram link status & user profile
+```
 
 ```
 app/
@@ -577,42 +665,70 @@ CREATE TABLE telegram_settings (
 
 ## Authentication Architecture
 
-### JWT Token Structure (Supabase)
+### Auth Migration: Passkey WebAuthn (Local)
+
+> **Migration**: Changed from Supabase email/password to local passkey (WebAuthn/FIDO2).
+> - No third-party auth provider
+> - HS256 JWT issued by backend
+> - Passkeys stored in database via SQLAlchemy
+
+### JWT Token Structure (Local HS256)
 ```
 Header:
 {
-  "alg": "ES256",  (or HS256 for older projects)
+  "alg": "HS256",
   "typ": "JWT"
 }
 
 Payload:
 {
   "sub": "user-uuid",
-  "aud": "authenticated",
   "iat": 1707900000,
   "exp": 1707903600,
-  "email": "user@example.com"
+  "user_id": "user-uuid"
 }
 
 Signature:
 {
-  ES256: signed with Supabase private key
-  HS256: signed with SUPABASE_JWT_SECRET
+  HS256: signed with JWT_SECRET (env var, 64+ char random)
 }
 ```
 
 ### Verification Flow
 ```
-1. Client sends: Authorization: Bearer <token>
-2. Backend extracts token from header
-3. Decode header to check algorithm
-4. If ES256/RS256: fetch public key from Supabase JWKS endpoint
-5. If HS256: use local SUPABASE_JWT_SECRET
-6. Validate signature
-7. Check expiry (iat + exp)
-8. Check audience (aud == "authenticated")
-9. Extract user_id from sub claim
-10. Proceed with request in user context
+1. Client sends: Authorization: Bearer <token> (or via HttpOnly cookie)
+2. Backend extracts token from header or cookie
+3. Decode header to check algorithm (HS256 only)
+4. Use local JWT_SECRET to validate signature
+5. Check expiry (iat + exp, default 7 days)
+6. Extract user_id from sub claim
+7. Proceed with request in user context
+
+Note: Old Supabase ES256 tokens no longer accepted
+```
+
+### Passkey Registration & Login Flow
+```
+Registration:
+1. User enters display name on /signup
+2. Frontend calls auth-api.registerPasskey() (WebAuthn)
+3. Browser shows passkey creation prompt (Face ID, Touch ID, PIN, etc.)
+4. Backend stores credential in credentials table
+5. Backend issues HS256 JWT session token
+6. Frontend stores token in HttpOnly cookie
+
+Login:
+1. User navigates to /login
+2. Frontend calls auth-api.authenticatePasskey() (WebAuthn)
+3. Browser shows passkey authentication prompt
+4. Backend verifies challenge response
+5. Backend issues HS256 JWT session token
+6. Frontend stores token in HttpOnly cookie
+7. User redirected to /notes (protected route)
+
+Logout:
+1. Frontend clears HttpOnly cookie
+2. User redirected to /
 ```
 
 ## Background Task Scheduling

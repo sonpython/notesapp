@@ -5,16 +5,16 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
-    "dev:web": "pnpm --filter @notesapp/web dev",
-    "build:web": "pnpm --filter @notesapp/web build",
-    "lint:web": "pnpm --filter @notesapp/web lint",
-    "dev:desktop": "pnpm --filter @notesapp/desktop dev",
-    "build:desktop": "pnpm --filter @notesapp/desktop build",
-    "dev:web-svelte": "pnpm --filter @notesapp/web-svelte dev",
-    "build:web-svelte": "pnpm --filter @notesapp/web-svelte build"
+    "dev:web": "bun --filter @notesapp/web dev",
+    "build:web": "bun --filter @notesapp/web build",
+    "lint:web": "bun --filter @notesapp/web lint",
+    "dev:desktop": "bun --filter @notesapp/desktop dev",
+    "build:desktop": "bun --filter @notesapp/desktop build",
+    "dev:web-svelte": "bun --filter @notesapp/web-svelte dev",
+    "build:web-svelte": "bun --filter @notesapp/web-svelte build"
   },
   "devDependencies": {
     "turbo": "^2.8.7"
   },
-  "packageManager": "pnpm@10.29.3"
+  "packageManager": "bun@1.2.4"
 }
