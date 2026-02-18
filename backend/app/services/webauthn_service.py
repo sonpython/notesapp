@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import uuid
@@ -60,9 +61,10 @@ async def create_registration_options(
         ),
     )
 
-    # Store challenge in DB
+    # Store challenge in DB (base64 encode binary challenge)
+    challenge_b64 = base64.urlsafe_b64encode(options.challenge).decode("ascii") if isinstance(options.challenge, bytes) else options.challenge
     challenge_record = WebAuthnChallenge(
-        challenge=options.challenge.decode() if isinstance(options.challenge, bytes) else options.challenge,
+        challenge=challenge_b64,
         user_id=temp_user_id,
         display_name=display_name,
         type="register",
@@ -100,11 +102,11 @@ async def verify_registration(
     challenge_record = await _get_and_delete_challenge(db, challenge_id, "register")
 
     try:
+        # Decode base64 challenge back to bytes
+        expected_challenge = base64.urlsafe_b64decode(challenge_record.challenge) if isinstance(challenge_record.challenge, str) else challenge_record.challenge
         verification = verify_registration_response(
             credential=credential_json,
-            expected_challenge=challenge_record.challenge.encode()
-            if isinstance(challenge_record.challenge, str)
-            else challenge_record.challenge,
+            expected_challenge=expected_challenge,
             expected_rp_id=settings.WEBAUTHN_RP_ID,
             expected_origin=settings.WEBAUTHN_ORIGIN,
         )
@@ -153,9 +155,10 @@ async def create_authentication_options(db: AsyncSession) -> tuple[dict, str]:
         # No allow_credentials = discoverable credential flow
     )
 
-    # Store challenge in DB
+    # Store challenge in DB (base64 encode binary challenge)
+    challenge_b64 = base64.urlsafe_b64encode(options.challenge).decode("ascii") if isinstance(options.challenge, bytes) else options.challenge
     challenge_record = WebAuthnChallenge(
-        challenge=options.challenge.decode() if isinstance(options.challenge, bytes) else options.challenge,
+        challenge=challenge_b64,
         user_id=None,
         type="login",
         expires_at=datetime.now(timezone.utc) + timedelta(minutes=CHALLENGE_TTL_MINUTES),
@@ -201,11 +204,11 @@ async def verify_authentication(
         raise ValueError("Credential not found")
 
     try:
+        # Decode base64 challenge back to bytes
+        expected_challenge = base64.urlsafe_b64decode(challenge_record.challenge) if isinstance(challenge_record.challenge, str) else challenge_record.challenge
         verification = verify_authentication_response(
             credential=credential_json,
-            expected_challenge=challenge_record.challenge.encode()
-            if isinstance(challenge_record.challenge, str)
-            else challenge_record.challenge,
+            expected_challenge=expected_challenge,
             expected_rp_id=settings.WEBAUTHN_RP_ID,
             expected_origin=settings.WEBAUTHN_ORIGIN,
             credential_public_key=stored_credential.public_key,
