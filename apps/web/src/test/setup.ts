@@ -19,31 +19,14 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }))
 
-// Mock Supabase browser client
-vi.mock('@/lib/supabase-browser', () => {
-  const mockSupabase = {
-    auth: {
-      getSession: vi.fn(async () => ({
-        data: { session: { access_token: 'mock-token' } },
-      })),
-      getUser: vi.fn(async () => ({
-        data: { user: null },
-        error: null,
-      })),
-      onAuthStateChange: vi.fn(() => ({
-        data: {
-          subscription: {
-            unsubscribe: vi.fn(),
-          },
-        },
-      })),
-      signOut: vi.fn(async () => ({ error: null })),
-    },
-  }
-  return {
-    createClient: () => mockSupabase,
-  }
-})
+// Mock auth API
+vi.mock('@/lib/auth-api', () => ({
+  getMe: vi.fn(async () => null),
+  logout: vi.fn(async () => undefined),
+  loginPasskey: vi.fn(async () => ({ user_id: 'test', display_name: 'Test' })),
+  registerPasskey: vi.fn(async () => ({ user_id: 'test', display_name: 'Test' })),
+  isPasskeySupported: vi.fn(() => true),
+}))
 
 // Mock API client
 vi.mock('@/lib/api', () => {

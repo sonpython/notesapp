@@ -51,9 +51,9 @@ pnpm lint:web         # Lint frontend only
 
 ### Stack
 - **Backend**: FastAPI + SQLAlchemy async + asyncpg + Alembic (Python 3.13)
-- **Frontend**: Next.js 16 (App Router) + React 19 + TailwindCSS v4 + @supabase/ssr
-- **Database**: PostgreSQL via Supabase (session mode pooler)
-- **Auth**: Supabase Auth (email/password) with JWT validation (ES256 + HS256)
+- **Frontend**: Next.js 16 (App Router) + React 19 + TailwindCSS v4
+- **Database**: PostgreSQL (local or Supabase as data backend)
+- **Auth**: Passkey-only (WebAuthn/FIDO2) with local HS256 JWT sessions
 - **Infrastructure**: pnpm monorepo + Turborepo, Docker Compose
 
 ### Key Features
@@ -181,22 +181,24 @@ created_at: datetime
 
 ## Auth Flow
 
-1. User signs up/logs in via Supabase Auth (email/password)
-2. Supabase returns JWT access token (ES256 signed)
-3. Frontend stores token in secure httpOnly cookie (via @supabase/ssr)
-4. Middleware refreshes token automatically before expiry
-5. API calls include `Authorization: Bearer <token>` header
-6. Backend validates JWT via JWKS endpoint (supports ES256 & HS256)
-7. All database queries filtered by `user_id` from JWT `sub` claim
+1. User registers with display name, creates passkey (Face ID/Touch ID/PIN)
+2. Backend creates user + credential, issues HS256 JWT as HttpOnly cookie
+3. Login: user authenticates with passkey, backend validates and issues JWT cookie
+4. Frontend calls API with `credentials: 'include'`, cookie sent automatically
+5. Backend validates JWT from cookie (or Bearer header for API clients)
+6. All database queries filtered by `user_id` from JWT `sub` claim
+7. Logout clears the session cookie
 
 ## Configuration
 
 ### Backend (.env)
 ```env
 DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/notesapp
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_ANON_KEY=eyxxx
-SUPABASE_JWT_SECRET=xxx
+JWT_SECRET=change-me-in-production-use-64-char-random-string
+JWT_EXPIRY_DAYS=7
+WEBAUTHN_RP_ID=localhost
+WEBAUTHN_RP_NAME=NotesApp
+WEBAUTHN_ORIGIN=http://localhost:3000
 TELEGRAM_BOT_TOKEN=xxx (optional)
 CORS_ORIGINS=http://localhost:3000,https://example.com
 ```
@@ -204,8 +206,6 @@ CORS_ORIGINS=http://localhost:3000,https://example.com
 ### Frontend (.env.local)
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyxxx
 ```
 
 ## Database Setup

@@ -141,10 +141,19 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="text-xs font-medium uppercase tracking-wider text-muted">
-                Email
+                Display Name
               </label>
               <p className="mt-1 text-sm text-foreground">
-                {authLoading ? 'Loading...' : user?.email ?? 'Unknown'}
+                {authLoading ? 'Loading...' : user?.display_name ?? 'Unknown'}
+              </p>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium uppercase tracking-wider text-muted">
+                Authentication
+              </label>
+              <p className="mt-1 text-sm text-muted">
+                Secured with passkey (Face ID, Touch ID, or device PIN)
               </p>
             </div>
 
@@ -156,13 +165,6 @@ export default function SettingsPage() {
               >
                 <LogOut className="h-4 w-4" />
                 Sign Out
-              </button>
-              <button
-                type="button"
-                disabled
-                className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted opacity-50 cursor-not-allowed"
-              >
-                Change Password
               </button>
             </div>
           </div>

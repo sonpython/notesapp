@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase-server'
+import { cookies } from 'next/headers'
 import { ResizableAppLayout } from '@/components/layout/resizable-app-layout'
 import { InstallBanner } from '@/components/pwa/install-banner'
 
@@ -14,12 +14,10 @@ export default async function AppLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const cookieStore = await cookies()
+  const hasSession = cookieStore.has('session')
 
-  if (!user) {
+  if (!hasSession) {
     redirect('/login')
   }
 

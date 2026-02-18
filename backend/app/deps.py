@@ -5,70 +5,48 @@ from __future__ import annotations
 import logging
 
 import jwt as pyjwt
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import HTTPException, Request, status
 
 from app.config import settings
 from app.database import get_db as _get_db
+from app.services.jwt_service import decode_jwt
 
 logger = logging.getLogger(__name__)
 
 # Re-export get_db so callers can import from app.deps
 get_db = _get_db
 
-# Bearer token scheme used to extract the JWT from the Authorization header
-_bearer_scheme = HTTPBearer()
 
-_JWT_AUDIENCE = "authenticated"
+async def get_current_user(request: Request) -> str:
+    """Validate the JWT from cookie or Bearer header and return the user ID.
 
-# Cache for the JWKS client to avoid re-fetching keys on every request
-_jwks_client: pyjwt.PyJWKClient | None = None
-
-
-def _get_jwks_client() -> pyjwt.PyJWKClient:
-    """Return a cached PyJWKClient that fetches keys from Supabase."""
-    global _jwks_client
-    if _jwks_client is None:
-        jwks_url = f"{settings.SUPABASE_URL}/auth/v1/.well-known/jwks.json"
-        _jwks_client = pyjwt.PyJWKClient(jwks_url)
-    return _jwks_client
-
-
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
-) -> str:
-    """Validate the Supabase JWT and return the authenticated user's ID.
-
-    Supports both ES256 (JWKS) and HS256 (JWT secret) tokens.
+    Checks:
+    1. Session cookie (HttpOnly, set by login/register)
+    2. Authorization: Bearer header (for API clients, mobile, etc.)
 
     Raises:
-        HTTPException: 401 if the token is missing, expired, or invalid.
+        HTTPException: 401 if no token, or token is invalid/expired.
     """
-    token = credentials.credentials
+    token: str | None = None
+
+    # 1. Try session cookie first
+    token = request.cookies.get("session")
+
+    # 2. Fallback to Authorization header
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     try:
-        # Check token algorithm to decide verification method
-        header = pyjwt.get_unverified_header(token)
-        alg = header.get("alg", "")
-
-        if alg.startswith("ES") or alg.startswith("RS") or alg.startswith("PS"):
-            # Asymmetric — use JWKS public key from Supabase
-            client = _get_jwks_client()
-            signing_key = client.get_signing_key_from_jwt(token)
-            payload = pyjwt.decode(
-                token,
-                signing_key.key,
-                algorithms=[alg],
-                audience=_JWT_AUDIENCE,
-            )
-        else:
-            # Symmetric (HS256/HS384/HS512) — use JWT secret
-            payload = pyjwt.decode(
-                token,
-                settings.SUPABASE_JWT_SECRET,
-                algorithms=["HS256", "HS384", "HS512"],
-                audience=_JWT_AUDIENCE,
-            )
+        payload = decode_jwt(token)
     except pyjwt.PyJWTError as exc:
         logger.warning("JWT decode failed: %s", exc)
         raise HTTPException(

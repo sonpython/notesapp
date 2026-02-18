@@ -1,37 +1,21 @@
-// Middleware to refresh Supabase auth session on every request
-import { createServerClient } from '@supabase/ssr'
+/**
+ * Middleware for route protection based on session cookie.
+ * No token decoding - just checks if session cookie exists.
+ * Real auth validation happens when API calls are made.
+ */
+
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+export function middleware(request: NextRequest) {
+  const hasSession = request.cookies.has('session')
+  const { pathname } = request.nextUrl
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // Redirect unauthenticated users to login (except auth pages)
+  // Redirect unauthenticated users to login (except auth pages and landing)
   if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/signup') &&
-    request.nextUrl.pathname !== '/'
+    !hasSession &&
+    !pathname.startsWith('/login') &&
+    !pathname.startsWith('/signup') &&
+    pathname !== '/'
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
@@ -40,16 +24,15 @@ export async function middleware(request: NextRequest) {
 
   // Redirect authenticated users away from auth pages
   if (
-    user &&
-    (request.nextUrl.pathname.startsWith('/login') ||
-      request.nextUrl.pathname.startsWith('/signup'))
+    hasSession &&
+    (pathname.startsWith('/login') || pathname.startsWith('/signup'))
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/notes'
     return NextResponse.redirect(url)
   }
 
-  return supabaseResponse
+  return NextResponse.next()
 }
 
 export const config = {

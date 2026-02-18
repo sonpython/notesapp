@@ -1,37 +1,39 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase-browser";
+import { Fingerprint } from "lucide-react";
+import { loginPasskey, isPasskeySupported } from "@/lib/auth-api";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function handleLogin() {
     setError(null);
+
+    if (!isPasskeySupported()) {
+      setError("Your browser does not support passkeys. Please use a modern browser.");
+      return;
+    }
+
     setLoading(true);
-
     try {
-      const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) {
-        setError(authError.message);
-        return;
-      }
-
+      await loginPasskey();
       router.push("/notes");
-    } catch {
-      setError("An unexpected error occurred. Please try again.");
+    } catch (err) {
+      if (err instanceof Error) {
+        // Handle user cancellation gracefully
+        if (err.name === "NotAllowedError") {
+          setError("Authentication was cancelled. Please try again.");
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError("Authentication failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -46,7 +48,7 @@ export default function LoginPage() {
             Sign in to NotesApp
           </h1>
           <p className="mt-2 text-sm text-muted">
-            Welcome back. Enter your credentials to continue.
+            Use your passkey to sign in securely.
           </p>
         </div>
 
@@ -57,63 +59,20 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Login form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="email"
-              className="mb-1.5 block text-sm font-medium text-foreground"
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              placeholder="you@example.com"
-              className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
+        {/* Passkey sign-in button */}
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          className="flex h-12 w-full items-center justify-center gap-3 rounded-lg bg-accent text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          <Fingerprint className="h-5 w-5" />
+          {loading ? "Authenticating..." : "Sign in with passkey"}
+        </button>
 
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-1.5 block text-sm font-medium text-foreground"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-              placeholder="Enter your password"
-              className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <button
-              type="button"
-              className="text-sm text-muted transition-colors hover:text-foreground"
-            >
-              Forgot password?
-            </button>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="h-10 w-full rounded-lg bg-accent text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
+        {/* Info text */}
+        <p className="mt-4 text-center text-xs text-muted">
+          Your device will prompt you to use Face ID, Touch ID, or your device PIN.
+        </p>
 
         {/* Footer link */}
         <p className="mt-6 text-center text-sm text-muted">

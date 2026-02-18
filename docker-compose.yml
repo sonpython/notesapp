@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: notesapp
       POSTGRES_DB: notesapp
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -15,7 +15,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://notesapp:notesapp@postgres:5432/notesapp
     env_file:
@@ -24,7 +24,24 @@ services:
       - postgres
     volumes:
       - ./backend:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8001
+    env_file:
+      - ./apps/web/.env.local
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    command: sh -c "corepack enable && pnpm install && pnpm dev"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

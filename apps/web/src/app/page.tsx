@@ -1,14 +1,11 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase-server";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const cookieStore = await cookies();
 
-  if (user) {
+  if (cookieStore.has("session")) {
     redirect("/notes");
   }
 

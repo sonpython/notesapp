@@ -1,16 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useAuth } from './use-auth'
-import * as supabaseModule from '@/lib/supabase-browser'
+import * as authApi from '@/lib/auth-api'
 
 describe('useAuth', () => {
   const mockUser = {
-    id: 'user123',
-    email: 'test@example.com',
-    user_metadata: {},
-    app_metadata: {},
-    aud: 'authenticated',
-    created_at: '2026-02-15T00:00:00Z',
+    user_id: 'user123',
+    display_name: 'Test User',
   }
 
   beforeEach(() => {
@@ -18,6 +14,8 @@ describe('useAuth', () => {
   })
 
   it('should initialize with loading state', () => {
+    vi.spyOn(authApi, 'getMe').mockImplementation(() => new Promise(() => {}))
+
     const { result } = renderHook(() => useAuth())
 
     expect(result.current.loading).toBe(true)
@@ -25,23 +23,7 @@ describe('useAuth', () => {
   })
 
   it('should fetch initial user on mount', async () => {
-    const mockSupabase = {
-      auth: {
-        getUser: vi.fn(async () => ({
-          data: { user: mockUser },
-          error: null,
-        })),
-        onAuthStateChange: vi.fn(() => ({
-          data: {
-            subscription: {
-              unsubscribe: vi.fn(),
-            },
-          },
-        })),
-      },
-    }
-
-    vi.spyOn(supabaseModule, 'createClient').mockReturnValue(mockSupabase as any)
+    vi.spyOn(authApi, 'getMe').mockResolvedValue(mockUser)
 
     const { result } = renderHook(() => useAuth())
 
@@ -50,27 +32,11 @@ describe('useAuth', () => {
     })
 
     expect(result.current.user).toEqual(mockUser)
-    expect(mockSupabase.auth.getUser).toHaveBeenCalled()
+    expect(authApi.getMe).toHaveBeenCalled()
   })
 
-  it('should handle initial user fetch error', async () => {
-    const mockSupabase = {
-      auth: {
-        getUser: vi.fn(async () => ({
-          data: { user: null },
-          error: new Error('Failed to fetch user'),
-        })),
-        onAuthStateChange: vi.fn(() => ({
-          data: {
-            subscription: {
-              unsubscribe: vi.fn(),
-            },
-          },
-        })),
-      },
-    }
-
-    vi.spyOn(supabaseModule, 'createClient').mockReturnValue(mockSupabase as any)
+  it('should handle user not authenticated', async () => {
+    vi.spyOn(authApi, 'getMe').mockResolvedValue(null)
 
     const { result } = renderHook(() => useAuth())
 
@@ -81,102 +47,41 @@ describe('useAuth', () => {
     expect(result.current.user).toBeNull()
   })
 
-  it('should listen to auth state changes', async () => {
-    const mockUnsubscribe = vi.fn()
-    const mockSupabase = {
-      auth: {
-        getUser: vi.fn(async () => ({
-          data: { user: null },
-          error: null,
-        })),
-        onAuthStateChange: vi.fn((callback) => {
-          // Simulate auth state change
-          setTimeout(() => {
-            callback('SIGNED_IN', { user: mockUser, access_token: 'token' })
-          }, 0)
+  it('should handle fetch error', async () => {
+    vi.spyOn(authApi, 'getMe').mockRejectedValue(new Error('Network error'))
 
-          return {
-            data: {
-              subscription: {
-                unsubscribe: mockUnsubscribe,
-              },
-            },
-          }
-        }),
-      },
-    }
-
-    vi.spyOn(supabaseModule, 'createClient').mockReturnValue(mockSupabase as any)
-
-    const { result, unmount } = renderHook(() => useAuth())
+    const { result } = renderHook(() => useAuth())
 
     await waitFor(() => {
-      expect(result.current.user).toEqual(mockUser)
+      expect(result.current.loading).toBe(false)
     })
 
-    expect(result.current.loading).toBe(false)
-
-    unmount()
-
-    await waitFor(() => {
-      expect(mockUnsubscribe).toHaveBeenCalled()
-    })
+    expect(result.current.user).toBeNull()
   })
 
   it('should handle sign out', async () => {
-    const mockSupabase = {
-      auth: {
-        getUser: vi.fn(async () => ({
-          data: { user: mockUser },
-          error: null,
-        })),
-        onAuthStateChange: vi.fn(() => ({
-          data: {
-            subscription: {
-              unsubscribe: vi.fn(),
-            },
-          },
-        })),
-        signOut: vi.fn(async () => ({ error: null })),
-      },
-    }
-
-    vi.spyOn(supabaseModule, 'createClient').mockReturnValue(mockSupabase as any)
+    vi.spyOn(authApi, 'getMe').mockResolvedValue(mockUser)
+    vi.spyOn(authApi, 'logout').mockResolvedValue(undefined)
 
     const { result } = renderHook(() => useAuth())
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false)
     })
+
+    expect(result.current.user).toEqual(mockUser)
 
     await act(async () => {
       await result.current.signOut()
     })
 
-    expect(mockSupabase.auth.signOut).toHaveBeenCalled()
+    expect(authApi.logout).toHaveBeenCalled()
+    expect(result.current.user).toBeNull()
   })
 
-  it('should handle sign out error gracefully', async () => {
-    const mockSupabase = {
-      auth: {
-        getUser: vi.fn(async () => ({
-          data: { user: mockUser },
-          error: null,
-        })),
-        onAuthStateChange: vi.fn(() => ({
-          data: {
-            subscription: {
-              unsubscribe: vi.fn(),
-            },
-          },
-        })),
-        signOut: vi.fn(async () => {
-          throw new Error('Sign out failed')
-        }),
-      },
-    }
-
-    vi.spyOn(supabaseModule, 'createClient').mockReturnValue(mockSupabase as any)
+  it('should handle sign out even if logout fails', async () => {
+    vi.spyOn(authApi, 'getMe').mockResolvedValue(mockUser)
+    vi.spyOn(authApi, 'logout').mockRejectedValue(new Error('Logout failed'))
 
     const { result } = renderHook(() => useAuth())
 
@@ -184,124 +89,11 @@ describe('useAuth', () => {
       expect(result.current.loading).toBe(false)
     })
 
-    // Should not throw
+    // Should not throw, user should still be cleared locally
     await act(async () => {
       await result.current.signOut()
-    })
-
-    expect(mockSupabase.auth.signOut).toHaveBeenCalled()
-  })
-
-  it('should update user when auth state changes to SIGNED_IN', async () => {
-    let authCallback: ((event: string, session: any) => void) | null = null
-
-    const mockSupabase = {
-      auth: {
-        getUser: vi.fn(async () => ({
-          data: { user: null },
-          error: null,
-        })),
-        onAuthStateChange: vi.fn((callback) => {
-          authCallback = callback
-          return {
-            data: {
-              subscription: {
-                unsubscribe: vi.fn(),
-              },
-            },
-          }
-        }),
-      },
-    }
-
-    vi.spyOn(supabaseModule, 'createClient').mockReturnValue(mockSupabase as any)
-
-    const { result } = renderHook(() => useAuth())
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false)
     })
 
     expect(result.current.user).toBeNull()
-
-    // Simulate sign in
-    await act(async () => {
-      authCallback?.('SIGNED_IN', { user: mockUser })
-    })
-
-    await waitFor(() => {
-      expect(result.current.user).toEqual(mockUser)
-    })
-  })
-
-  it('should clear user when auth state changes to SIGNED_OUT', async () => {
-    let authCallback: ((event: string, session: any) => void) | null = null
-
-    const mockSupabase = {
-      auth: {
-        getUser: vi.fn(async () => ({
-          data: { user: mockUser },
-          error: null,
-        })),
-        onAuthStateChange: vi.fn((callback) => {
-          authCallback = callback
-          return {
-            data: {
-              subscription: {
-                unsubscribe: vi.fn(),
-              },
-            },
-          }
-        }),
-      },
-    }
-
-    vi.spyOn(supabaseModule, 'createClient').mockReturnValue(mockSupabase as any)
-
-    const { result } = renderHook(() => useAuth())
-
-    await waitFor(() => {
-      expect(result.current.user).toEqual(mockUser)
-    })
-
-    // Simulate sign out
-    await act(async () => {
-      authCallback?.('SIGNED_OUT', null)
-    })
-
-    await waitFor(() => {
-      expect(result.current.user).toBeNull()
-    })
-  })
-
-  it('should unsubscribe from auth changes on unmount', async () => {
-    const mockUnsubscribe = vi.fn()
-    const mockSupabase = {
-      auth: {
-        getUser: vi.fn(async () => ({
-          data: { user: null },
-          error: null,
-        })),
-        onAuthStateChange: vi.fn(() => ({
-          data: {
-            subscription: {
-              unsubscribe: mockUnsubscribe,
-            },
-          },
-        })),
-      },
-    }
-
-    vi.spyOn(supabaseModule, 'createClient').mockReturnValue(mockSupabase as any)
-
-    const { unmount } = renderHook(() => useAuth())
-
-    await waitFor(() => {
-      expect(mockSupabase.auth.onAuthStateChange).toHaveBeenCalled()
-    })
-
-    unmount()
-
-    expect(mockUnsubscribe).toHaveBeenCalled()
   })
 })

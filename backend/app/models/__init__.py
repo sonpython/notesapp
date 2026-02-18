@@ -7,17 +7,23 @@ Alembic or application startup inspects it.
 from app.database import Base
 from app.models.folder import Folder
 from app.models.note import Note
+from app.models.passkey_credential import PasskeyCredential
 from app.models.tag import NoteTag, Tag, TodoTag
 from app.models.telegram import TelegramSettings
 from app.models.todo import Todo
+from app.models.user import User
+from app.models.webauthn_challenge import WebAuthnChallenge
 
 __all__ = [
     "Base",
     "Folder",
     "Note",
     "NoteTag",
+    "PasskeyCredential",
     "Tag",
     "Todo",
     "TodoTag",
     "TelegramSettings",
+    "User",
+    "WebAuthnChallenge",
 ]

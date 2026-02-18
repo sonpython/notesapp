@@ -42,8 +42,9 @@ NotesApp API provides endpoints for managing notes, todos, folders, and Telegram
 - **Telegram**: Bot integration for creating todos via chat
 
 ## Authentication
-All endpoints (except health and telegram webhook) require a valid Supabase JWT token
-in the Authorization header: `Bearer <token>`
+All endpoints (except health and telegram webhook) require authentication via:
+- Session cookie (set by passkey login/register)
+- Or Authorization header: `Bearer <token>`
 """,
     lifespan=lifespan,
     docs_url="/api/docs",
@@ -88,9 +89,11 @@ async def health_check() -> dict[str, str]:
 
 def _register_routers() -> None:
     """Import and include all API routers."""
-    from app.routers import auth, folders, notes, tags, telegram, todos
+    from app.routers import auth, auth_login, auth_register, folders, notes, tags, telegram, todos
 
     app.include_router(auth.router)
+    app.include_router(auth_register.router)
+    app.include_router(auth_login.router)
     app.include_router(notes.router)
     app.include_router(folders.router)
     app.include_router(todos.router)

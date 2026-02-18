@@ -3,7 +3,6 @@
 import { Download, FileDown, FileText, FolderArchive } from 'lucide-react'
 import { useState } from 'react'
 import type { Note } from '@/lib/types'
-import { createClient } from '@/lib/supabase-browser'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -24,14 +23,9 @@ export function NoteExportMenu({ note, onExportAll }: NoteExportMenuProps) {
     if (!note) return
     setIsExporting(true)
     try {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      const headers: HeadersInit = {}
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`
-      }
-
-      const response = await fetch(`${API_URL}/api/notes/${note.id}/export/md`, { headers })
+      const response = await fetch(`${API_URL}/api/notes/${note.id}/export/md`, {
+        credentials: 'include',
+      })
       if (!response.ok) {
         const errorText = await response.text()
         throw new Error(`Export failed: ${response.status} - ${errorText}`)
@@ -59,14 +53,9 @@ export function NoteExportMenu({ note, onExportAll }: NoteExportMenuProps) {
     if (!note) return
     setIsExporting(true)
     try {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      const headers: HeadersInit = {}
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`
-      }
-
-      const response = await fetch(`${API_URL}/api/notes/${note.id}/export/pdf`, { headers })
+      const response = await fetch(`${API_URL}/api/notes/${note.id}/export/pdf`, {
+        credentials: 'include',
+      })
       if (!response.ok) {
         const errorText = await response.text()
         throw new Error(`Export failed: ${response.status} - ${errorText}`)

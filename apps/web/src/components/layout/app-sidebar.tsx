@@ -214,7 +214,7 @@ export function AppSidebar() {
 
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-xs text-zinc-500">
-            {user?.email ?? 'Loading...'}
+            {user?.display_name ?? 'Loading...'}
           </span>
           <div className="flex shrink-0 items-center gap-1">
             <ThemeToggleButton />

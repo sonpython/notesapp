@@ -21,10 +21,12 @@ class Settings(BaseSettings):
     # --- Database ---
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/notesapp"
 
-    # --- Supabase ---
-    SUPABASE_URL: str = ""
-    SUPABASE_ANON_KEY: str = ""
-    SUPABASE_JWT_SECRET: str = ""
+    # --- Auth (Passkey/WebAuthn) ---
+    JWT_SECRET: str = "change-me-in-production-use-64-char-random-string"
+    JWT_EXPIRY_DAYS: int = 7
+    WEBAUTHN_RP_ID: str = "localhost"
+    WEBAUTHN_RP_NAME: str = "NotesApp"
+    WEBAUTHN_ORIGIN: str = "http://localhost:3000"
 
     # --- Telegram (optional) ---
     TELEGRAM_BOT_TOKEN: str | None = None

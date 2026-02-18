@@ -1,76 +1,50 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase-browser";
+import { Fingerprint } from "lucide-react";
+import { registerPasskey, isPasskeySupported } from "@/lib/auth-api";
 
 export default function SignupPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const router = useRouter();
+  const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+    const trimmedName = displayName.trim();
+    if (!trimmedName) {
+      setError("Please enter your name.");
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    if (!isPasskeySupported()) {
+      setError("Your browser does not support passkeys. Please use a modern browser.");
       return;
     }
 
     setLoading(true);
-
     try {
-      const supabase = createClient();
-      const { error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (authError) {
-        setError(authError.message);
-        return;
+      await registerPasskey(trimmedName);
+      router.push("/notes");
+    } catch (err) {
+      if (err instanceof Error) {
+        // Handle user cancellation gracefully
+        if (err.name === "NotAllowedError") {
+          setError("Passkey creation was cancelled. Please try again.");
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError("Registration failed. Please try again.");
       }
-
-      setSuccess(true);
-    } catch {
-      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
-  }
-
-  // Success state: show confirmation message
-  if (success) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-sm text-center">
-          <div className="mb-4 text-4xl">&#9993;</div>
-          <h2 className="text-xl font-bold text-foreground">
-            Check your email
-          </h2>
-          <p className="mt-3 text-sm text-muted">
-            We sent a confirmation link to{" "}
-            <span className="font-medium text-foreground">{email}</span>. Click
-            the link to activate your account.
-          </p>
-          <Link
-            href="/login"
-            className="mt-6 inline-flex h-10 items-center justify-center rounded-lg border border-border px-6 text-sm font-medium text-foreground transition-colors hover:bg-sidebar"
-          >
-            Back to sign in
-          </Link>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -82,7 +56,7 @@ export default function SignupPage() {
             Create your account
           </h1>
           <p className="mt-2 text-sm text-muted">
-            Start organizing your notes in seconds.
+            Set up a passkey to secure your account.
           </p>
         </div>
 
@@ -97,57 +71,19 @@ export default function SignupPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label
-              htmlFor="email"
+              htmlFor="displayName"
               className="mb-1.5 block text-sm font-medium text-foreground"
             >
-              Email
+              Your name
             </label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="displayName"
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
               required
-              autoComplete="email"
-              placeholder="you@example.com"
-              className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-1.5 block text-sm font-medium text-foreground"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="new-password"
-              placeholder="At least 6 characters"
-              className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="confirmPassword"
-              className="mb-1.5 block text-sm font-medium text-foreground"
-            >
-              Confirm password
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              autoComplete="new-password"
-              placeholder="Repeat your password"
+              autoComplete="name"
+              placeholder="Enter your name"
               className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
@@ -155,11 +91,17 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="h-10 w-full rounded-lg bg-accent text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="flex h-12 w-full items-center justify-center gap-3 rounded-lg bg-accent text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {loading ? "Creating account..." : "Create account"}
+            <Fingerprint className="h-5 w-5" />
+            {loading ? "Creating account..." : "Create account with passkey"}
           </button>
         </form>
+
+        {/* Info text */}
+        <p className="mt-4 text-center text-xs text-muted">
+          Your device will create a secure passkey using Face ID, Touch ID, or your device PIN.
+        </p>
 
         {/* Footer link */}
         <p className="mt-6 text-center text-sm text-muted">
