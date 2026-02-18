@@ -29,7 +29,7 @@
 	}
 </script>
 
-<aside class="flex h-full w-64 flex-col bg-zinc-900 text-zinc-300">
+<aside class="flex h-full w-full flex-col bg-zinc-900 text-zinc-300">
 	<!-- App title -->
 	<div class="flex h-14 items-center px-5">
 		<h1 class="text-lg font-semibold tracking-tight text-white">NotesApp</h1>

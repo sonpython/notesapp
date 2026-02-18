@@ -20,7 +20,7 @@
 	--font-mono: 'Geist Mono', ui-monospace, monospace;
 }
 
-.dark {
+:root.dark, .dark {
 	--background: #0a0a0a;
 	--foreground: #ededed;
 	--sidebar: #1c1c1e;
