@@ -8,9 +8,9 @@
 	import {
 		isPrfSupported,
 		deriveKeyFromPasskey,
+		deriveKeyFromPassword,
 		encryptData,
-		decryptData,
-		type PrfKeyResult
+		decryptData
 	} from '$lib/crypto';
 
 	interface TelegramStatus {
@@ -71,7 +71,9 @@
 
 	// Encryption state
 	let prfSupported = $state(false);
-	let useEncryption = $state(true); // Default to encrypted backups
+	let useEncryption = $state(true);
+	let encryptionPassword = $state('');
+	let usePasswordEncryption = $state(false); // Fallback when PRF not available
 
 	onMount(async () => {
 		// Check PRF support on mount
@@ -140,25 +142,33 @@
 		actionLoading = true;
 		error = null;
 		try {
-			if (useEncryption && prfSupported) {
+			const shouldEncrypt = useEncryption && (prfSupported || usePasswordEncryption);
+
+			if (shouldEncrypt) {
 				// E2E encrypted backup flow
-				// 1. Export data from backend
 				const exportData = await api.get<BackupExportData>('/api/backup/export');
 
-				// 2. Derive encryption key from passkey
-				const { key } = await deriveKeyFromPasskey();
+				// Derive key from passkey (PRF) or password
+				let key: CryptoKey;
+				if (prfSupported && !usePasswordEncryption) {
+					const result = await deriveKeyFromPasskey();
+					key = result.key;
+				} else {
+					if (!encryptionPassword || encryptionPassword.length < 8) {
+						throw new Error('Password must be at least 8 characters');
+					}
+					key = await deriveKeyFromPassword(encryptionPassword);
+				}
 
-				// 3. Encrypt the data
+				// Encrypt and send
 				const dataJson = JSON.stringify(exportData);
 				const { ciphertext, iv } = await encryptData(key, dataJson);
-
-				// 4. Send encrypted data to backend
 				await api.post('/api/backup/trigger/encrypted', {
 					encrypted_data: ciphertext,
 					iv: iv
 				});
 			} else {
-				// Unencrypted backup (legacy flow)
+				// Unencrypted backup
 				await api.post('/api/backup/trigger');
 			}
 
@@ -340,20 +350,27 @@
 					{/if}
 
 					<!-- Encryption toggle -->
-					{#if prfSupported}
-						<label class="flex items-center gap-2">
+					<label class="flex items-center gap-2">
+						<input type="checkbox" bind:checked={useEncryption} class="rounded" />
+						<span class="text-sm text-foreground">Encrypt backup</span>
+					</label>
+
+					{#if useEncryption}
+						{#if prfSupported}
+							<label class="flex items-center gap-2 ml-4">
+								<input type="checkbox" bind:checked={usePasswordEncryption} class="rounded" />
+								<span class="text-xs text-muted">Use password instead of passkey</span>
+							</label>
+						{/if}
+
+						{#if !prfSupported || usePasswordEncryption}
 							<input
-								type="checkbox"
-								bind:checked={useEncryption}
-								class="rounded"
+								type="password"
+								bind:value={encryptionPassword}
+								placeholder="Encryption password (min 8 chars)"
+								class="ml-4 w-48 rounded border border-border bg-background px-2 py-1 text-sm"
 							/>
-							<span class="text-sm text-foreground">Encrypt backup with passkey</span>
-							<span class="text-xs text-muted">(E2E encrypted)</span>
-						</label>
-					{:else}
-						<p class="text-xs text-amber-500">
-							Encrypted backups not available (requires Chrome 116+, Safari 17+, or Edge 116+)
-						</p>
+						{/if}
 					{/if}
 
 					<button

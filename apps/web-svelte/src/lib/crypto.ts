@@ -207,6 +207,34 @@ export async function decryptData(key: CryptoKey, ciphertext: string, iv: string
 	return new TextDecoder().decode(plaintext);
 }
 
+/**
+ * Derive AES-GCM key from password using PBKDF2.
+ * Fallback when PRF not supported.
+ */
+export async function deriveKeyFromPassword(password: string): Promise<CryptoKey> {
+	const encoder = new TextEncoder();
+	const passwordBuffer = encoder.encode(password);
+
+	// Import password as key material
+	const keyMaterial = await crypto.subtle.importKey('raw', passwordBuffer, 'PBKDF2', false, [
+		'deriveKey'
+	]);
+
+	// Derive AES-256-GCM key with PBKDF2
+	return crypto.subtle.deriveKey(
+		{
+			name: 'PBKDF2',
+			salt: PRF_SALT,
+			iterations: 100000,
+			hash: 'SHA-256'
+		},
+		keyMaterial,
+		{ name: 'AES-GCM', length: 256 },
+		false,
+		['encrypt', 'decrypt']
+	);
+}
+
 // --- Utility functions ---
 
 function bufferToBase64(buffer: Uint8Array): string {
