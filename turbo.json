@@ -7,7 +7,7 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "src-tauri/target/**"]
+      "outputs": [".next/**", "!.next/cache/**", ".svelte-kit/**", "build/**", "src-tauri/target/**"]
     },
     "lint": {
       "dependsOn": ["^lint"]

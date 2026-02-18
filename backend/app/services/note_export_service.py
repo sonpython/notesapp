@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import markdown
-from weasyprint import HTML
 
 from app.models.note import Note
 
@@ -41,7 +40,17 @@ def export_note_as_pdf(note: Note) -> bytes:
     Export a note as PDF by converting markdown to HTML then to PDF.
 
     Uses weasyprint for PDF generation with basic styling.
+    Requires system libraries: libgobject, pango, etc.
     """
+    # Lazy import - weasyprint requires system libs not always available
+    try:
+        from weasyprint import HTML
+    except OSError as e:
+        raise RuntimeError(
+            "PDF export requires WeasyPrint system libraries (libgobject, pango). "
+            "See https://doc.courtbouillon.org/weasyprint/stable/first_steps.html"
+        ) from e
+
     markdown_text = export_note_as_markdown(note)
 
     # Convert markdown to HTML

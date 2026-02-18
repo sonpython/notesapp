@@ -9,7 +9,9 @@
     "build:web": "pnpm --filter @notesapp/web build",
     "lint:web": "pnpm --filter @notesapp/web lint",
     "dev:desktop": "pnpm --filter @notesapp/desktop dev",
-    "build:desktop": "pnpm --filter @notesapp/desktop build"
+    "build:desktop": "pnpm --filter @notesapp/desktop build",
+    "dev:web-svelte": "pnpm --filter @notesapp/web-svelte dev",
+    "build:web-svelte": "pnpm --filter @notesapp/web-svelte build"
   },
   "devDependencies": {
     "turbo": "^2.8.7"
