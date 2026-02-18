@@ -152,6 +152,7 @@
   .wysiwyg-editor :global(.ProseMirror) {
     outline: none;
     min-height: 200px;
+    padding: 1rem;
   }
   .wysiwyg-editor :global(.ProseMirror p.is-editor-empty:first-child::before) {
     content: attr(data-placeholder);
@@ -160,9 +161,15 @@
     float: left;
     height: 0;
   }
-  .wysiwyg-editor :global(.ProseMirror img) {
-    max-width: 100%;
-    height: auto;
-    border-radius: 0.375rem;
-  }
+  .wysiwyg-editor :global(.ProseMirror h1) { font-size: 2em; font-weight: bold; margin: 0.5em 0; }
+  .wysiwyg-editor :global(.ProseMirror h2) { font-size: 1.5em; font-weight: bold; margin: 0.5em 0; }
+  .wysiwyg-editor :global(.ProseMirror h3) { font-size: 1.25em; font-weight: bold; margin: 0.5em 0; }
+  .wysiwyg-editor :global(.ProseMirror ul) { list-style: disc; padding-left: 1.5em; margin: 0.5em 0; }
+  .wysiwyg-editor :global(.ProseMirror ol) { list-style: decimal; padding-left: 1.5em; margin: 0.5em 0; }
+  .wysiwyg-editor :global(.ProseMirror li) { margin: 0.25em 0; }
+  .wysiwyg-editor :global(.ProseMirror code) { background: var(--sidebar); padding: 0.2em 0.4em; border-radius: 0.25rem; font-family: monospace; }
+  .wysiwyg-editor :global(.ProseMirror pre) { background: var(--sidebar); padding: 1em; border-radius: 0.5rem; overflow-x: auto; margin: 0.5em 0; }
+  .wysiwyg-editor :global(.ProseMirror blockquote) { border-left: 3px solid var(--border); padding-left: 1em; margin: 0.5em 0; color: var(--muted); }
+  .wysiwyg-editor :global(.ProseMirror img) { max-width: 100%; height: auto; border-radius: 0.375rem; }
+  .wysiwyg-editor :global(.ProseMirror p) { margin: 0.5em 0; }
 </style>
