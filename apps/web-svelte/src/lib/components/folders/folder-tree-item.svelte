@@ -33,7 +33,8 @@
 
   const hasChildren = $derived(folder.children && folder.children.length > 0);
   const isSelected = $derived(folder.id === selectedFolderId);
-  const paddingLeft = $derived(12 + depth * 16);
+  // Increase indent for child folders: base 8px + 20px per depth level
+  const paddingLeft = $derived(8 + depth * 20);
 
   // Focus rename input when renaming starts
   $effect(() => {
@@ -142,6 +143,9 @@
           <ChevronRight class="h-3.5 w-3.5" />
         {/if}
       </button>
+    {:else}
+      <!-- Spacer to align with folders that have chevrons -->
+      <span class="w-4 shrink-0"></span>
     {/if}
 
     <span title={folder.name}>
@@ -200,7 +204,8 @@
 
   <!-- Child folder creation input -->
   {#if isCreating}
-    <div style="padding-left: {paddingLeft + 16}px" class="flex items-center gap-1.5 px-3 py-1.5">
+    <div style="padding-left: {paddingLeft + 20}px" class="flex items-center gap-1.5 px-3 py-1.5">
+      <span class="w-4 shrink-0"></span>
       <FolderIcon class="h-4 w-4 shrink-0 text-yellow-500" />
       <input
         bind:this={createInput}

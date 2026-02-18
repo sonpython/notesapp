@@ -6,6 +6,6 @@
 	let { children }: { children: Snippet } = $props();
 </script>
 
-<ModeWatcher />
+<ModeWatcher track={true} />
 
 {@render children()}

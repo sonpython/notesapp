@@ -5,19 +5,23 @@
 	 */
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { FileText, CheckSquare, Settings, Plus, Tag as TagIcon } from 'lucide-svelte';
+	import { CheckSquare, Settings, Tag as TagIcon } from 'lucide-svelte';
 	import type { FoldersStore } from '$lib/stores/folders-store.svelte';
 	import type { TagsStore } from '$lib/stores/tags-store.svelte';
+	import type { NotesStore } from '$lib/stores/notes-store.svelte';
+	import FolderTree from '$lib/components/folders/folder-tree.svelte';
 
 	interface Props {
 		foldersStore: FoldersStore;
 		tagsStore: TagsStore;
+		notesStore: NotesStore;
 	}
 
-	let { foldersStore, tagsStore }: Props = $props();
+	let { foldersStore, tagsStore, notesStore }: Props = $props();
+
+	let isCreatingFolder = $state(false);
 
 	const navItems = [
-		{ label: 'Notes', href: '/notes', icon: FileText },
 		{ label: 'Todos', href: '/todos', icon: CheckSquare },
 		{ label: 'Settings', href: '/settings', icon: Settings },
 	] as const;
@@ -31,6 +35,23 @@
 
 	function selectFolder(id: string | null) {
 		goto(id ? `/notes?folder=${id}` : '/notes');
+	}
+
+	async function createFolder(name: string, parentId?: string) {
+		return await foldersStore.createFolder(name, parentId);
+	}
+
+	async function renameFolder(id: string, name: string) {
+		return await foldersStore.updateFolder(id, { name });
+	}
+
+	async function deleteFolder(id: string) {
+		await foldersStore.deleteFolder(id);
+		if (selectedFolderId === id) goto('/notes');
+	}
+
+	async function moveNote(noteId: string, folderId: string | null) {
+		await notesStore.moveNoteToFolder(noteId, folderId);
 	}
 
 	function toggleTag(tagId: string) {
@@ -54,7 +75,22 @@
 	}
 </script>
 
-<!-- Navigation links -->
+<!-- Folder tree with "All Notes" -->
+<div class="flex-1 overflow-y-auto px-3">
+	<FolderTree
+		folders={foldersStore.folderTree}
+		{selectedFolderId}
+		onselectFolder={selectFolder}
+		oncreateFolder={createFolder}
+		onrenameFolder={renameFolder}
+		ondeleteFolder={deleteFolder}
+		onmoveNote={moveNote}
+	/>
+</div>
+
+<div class="mx-5 my-3 border-t border-zinc-800"></div>
+
+<!-- Other navigation links -->
 <nav class="space-y-0.5 px-3">
 	{#each navItems as item (item.href)}
 		{@const isActive = pathname.startsWith(item.href)}
@@ -69,44 +105,6 @@
 		</a>
 	{/each}
 </nav>
-
-<div class="mx-5 my-3 border-t border-zinc-800"></div>
-
-<!-- Folder section header -->
-<div class="flex items-center justify-between px-5 pb-2">
-	<span class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Folders</span>
-	<button
-		type="button"
-		class="rounded p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
-		title="New Folder"
-	>
-		<Plus class="h-3.5 w-3.5" />
-	</button>
-</div>
-
-<!-- Folder list - scrollable -->
-<div class="flex-1 overflow-y-auto px-3">
-	<!--
-		TODO: Replace with <FolderTree> component once migrated.
-		Props: folders={foldersStore.folderTree} {selectedFolderId}
-		onSelectFolder={selectFolder} onCreateFolder onRenameFolder onDeleteFolder
-	-->
-	{#if !foldersStore.folderTree?.length}
-		<p class="px-2 py-4 text-xs text-zinc-600">No folders yet.</p>
-	{:else}
-		{#each foldersStore.folderTree as folder (folder.id)}
-			<button
-				type="button"
-				onclick={() => selectFolder(folder.id)}
-				class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors {selectedFolderId === folder.id
-					? 'bg-zinc-700/60 text-white'
-					: 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}"
-			>
-				{folder.name}
-			</button>
-		{/each}
-	{/if}
-</div>
 
 <div class="mx-5 my-3 border-t border-zinc-800"></div>
 

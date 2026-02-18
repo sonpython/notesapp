@@ -65,21 +65,22 @@
     All Notes
   </button>
 
+  <!-- Folders header with New Folder button -->
+  <div class="flex items-center justify-between px-3 pt-2 pb-1">
+    <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Folders</span>
+    <button
+      type="button"
+      onclick={() => (isCreatingRoot = true)}
+      class="rounded p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+      title="New Folder"
+    >
+      <Plus class="h-3.5 w-3.5" />
+    </button>
+  </div>
+
   <!-- Empty state -->
   {#if isEmpty}
-    <div class="flex flex-col items-center gap-2 py-6 text-center">
-      <FolderIcon class="h-8 w-8 text-zinc-700" />
-      <p class="text-xs text-zinc-600">No folders yet</p>
-      <button
-        type="button"
-        onclick={() => (isCreatingRoot = true)}
-        class="flex items-center gap-1.5 rounded-md bg-zinc-800 px-3 py-1.5
-          text-xs text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-300"
-      >
-        <Plus class="h-3 w-3" />
-        New Folder
-      </button>
-    </div>
+    <p class="px-3 py-2 text-xs text-zinc-600">No folders yet</p>
   {/if}
 
   <!-- Root folder creation input -->

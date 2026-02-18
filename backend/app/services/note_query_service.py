@@ -48,20 +48,12 @@ def build_notes_list_query(
 
     if search:
         search = search.strip()
-        if len(search) < 2:
-            # Short queries: fallback to ilike
-            pattern = f"%{search}%"
-            stmt = stmt.where(
-                Note.title.ilike(pattern) | Note.content.ilike(pattern)
-            )
-        else:
-            # Full-text search on title and content
-            tsvector = func.to_tsvector(
-                'english',
-                func.coalesce(Note.title, '') + ' ' + func.coalesce(Note.content, '')
-            )
-            tsquery = func.plainto_tsquery('english', search)
-            stmt = stmt.where(tsvector.op('@@')(tsquery))
+        # Use ILIKE for substring matching (matches anywhere in text)
+        # This allows "worl" to match "world", "llo" to match "hello"
+        pattern = f"%{search}%"
+        stmt = stmt.where(
+            Note.title.ilike(pattern) | Note.content.ilike(pattern)
+        )
 
     # Eager load tags to avoid N+1 queries
     stmt = stmt.options(selectinload(Note.tags))

@@ -19,6 +19,7 @@ def build_todos_list_query(
     is_completed: bool | None = None,
     priority: int | None = None,
     has_deadline: bool | None = None,
+    overdue: bool | None = None,
     note_id: UUID | None = None,
     is_recurring: bool | None = None,
     tag_ids: list[UUID] | None = None,
@@ -44,6 +45,15 @@ def build_todos_list_query(
             stmt = stmt.where(Todo.deadline.isnot(None))
         else:
             stmt = stmt.where(Todo.deadline.is_(None))
+
+    if overdue:
+        # Overdue: has deadline in the past and not completed
+        now = datetime.now(timezone.utc)
+        stmt = stmt.where(
+            Todo.deadline.isnot(None),
+            Todo.deadline < now,
+            Todo.is_completed == False,
+        )
 
     if note_id is not None:
         stmt = stmt.where(Todo.note_id == note_id)

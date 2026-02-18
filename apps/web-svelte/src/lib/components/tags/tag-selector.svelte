@@ -21,6 +21,7 @@
   let newTagName = $state('');
   let newTagColor = $state(TAG_COLORS[0].hex);
   let dropdownRef = $state<HTMLDivElement | null>(null);
+  let createError = $state<string | null>(null);
 
   const availableTags = $derived((allTags ?? []).filter((tag) => !(selectedTags ?? []).some((st) => st.id === tag.id)));
   const filteredTags = $derived(availableTags.filter((tag) => tag.name.toLowerCase().includes(search.toLowerCase())));
@@ -30,6 +31,7 @@
       if (dropdownRef && !dropdownRef.contains(event.target as Node)) {
         isOpen = false;
         isCreating = false;
+        createError = null;
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -38,13 +40,23 @@
 
   async function handleCreateTag() {
     if (!newTagName.trim()) return;
-    const created = await oncreate(newTagName.trim(), newTagColor);
-    if (created) {
-      onadd(created.id);
-      newTagName = '';
-      newTagColor = TAG_COLORS[0].hex;
-      isCreating = false;
-      search = '';
+    createError = null;
+    try {
+      const created = await oncreate(newTagName.trim(), newTagColor);
+      if (created) {
+        onadd(created.id);
+        newTagName = '';
+        newTagColor = TAG_COLORS[0].hex;
+        isCreating = false;
+        search = '';
+      }
+    } catch (err) {
+      // Handle 409 Conflict (duplicate tag name)
+      if (err instanceof Error && err.message.includes('409')) {
+        createError = 'Tag already exists';
+      } else {
+        createError = 'Failed to create tag';
+      }
     }
   }
 </script>
@@ -87,37 +99,33 @@
       <!-- Tag list or create form -->
       <div class="max-h-48 overflow-y-auto">
         {#if isCreating}
-          <div class="p-3 space-y-3">
-            <div>
-              <label for="ts-new-tag-name" class="block text-xs font-medium text-zinc-400 mb-1">Tag name</label>
-              <!-- svelte-ignore a11y_autofocus -->
-              <input
-                id="ts-new-tag-name"
-                type="text"
-                bind:value={newTagName}
-                placeholder="Enter tag name"
-                class="w-full px-2 py-1.5 bg-zinc-900 text-sm text-zinc-200 placeholder-zinc-500 border border-zinc-700 rounded outline-none focus:border-amber-500"
-                autofocus
-                onkeydown={(e) => {
-                  if (e.key === 'Enter') handleCreateTag();
-                  if (e.key === 'Escape') isCreating = false;
-                }}
-              />
-            </div>
-            <div>
-              <p class="block text-xs font-medium text-zinc-400 mb-2">Color</p>
-              <TagColorPicker selected={newTagColor} onchange={(hex) => (newTagColor = hex)} />
-            </div>
-            <div class="flex gap-2 pt-2">
+          <div class="p-2 space-y-2">
+            <!-- svelte-ignore a11y_autofocus -->
+            <input
+              type="text"
+              bind:value={newTagName}
+              placeholder="Tag name"
+              class="w-full px-2 py-1 bg-zinc-900 text-sm text-zinc-200 placeholder-zinc-500 border border-zinc-700 rounded outline-none focus:border-amber-500"
+              autofocus
+              onkeydown={(e) => {
+                if (e.key === 'Enter') handleCreateTag();
+                if (e.key === 'Escape') { isCreating = false; createError = null; }
+              }}
+            />
+            {#if createError}
+              <p class="text-xs text-red-400">{createError}</p>
+            {/if}
+            <TagColorPicker selected={newTagColor} onchange={(hex) => (newTagColor = hex)} compact />
+            <div class="flex gap-1.5">
               <button
                 onclick={handleCreateTag}
-                class="flex-1 px-3 py-1.5 text-sm font-medium text-zinc-900 bg-amber-500 hover:bg-amber-600 rounded transition-colors"
+                class="flex-1 px-2 py-1 text-xs font-medium text-zinc-900 bg-amber-500 hover:bg-amber-600 rounded transition-colors"
               >
                 Create
               </button>
               <button
-                onclick={() => { isCreating = false; newTagName = ''; newTagColor = TAG_COLORS[0].hex; }}
-                class="flex-1 px-3 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-300 bg-zinc-700 hover:bg-zinc-600 rounded transition-colors"
+                onclick={() => { isCreating = false; newTagName = ''; newTagColor = TAG_COLORS[0].hex; createError = null; }}
+                class="flex-1 px-2 py-1 text-xs font-medium text-zinc-400 hover:text-zinc-300 bg-zinc-700 hover:bg-zinc-600 rounded transition-colors"
               >
                 Cancel
               </button>

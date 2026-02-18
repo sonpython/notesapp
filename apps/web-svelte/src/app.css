@@ -7,6 +7,8 @@
 	--border: #e5e5e5;
 	--muted: #737373;
 	--accent: #f59e0b;
+	--note-bg: #fffef8;
+	--note-toolbar: #fafaf8;
 }
 
 @theme inline {
@@ -16,6 +18,8 @@
 	--color-border: var(--border);
 	--color-muted: var(--muted);
 	--color-accent: var(--accent);
+	--color-note-bg: var(--note-bg);
+	--color-note-toolbar: var(--note-toolbar);
 	--font-sans: 'Geist', system-ui, -apple-system, sans-serif;
 	--font-mono: 'Geist Mono', ui-monospace, monospace;
 }
@@ -27,6 +31,8 @@
 	--border: #2c2c2e;
 	--muted: #8e8e93;
 	--accent: #fbbf24;
+	--note-bg: #1a1a1c;
+	--note-toolbar: #242426;
 }
 
 body {

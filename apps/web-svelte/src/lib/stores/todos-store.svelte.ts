@@ -61,7 +61,17 @@ export class TodosStore {
 		try {
 			const filterParam = activeFilter || this.filter;
 			const params = new URLSearchParams();
-			if (filterParam !== 'all') params.set('filter', filterParam);
+			// Convert filter to backend params
+			if (filterParam === 'active') {
+				params.set('is_completed', 'false');
+			} else if (filterParam === 'completed') {
+				params.set('is_completed', 'true');
+			} else if (filterParam === 'overdue') {
+				params.set('is_completed', 'false');
+				params.set('has_deadline', 'true');
+				params.set('overdue', 'true');
+			}
+			// 'all' sends no filter params
 			if (tagIds && tagIds.length > 0) params.set('tag_ids', tagIds.join(','));
 			params.set('limit', this.limit.toString());
 			params.set('offset', '0');

@@ -15,8 +15,9 @@ export class TagsStore {
 		this.error = null;
 
 		try {
-			const data = await api.get<PaginatedResponse<Tag>>('/api/tags?limit=100');
-			this.tags = data.items;
+			// Backend returns array directly, not paginated
+			const data = await api.get<Tag[]>('/api/tags/');
+			this.tags = data;
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Failed to fetch tags';
 			this.error = message;
@@ -27,7 +28,7 @@ export class TagsStore {
 
 	async createTag(name: string, color?: string): Promise<Tag> {
 		try {
-			const created = await api.post<Tag>('/api/tags', { name, color });
+			const created = await api.post<Tag>('/api/tags/', { name, color });
 			this.tags = [...this.tags, created];
 			return created;
 		} catch (err) {

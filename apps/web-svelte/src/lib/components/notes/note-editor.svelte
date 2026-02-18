@@ -7,7 +7,7 @@
   import { Pin, Archive, Eye, Edit3, Trash2 } from 'lucide-svelte';
   import CodeMirror from 'svelte-codemirror-editor';
   import { markdown } from '@codemirror/lang-markdown';
-  import type { Note } from '$lib/types';
+  import type { Note, Tag } from '$lib/types';
   import { TagsStore } from '$lib/stores/tags-store.svelte';
   import NotePreview from './note-preview.svelte';
   import NoteExportMenu from './note-export-menu.svelte';
@@ -28,6 +28,7 @@
   let title = $state('');
   let content = $state('');
   let isPreview = $state(false);
+  let noteTags = $state<Tag[]>([]);
 
   // Debounce timers
   let titleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -38,6 +39,7 @@
     if (note) {
       title = note.title;
       content = note.content;
+      noteTags = note.tags ?? [];
       isPreview = false;
     }
   });
@@ -83,20 +85,30 @@
 
   async function handleAddTag(tagId: string) {
     if (!note) return;
+    // Optimistic update - find tag from allTags and add to local state
+    const tagToAdd = tagsStore.tags.find((t) => t.id === tagId);
+    if (tagToAdd && !noteTags.some((t) => t.id === tagId)) {
+      noteTags = [...noteTags, tagToAdd];
+    }
     try {
       await api.post(`/api/notes/${note.id}/tags`, { tag_ids: [tagId] });
-      await tagsStore.fetchTags();
     } catch (err) {
+      // Rollback on error
+      noteTags = noteTags.filter((t) => t.id !== tagId);
       console.error('Failed to add tag:', err);
     }
   }
 
   async function handleRemoveTag(tagId: string) {
     if (!note) return;
+    // Optimistic update - remove from local state
+    const removedTag = noteTags.find((t) => t.id === tagId);
+    noteTags = noteTags.filter((t) => t.id !== tagId);
     try {
       await api.delete(`/api/notes/${note.id}/tags/${tagId}`);
-      await tagsStore.fetchTags();
     } catch (err) {
+      // Rollback on error
+      if (removedTag) noteTags = [...noteTags, removedTag];
       console.error('Failed to remove tag:', err);
     }
   }
@@ -117,9 +129,9 @@
     <p class="text-lg">Select a note to start editing</p>
   </div>
 {:else}
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col h-full bg-note-bg">
     <!-- Toolbar -->
-    <div class="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
+    <div class="flex items-center justify-between px-4 py-2 border-b border-border/50 shrink-0 bg-note-toolbar">
       <div class="flex items-center gap-1">
         <button
           onclick={handleTogglePin}
@@ -162,9 +174,9 @@
     </div>
 
     <!-- Tags selector -->
-    <div class="px-4 py-2 border-b border-border">
+    <div class="px-4 py-2 border-b border-border/50 bg-note-toolbar">
       <TagSelector
-        selectedTags={note.tags ?? []}
+        selectedTags={noteTags}
         allTags={tagsStore.tags}
         onadd={handleAddTag}
         onremove={handleRemoveTag}

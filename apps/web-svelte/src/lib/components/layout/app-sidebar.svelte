@@ -10,6 +10,7 @@
 	import { NotesStore } from '$lib/stores/notes-store.svelte';
 	import { TagsStore } from '$lib/stores/tags-store.svelte';
 	import ThemeToggleButton from '$lib/components/ui/theme-toggle-button.svelte';
+	import ConnectionStatusIndicator from '$lib/components/ui/connection-status-indicator.svelte';
 	import AppSidebarNav from './app-sidebar-nav.svelte';
 
 	interface Props {
@@ -53,6 +54,7 @@
 			</a>
 		</div>
 		<div class="mt-auto flex flex-col items-center gap-2 border-t border-zinc-800 py-3">
+			<ConnectionStatusIndicator />
 			<ThemeToggleButton />
 			<button onclick={handleSignOut} class="p-2 text-zinc-400 hover:text-white" title="Sign out">
 				<LogOut class="h-4 w-4" />
@@ -68,10 +70,13 @@
 				</button>
 			{/if}
 		</div>
-		<AppSidebarNav {foldersStore} {tagsStore} />
+		<AppSidebarNav {foldersStore} {tagsStore} {notesStore} />
 		<div class="border-t border-zinc-800 px-4 py-3">
 			<div class="flex items-center justify-between gap-2">
-				<span class="truncate text-xs text-zinc-500">{authStore.user?.display_name ?? 'Loading...'}</span>
+				<div class="flex items-center gap-2 min-w-0">
+					<ConnectionStatusIndicator />
+					<span class="truncate text-xs text-zinc-500">{authStore.user?.display_name ?? 'Loading...'}</span>
+				</div>
 				<div class="flex shrink-0 items-center gap-1">
 					<ThemeToggleButton />
 					<button onclick={handleSignOut} class="rounded p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300" title="Sign out">
