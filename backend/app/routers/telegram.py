@@ -188,10 +188,10 @@ async def telegram_webhook(
 
 
 async def _get_user_id(session: AsyncSession, chat_id: str) -> str | None:
-    """Get user_id from chat_id."""
-    stmt = select(TelegramSettings.user_id).where(TelegramSettings.chat_id == chat_id)
+    """Get user_id from chat_id (handles duplicate rows gracefully)."""
+    stmt = select(TelegramSettings.user_id).where(TelegramSettings.chat_id == chat_id).limit(1)
     result = await session.execute(stmt)
-    row = result.scalar_one_or_none()
+    row = result.scalar()
     return str(row) if row else None
 
 
