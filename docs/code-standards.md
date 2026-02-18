@@ -387,11 +387,12 @@ const fetchNotes = async (filters?: NoteFilters): Promise<Note[]> => {
 - Minimal dependencies: FastAPI, SQLAlchemy, Pydantic only
 - Command: `uv sync` (install), `uv add package` (add)
 
-### Node.js (pnpm)
-- Use `pnpm` (no npm or yarn)
+### Node.js (Bun)
+- Use `bun` (no npm, pnpm, or yarn)
 - `package.json` for monorepo root and workspaces
-- Lock file: `pnpm-lock.yaml` (auto-generated, commit to git)
-- Commands: `pnpm install`, `pnpm add package`
+- Lock file: `bun.lockb` (auto-generated, commit to git)
+- Commands: `bun install`, `bun add package`, `bun run <script>`
+- Filter workspaces: `bun --filter @notesapp/web-svelte install`
 
 ## Git & Commit Standards
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-NotesApp is a full-stack monorepo with ~90+ source files totaling ~8,000+ LOC. Built with pnpm workspace + Turborepo, FastAPI backend, SvelteKit primary frontend (in progress), Next.js legacy frontend (deprecated). Includes PWA/offline support, tagging system, recurring todos, note export, passkey WebAuthn auth, and theme toggle.
+NotesApp is a full-stack monorepo with ~90+ source files totaling ~8,000+ LOC. Built with Bun monorepo + Turborepo, FastAPI backend, SvelteKit primary frontend (in progress), Tauri desktop app (macOS), Next.js legacy frontend (deprecated). Includes PWA/offline support, tagging system, recurring todos, note export, passkey WebAuthn auth, and theme toggle.
 
 ## Directory Structure
 
@@ -132,7 +132,7 @@ notesapp/
 │   ├── tsconfig.json
 │   └── [config files]
 ├── docker-compose.yml                # Local dev: postgres + backend
-├── pnpm-workspace.yaml               # Monorepo config
+├── bun.lockb                         # Bun lock file
 ├── turbo.json                        # Turborepo task pipeline
 ├── package.json                      # Root workspace scripts
 ├── CLAUDE.md                         # Project instructions for Claude
@@ -318,9 +318,9 @@ notesapp/
 
 ### Local Development
 - Docker Compose: PostgreSQL (5432) + FastAPI (8000)
-- pnpm dev: Turborepo runs all dev servers
+- bun run dev: Turborepo runs all dev servers
 - Hot reload: Backend (uvicorn --reload), Frontend (SvelteKit Vite HMR)
-- pnpm dev:web: SvelteKit frontend only on port 5173
+- bun run dev:web-svelte: SvelteKit frontend only on port 5173
 
 ### Production (Planned)
 - Backend: Containerized FastAPI on VPS/serverless

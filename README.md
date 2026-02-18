@@ -8,17 +8,17 @@ A modern, full-stack note-taking and todo management application with Telegram r
 - Docker & Docker Compose
 - Python 3.13 (via `uv`)
 - Node.js 22+
-- pnpm 10.29.3+
+- Bun 1.2.4+
 
 ### Local Development
 
 ```bash
 # Install dependencies
-pnpm install
+bun install
 
 # Set up environment
 cp backend/.env.example backend/.env
-cp apps/web/.env.example apps/web/.env.local
+cp apps/web-svelte/.env.example apps/web-svelte/.env.local
 
 # Start database & backend
 docker-compose up -d
@@ -27,7 +27,7 @@ docker-compose up -d
 cd backend && alembic upgrade head && cd ..
 
 # Start dev servers
-pnpm dev
+bun run dev
 ```
 
 Services:
@@ -39,12 +39,13 @@ Services:
 ### Development Commands
 
 ```bash
-pnpm dev              # Run all services in dev mode
-pnpm build            # Build frontend and backend
-pnpm lint             # Lint all packages
-pnpm dev:web          # Frontend only
-pnpm build:web        # Build frontend only
-pnpm lint:web         # Lint frontend only
+bun run dev              # Run all services in dev mode
+bun run build            # Build frontend and backend
+bun run lint             # Lint all packages
+bun run dev:web-svelte   # SvelteKit frontend
+bun run build:web-svelte # Build SvelteKit frontend
+bun run dev:desktop      # Tauri desktop app
+bun run build:desktop    # Build Tauri desktop app
 ```
 
 ## Architecture Overview
@@ -52,10 +53,11 @@ pnpm lint:web         # Lint frontend only
 ### Stack
 - **Backend**: FastAPI + SQLAlchemy async + asyncpg + Alembic (Python 3.13)
 - **Frontend (Primary)**: SvelteKit 2 + Svelte 5 + TailwindCSS v4 (in progress, Phases 1-3 done)
+- **Desktop**: Tauri v2 (macOS, Phases 1-2 done)
 - **Frontend (Legacy)**: Next.js 16 (deprecated, kept for reference)
 - **Database**: PostgreSQL (local or managed)
 - **Auth**: Passkey-only (WebAuthn/FIDO2) with local HS256 JWT sessions
-- **Infrastructure**: pnpm monorepo + Turborepo, Docker Compose
+- **Infrastructure**: Bun monorepo + Turborepo, Docker Compose
 
 ### Key Features
 - **Notes**: Rich text editing (CodeMirror), auto-save with debounce, pinned/archived states, folder organization
@@ -97,16 +99,21 @@ pnpm lint:web         # Lint frontend only
 │   ├── package.json             # Node dependencies
 │   ├── svelte.config.js         # SvelteKit config
 │   └── vite.config.ts           # Vite config
+├── apps/desktop/                # Tauri v2 desktop app (macOS)
+│   ├── src/                     # Svelte UI
+│   ├── src-tauri/               # Rust backend
+│   ├── package.json             # Node dependencies
+│   └── [Tauri config]
 ├── apps/web/                    # Next.js 16 frontend (DEPRECATED - for reference)
 │   ├── src/
 │   │   ├── app/                 # Next.js App Router pages
 │   │   ├── components/          # React components
-│   │   ├── hooks/               # Custom React hooks (Supabase auth, deprecated)
+│   │   ├── hooks/               # Custom React hooks (deprecated)
 │   │   └── lib/                 # Utilities
 │   ├── package.json             # Node dependencies
 │   └── [config files]
 ├── docker-compose.yml           # Local dev environment
-├── pnpm-workspace.yaml          # Monorepo config
+├── bun.lockb                    # Bun lock file
 ├── turbo.json                   # Turborepo config
 └── docs/                        # Documentation
 ```

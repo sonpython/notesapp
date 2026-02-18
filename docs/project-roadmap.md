@@ -271,7 +271,7 @@
 - Python 3.13+ required
 - Node.js 22+ required
 - PostgreSQL 15+ required
-- pnpm package manager only
+- Bun 1.2.4+ package manager
 
 ## Resource Allocation
 

@@ -227,7 +227,7 @@ NotesApp is a lightweight, modern note-taking and task management platform with 
 - Python 3.13+ required
 - Node.js 22+ required
 - PostgreSQL 15+ required
-- pnpm package manager (no npm/yarn)
+- Bun 1.2.4+ package manager (no npm/pnpm/yarn)
 
 ### Organizational Constraints
 - Single developer (current)

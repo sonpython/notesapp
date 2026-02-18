@@ -6,7 +6,7 @@
 - Docker & Docker Compose
 - Python 3.13 (via `uv`)
 - Node.js 22+
-- pnpm 10.29.3+
+- Bun 1.2.4+
 - Git
 
 ### Step 1: Clone & Install
@@ -16,7 +16,7 @@ git clone <repo-url>
 cd notesapp
 
 # Install all dependencies
-pnpm install
+bun install
 ```
 
 ### Step 2: Environment Configuration
@@ -36,10 +36,8 @@ CORS_ORIGINS=http://localhost:3000
 
 **Frontend (.env.local)**
 ```bash
-# apps/web/.env.local
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...
+# apps/web-svelte/.env.local
+PUBLIC_API_URL=http://localhost:8000
 ```
 
 ### Step 3: Start Database
@@ -74,10 +72,10 @@ alembic current
 
 ```bash
 # From project root
-pnpm dev
+bun run dev
 
 # This starts:
-# - Frontend: http://localhost:3000
+# - Frontend (SvelteKit): http://localhost:3000 (or configured port)
 # - Backend: http://localhost:8000
 # - Turborepo watches for changes
 ```
@@ -98,11 +96,12 @@ open http://localhost:8000/docs
 ## Local Development Commands
 
 ```bash
-# Development
-pnpm dev              # Run all services
-pnpm dev:web          # Frontend only
-pnpm build            # Build all
-pnpm lint             # Lint all
+# Development (using Bun)
+bun run dev              # Run all services
+bun run dev:web-svelte   # SvelteKit frontend only
+bun run dev:desktop      # Tauri desktop app
+bun run build            # Build all
+bun run lint             # Lint all
 
 # Backend specific
 cd backend
@@ -110,11 +109,11 @@ uv sync               # Install deps
 alembic upgrade head  # Run migrations
 alembic revision --autogenerate -m "message"  # New migration
 
-# Frontend specific
-cd apps/web
-pnpm dev              # Dev server
-pnpm build            # Build for production
-pnpm lint             # Lint code
+# Frontend specific (SvelteKit)
+cd apps/web-svelte
+bun dev              # Dev server
+bun run build        # Build for production
+bun run lint         # Lint code
 ```
 
 ## Docker Local Environment
@@ -163,10 +162,10 @@ apt update && apt upgrade -y
 curl -fsSL https://get.docker.com -o get-docker.sh
 sh get-docker.sh
 
-# Install Node.js & pnpm (for building frontend)
+# Install Node.js & Bun (for building frontend)
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 apt install -y nodejs
-npm install -g pnpm
+curl -fsSL https://bun.sh/install | bash
 
 # Install Python & uv
 apt install -y python3.13 python3-pip
@@ -184,17 +183,16 @@ cd notesapp
 cp backend/.env.example backend/.env
 # Edit backend/.env with production values
 
-cp apps/web/.env.example apps/web/.env.production.local
+cp apps/web-svelte/.env.example apps/web-svelte/.env.production.local
 # Edit frontend .env with production API URL
 ```
 
 #### Step 3: Build & Deploy
 
 ```bash
-# Build frontend
-cd apps/web
-pnpm install
-pnpm build
+# Build frontend (from root)
+bun install
+bun run build:web-svelte
 
 # Build backend Docker image
 cd /opt/notesapp
