@@ -16,6 +16,7 @@
   import { api } from '$lib/api';
   import { uploadNoteImage } from '$lib/services/image-upload-service';
   import { imageDropExtension } from '$lib/extensions/codemirror-image-drop-extension';
+  import { marked } from 'marked';
 
   interface Props {
     note: Note | null;
@@ -143,6 +144,15 @@
     setTimeout(() => { uploadError = null; }, 5000);
   }
 
+  function handleToggleMode() {
+    if (isMarkdownMode) {
+      // Switching from Markdown to WYSIWYG: convert markdown to HTML
+      content = marked.parse(content, { async: false }) as string;
+    }
+    // Note: WYSIWYG to Markdown conversion not implemented (complex)
+    isMarkdownMode = !isMarkdownMode;
+  }
+
   const cmExtensions = [
     markdown(),
     imageDropExtension(handleImageUpload, handleUploadError),
@@ -191,7 +201,7 @@
         {/if}
         <NoteExportMenu {note} onexportAll={onexportAll} />
         <button
-          onclick={() => (isMarkdownMode = !isMarkdownMode)}
+          onclick={handleToggleMode}
           title={isMarkdownMode ? 'Switch to WYSIWYG' : 'Switch to Markdown'}
           class="p-1.5 rounded-md transition-colors cursor-pointer {isMarkdownMode ? 'text-accent bg-accent/10' : 'text-muted hover:text-foreground hover:bg-sidebar'}"
         >

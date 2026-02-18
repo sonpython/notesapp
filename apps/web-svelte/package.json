@@ -44,6 +44,7 @@
     "date-fns": "^4.1.0",
     "idb": "^8.0.3",
     "lucide-svelte": "^0.475.0",
+    "marked": "^17.0.3",
     "mode-watcher": "^0.5.0",
     "remark-gfm": "^4.0.1",
     "svelte-codemirror-editor": "^1.4.0",
