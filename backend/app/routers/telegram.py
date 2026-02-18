@@ -204,7 +204,7 @@ async def _handle_list(session: AsyncSession, chat_id: str, user_id: str) -> Non
         Todo.parent_id == None,  # noqa: E711
     ).order_by(Todo.priority.desc(), Todo.created_at.desc()).limit(10)
     result = await session.execute(stmt)
-    todos = result.scalars().all()
+    todos = list(result.scalars().all())
 
     if not todos:
         await send_telegram_message(chat_id, "📝 No active todos. Create one with `/todo Buy milk`")
@@ -233,7 +233,9 @@ async def _handle_done(session: AsyncSession, chat_id: str, user_id: str, num: i
         return
 
     todo = todos[num - 1]
+    title = todo.title
+
     todo.is_completed = True
     todo.completed_at = datetime.now(timezone.utc)
     await session.commit()
-    await send_telegram_message(chat_id, f"✅ Completed: *{todo.title}*")
+    await send_telegram_message(chat_id, f"✅ Completed: *{title}*")

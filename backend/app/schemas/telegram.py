@@ -1,5 +1,8 @@
-from pydantic import BaseModel
+import uuid
 from datetime import datetime
+from typing import Literal
+
+from pydantic import BaseModel, Field
 
 
 class TelegramStatusResponse(BaseModel):
@@ -18,3 +21,57 @@ class TelegramWebhookPayload(BaseModel):
     """Simplified Telegram webhook update"""
     update_id: int
     message: dict | None = None
+
+
+# --- Backup settings schemas ---
+
+BackupSchedule = Literal["daily", "weekly"]
+
+
+class TelegramBackupSettingsUpdate(BaseModel):
+    """Request body for updating backup settings."""
+    backup_enabled: bool | None = None
+    backup_schedule: BackupSchedule | None = None
+    backup_retention: int | None = Field(default=None, ge=1, le=20)
+
+
+class TelegramBackupSettingsResponse(BaseModel):
+    """Current backup settings for a user."""
+    backup_enabled: bool
+    backup_schedule: BackupSchedule | None
+    backup_retention: int
+    last_backup_at: datetime | None = None
+    next_backup_at: datetime | None = None
+
+
+class TelegramBackupItem(BaseModel):
+    """Single backup entry returned in list responses."""
+    id: uuid.UUID
+    telegram_file_id: str
+    telegram_message_id: int | None
+    backup_size_bytes: int
+    entity_counts: dict
+    version_number: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class TelegramBackupListResponse(BaseModel):
+    """Paginated list of backups for a user."""
+    items: list[TelegramBackupItem]
+    total: int
+
+
+class RestoreEntityCounts(BaseModel):
+    """Created/updated/skipped counts for one entity type during restore."""
+    created: int = 0
+    updated: int = 0
+    skipped: int = 0
+
+
+class RestoreResponse(BaseModel):
+    """Result of a restore operation."""
+    backup_id: str
+    version_number: int
+    counts: dict[str, RestoreEntityCounts]

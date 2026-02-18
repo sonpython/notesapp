@@ -45,5 +45,28 @@ class TelegramSettings(Base):
         server_default=sa.func.now(),
     )
 
+    # --- Backup settings ---
+    backup_enabled: Mapped[bool] = mapped_column(
+        sa.Boolean, nullable=False, server_default=sa.text("false"),
+    )
+
+    # 'daily' | 'weekly' | None (disabled)
+    backup_schedule: Mapped[str | None] = mapped_column(
+        sa.String(16), nullable=True, server_default=sa.text("'daily'"),
+    )
+
+    # Number of backup messages to keep before pruning older ones
+    backup_retention: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default=sa.text("5"),
+    )
+
+    last_backup_at: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True,
+    )
+
+    next_backup_at: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True,
+    )
+
     def __repr__(self) -> str:
         return f"<TelegramSettings id={self.id} user_id={self.user_id}>"

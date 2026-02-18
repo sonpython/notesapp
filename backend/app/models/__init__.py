@@ -10,6 +10,7 @@ from app.models.note import Note
 from app.models.passkey_credential import PasskeyCredential
 from app.models.tag import NoteTag, Tag, TodoTag
 from app.models.telegram import TelegramSettings
+from app.models.telegram_backup import TelegramBackup
 from app.models.todo import Todo
 from app.models.user import User
 from app.models.webauthn_challenge import WebAuthnChallenge
@@ -23,6 +24,7 @@ __all__ = [
     "Tag",
     "Todo",
     "TodoTag",
+    "TelegramBackup",
     "TelegramSettings",
     "User",
     "WebAuthnChallenge",

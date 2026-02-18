@@ -4,6 +4,7 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.services.reminder_service import check_and_send_reminders
+from app.tasks.telegram_backup_scheduler import check_and_run_scheduled_backups
 
 logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
@@ -33,6 +34,13 @@ def start_scheduler():
         'interval',
         minutes=10,
         id='webauthn_challenge_cleanup',
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        check_and_run_scheduled_backups,
+        'interval',
+        minutes=15,
+        id='telegram_backup_check',
         replace_existing=True,
     )
     scheduler.start()
