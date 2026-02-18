@@ -36,7 +36,7 @@
 	}
 </script>
 
-<aside class="flex h-full w-full flex-col bg-zinc-900 text-zinc-300">
+<aside class="flex h-full w-full flex-col bg-sidebar text-foreground">
 	{#if collapsed}
 		<!-- Collapsed: icons only -->
 		<div class="flex flex-col items-center py-3 gap-2">
@@ -53,7 +53,7 @@
 				<Settings class="h-5 w-5" />
 			</a>
 		</div>
-		<div class="mt-auto flex flex-col items-center gap-2 border-t border-zinc-800 py-3">
+		<div class="mt-auto flex flex-col items-center gap-2 border-t border-border py-3">
 			<ConnectionStatusIndicator />
 			<ThemeToggleButton />
 			<button onclick={handleSignOut} class="p-2 text-zinc-400 hover:text-white" title="Sign out">
@@ -65,13 +65,13 @@
 		<div class="flex h-14 items-center justify-between px-5">
 			<h1 class="text-lg font-semibold tracking-tight text-white">NotesApp</h1>
 			{#if oncollapse}
-				<button onclick={oncollapse} class="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300" title="Collapse">
+				<button onclick={oncollapse} class="rounded p-1 text-zinc-500 hover:bg-border hover:text-zinc-300" title="Collapse">
 					<PanelLeftClose class="h-4 w-4" />
 				</button>
 			{/if}
 		</div>
 		<AppSidebarNav {foldersStore} {tagsStore} {notesStore} />
-		<div class="border-t border-zinc-800 px-4 py-3">
+		<div class="border-t border-border px-4 py-3">
 			<div class="flex items-center justify-between gap-2">
 				<div class="flex items-center gap-2 min-w-0">
 					<ConnectionStatusIndicator />
@@ -79,7 +79,7 @@
 				</div>
 				<div class="flex shrink-0 items-center gap-1">
 					<ThemeToggleButton />
-					<button onclick={handleSignOut} class="rounded p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300" title="Sign out">
+					<button onclick={handleSignOut} class="rounded p-1.5 text-zinc-500 hover:bg-border hover:text-zinc-300" title="Sign out">
 						<LogOut class="h-3.5 w-3.5" />
 					</button>
 				</div>

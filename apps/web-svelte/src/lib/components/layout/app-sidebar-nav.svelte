@@ -88,7 +88,7 @@
 	/>
 </div>
 
-<div class="mx-5 my-3 border-t border-zinc-800"></div>
+<div class="mx-5 my-3 border-t border-border"></div>
 
 <!-- Other navigation links -->
 <nav class="space-y-0.5 px-3">
@@ -97,8 +97,8 @@
 		<a
 			href={item.href}
 			class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors {isActive
-				? 'bg-zinc-700/60 text-white'
-				: 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}"
+				? 'bg-accent/15 text-accent'
+				: 'text-muted hover:bg-border hover:text-foreground'}"
 		>
 			<item.icon class="h-4 w-4 shrink-0" />
 			{item.label}
@@ -106,14 +106,14 @@
 	{/each}
 </nav>
 
-<div class="mx-5 my-3 border-t border-zinc-800"></div>
+<div class="mx-5 my-3 border-t border-border"></div>
 
 <!-- Tags section header -->
 <div class="flex items-center justify-between px-5 pb-2">
 	<span class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Tags</span>
 	<a
 		href="/settings?tab=tags"
-		class="rounded p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+		class="rounded p-1 text-zinc-500 transition-colors hover:bg-border hover:text-zinc-300"
 		title="Manage Tags"
 	>
 		<TagIcon class="h-3.5 w-3.5" />
@@ -134,7 +134,7 @@
 					onclick={() => toggleTag(tag.id)}
 					class="rounded-full px-2 py-0.5 text-xs transition-colors {selectedTagIds.includes(tag.id)
 						? 'bg-zinc-600 text-white'
-						: 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'}"
+						: 'bg-zinc-800 text-muted hover:bg-zinc-700 hover:text-foreground'}"
 					style={tag.color ? `border: 1px solid ${tag.color}` : ''}
 				>
 					{tag.name}
