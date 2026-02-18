@@ -9,6 +9,7 @@
 	import { authStore } from '$lib/stores/auth-store.svelte';
 	import { TagsStore } from '$lib/stores/tags-store.svelte';
 	import TagManagementList from '$lib/components/tags/tag-management-list.svelte';
+	import TelegramSettings from '$lib/components/settings/telegram-settings.svelte';
 	import type { Tag } from '$lib/types';
 
 	const tagsStore = new TagsStore();
@@ -120,14 +121,8 @@
 			</div>
 
 		{:else if activeTab === 'telegram'}
-			<div class="max-w-md space-y-4">
-				<h2 class="text-lg font-semibold text-foreground">Telegram</h2>
-				<div class="rounded-lg border border-border bg-sidebar p-4">
-					<p class="text-sm text-muted">Telegram integration coming soon.</p>
-					<p class="mt-1 text-xs text-muted">
-						Link your Telegram account to receive reminders and manage todos via bot.
-					</p>
-				</div>
+			<div class="max-w-md">
+				<TelegramSettings />
 			</div>
 
 		{:else if activeTab === 'about'}
