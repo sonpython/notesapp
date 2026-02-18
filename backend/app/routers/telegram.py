@@ -95,6 +95,10 @@ async def unlink_telegram(
     if record is None:
         raise HTTPException(status_code=404, detail="Telegram settings not found")
 
+    # Notify user via Telegram before unlinking
+    if record.chat_id:
+        await send_telegram_message(record.chat_id, "🔓 Tài khoản đã được hủy liên kết.\n\nBạn sẽ không nhận được thông báo nữa.")
+
     record.chat_id = None
     record.link_code = None
     record.bot_linked_at = None
