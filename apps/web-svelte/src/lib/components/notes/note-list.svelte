@@ -15,7 +15,9 @@
 
   /** Extracts the first non-empty line of content as a preview snippet. */
   function getContentPreview(content: string): string {
-    const firstLine = content
+    // Strip HTML tags for WYSIWYG content
+    const stripped = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    const firstLine = stripped
       .split('\n')
       .map((line) => line.replace(/^#+\s*/, '').trim())
       .find((line) => line.length > 0);
