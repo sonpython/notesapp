@@ -52,31 +52,26 @@
 		<!-- Desktop sidebar - hidden on mobile, collapsible -->
 		{#if !sidebarCollapsed}
 			<div class="hidden lg:flex" style="width: {sidebarWidth}px;">
-				<AppSidebar />
+				<AppSidebar oncollapse={toggleSidebar} />
 			</div>
 			<ResizableDivider onresize={handleSidebarResize} class="hidden lg:block" />
-		{/if}
-
-		<!-- Main content -->
-		<main class="flex flex-1 flex-col overflow-hidden">
-			<!-- Collapse toggle -->
-			<div class="hidden h-10 items-center border-b border-border px-2 lg:flex">
+		{:else}
+			<!-- Collapsed: show expand button -->
+			<div class="hidden border-r border-border bg-sidebar p-2 lg:block">
 				<button
 					type="button"
 					onclick={toggleSidebar}
-					class="rounded p-1.5 text-muted transition-colors hover:bg-sidebar hover:text-foreground"
-					title={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+					class="rounded p-1.5 text-muted transition-colors hover:bg-background hover:text-foreground"
+					title="Show sidebar"
 				>
-					{#if sidebarCollapsed}
-						<PanelLeft class="h-4 w-4" />
-					{:else}
-						<PanelLeftClose class="h-4 w-4" />
-					{/if}
+					<PanelLeft class="h-4 w-4" />
 				</button>
 			</div>
-			<div class="flex flex-1 overflow-hidden">
-				{@render children()}
-			</div>
+		{/if}
+
+		<!-- Main content -->
+		<main class="flex flex-1 overflow-hidden">
+			{@render children()}
 		</main>
 	</div>
 </div>

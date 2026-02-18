@@ -4,13 +4,18 @@
 	 * Apple Notes-inspired dark sidebar (zinc-900).
 	 */
 	import { goto } from '$app/navigation';
-	import { LogOut } from 'lucide-svelte';
+	import { LogOut, PanelLeftClose } from 'lucide-svelte';
 	import { authStore } from '$lib/stores/auth-store.svelte';
 	import { FoldersStore } from '$lib/stores/folders-store.svelte';
 	import { NotesStore } from '$lib/stores/notes-store.svelte';
 	import { TagsStore } from '$lib/stores/tags-store.svelte';
 	import ThemeToggleButton from '$lib/components/ui/theme-toggle-button.svelte';
 	import AppSidebarNav from './app-sidebar-nav.svelte';
+
+	interface Props {
+		oncollapse?: () => void;
+	}
+	let { oncollapse }: Props = $props();
 
 	// Instantiate stores as singletons for this sidebar session
 	const foldersStore = new FoldersStore();
@@ -30,9 +35,19 @@
 </script>
 
 <aside class="flex h-full w-full flex-col bg-zinc-900 text-zinc-300">
-	<!-- App title -->
-	<div class="flex h-14 items-center px-5">
+	<!-- App title + collapse -->
+	<div class="flex h-14 items-center justify-between px-5">
 		<h1 class="text-lg font-semibold tracking-tight text-white">NotesApp</h1>
+		{#if oncollapse}
+			<button
+				type="button"
+				onclick={oncollapse}
+				class="rounded p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+				title="Hide sidebar"
+			>
+				<PanelLeftClose class="h-4 w-4" />
+			</button>
+		{/if}
 	</div>
 
 	<!-- Nav, folders, tags -->
