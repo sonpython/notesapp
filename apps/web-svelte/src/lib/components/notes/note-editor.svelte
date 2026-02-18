@@ -1,16 +1,16 @@
 <script lang="ts">
   /**
-   * Full note editor with title input, CodeMirror markdown editor,
-   * preview toggle, and action toolbar (pin, archive, delete).
+   * Full note editor with title input, WYSIWYG editor (default),
+   * markdown mode toggle, and action toolbar (pin, archive, delete).
    * Auto-saves changes after 500 ms debounce.
    * Supports drag-and-drop and paste image uploads.
    */
-  import { Pin, Archive, Eye, Edit3, Trash2, ImageIcon } from 'lucide-svelte';
+  import { Pin, Archive, Code, Trash2, ImageIcon } from 'lucide-svelte';
   import CodeMirror from 'svelte-codemirror-editor';
   import { markdown } from '@codemirror/lang-markdown';
   import type { Note, Tag } from '$lib/types';
   import { TagsStore } from '$lib/stores/tags-store.svelte';
-  import NotePreview from './note-preview.svelte';
+  import WysiwygEditor from './wysiwyg-editor.svelte';
   import NoteExportMenu from './note-export-menu.svelte';
   import TagSelector from '$lib/components/tags/tag-selector.svelte';
   import { api } from '$lib/api';
@@ -30,7 +30,7 @@
 
   let title = $state('');
   let content = $state('');
-  let isPreview = $state(false);
+  let isMarkdownMode = $state(false); // false = WYSIWYG (default), true = markdown
   let noteTags = $state<Tag[]>([]);
   let isUploading = $state(false);
   let uploadError = $state<string | null>(null);
@@ -45,7 +45,6 @@
       title = note.title;
       content = note.content;
       noteTags = note.tags ?? [];
-      isPreview = false;
     }
   });
 
@@ -192,15 +191,11 @@
         {/if}
         <NoteExportMenu {note} onexportAll={onexportAll} />
         <button
-          onclick={() => (isPreview = !isPreview)}
-          title={isPreview ? 'Edit' : 'Preview'}
-          class="p-1.5 rounded-md transition-colors cursor-pointer {isPreview ? 'text-accent bg-accent/10' : 'text-muted hover:text-foreground hover:bg-sidebar'}"
+          onclick={() => (isMarkdownMode = !isMarkdownMode)}
+          title={isMarkdownMode ? 'Switch to WYSIWYG' : 'Switch to Markdown'}
+          class="p-1.5 rounded-md transition-colors cursor-pointer {isMarkdownMode ? 'text-accent bg-accent/10' : 'text-muted hover:text-foreground hover:bg-sidebar'}"
         >
-          {#if isPreview}
-            <Edit3 class="w-4 h-4" />
-          {:else}
-            <Eye class="w-4 h-4" />
-          {/if}
+          <Code class="w-4 h-4" />
         </button>
       </div>
     </div>
@@ -231,22 +226,29 @@
       class="w-full px-4 py-3 text-2xl font-bold bg-transparent border-none outline-none text-foreground placeholder:text-muted/50"
     />
 
-    <!-- Editor or Preview -->
-    <div class="flex-1 overflow-y-auto px-4 pb-4">
-      {#if isPreview}
-        <NotePreview {content} />
+    <!-- Editor: WYSIWYG (default) or Markdown -->
+    <div class="flex-1 overflow-y-auto">
+      {#if isMarkdownMode}
+        <div class="px-4 pb-4">
+          <CodeMirror
+            bind:value={content}
+            extensions={cmExtensions}
+            placeholder="Start writing..."
+            class="min-h-full text-base"
+            lineWrapping
+            styles={{
+              '&': { background: 'transparent', height: '100%' },
+              '.cm-content': { fontFamily: 'inherit' },
+              '.cm-line': { lineHeight: '1.6' },
+            }}
+          />
+        </div>
       {:else}
-        <CodeMirror
-          bind:value={content}
-          extensions={cmExtensions}
-          placeholder="Start writing..."
-          class="min-h-full text-base"
-          lineWrapping
-          styles={{
-            '&': { background: 'transparent', height: '100%' },
-            '.cm-content': { fontFamily: 'inherit' },
-            '.cm-line': { lineHeight: '1.6' },
-          }}
+        <WysiwygEditor
+          {content}
+          onchange={(html) => { content = html; }}
+          onuploadstart={() => { isUploading = true; }}
+          onuploaderror={handleUploadError}
         />
       {/if}
     </div>
