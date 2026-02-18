@@ -62,10 +62,18 @@ export async function registerPasskey(displayName: string): Promise<AuthUser> {
 	const { options, challenge_id }: RegisterOptionsResponse = await optionsRes.json();
 	console.log('[DEBUG] Step 1 complete - got options:', { challenge_id, rp: options.rp });
 
-	// Step 2: Start WebAuthn registration ceremony
+	// Step 2: Start WebAuthn registration ceremony with PRF extension
 	console.log('[DEBUG] Step 2: Starting WebAuthn registration ceremony...');
 	try {
-		const credential = await startRegistration({ optionsJSON: options });
+		// Enable PRF extension for E2E backup encryption
+		const optionsWithPrf = {
+			...options,
+			extensions: {
+				...options.extensions,
+				prf: {}
+			}
+		};
+		const credential = await startRegistration({ optionsJSON: optionsWithPrf });
 		console.log('[DEBUG] Step 2 complete - got credential:', { id: credential.id, type: credential.type });
 
 		// Step 3: Verify registration
