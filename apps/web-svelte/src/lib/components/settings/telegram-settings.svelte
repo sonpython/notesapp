@@ -1,9 +1,17 @@
 <script lang="ts">
 	/**
 	 * Telegram settings panel - link/unlink, backup settings, and restore.
+	 * Supports E2E encryption of backups using passkey PRF extension.
 	 */
 	import { api } from '$lib/api';
 	import { onMount } from 'svelte';
+	import {
+		isPrfSupported,
+		deriveKeyFromPasskey,
+		encryptData,
+		decryptData,
+		type PrfKeyResult
+	} from '$lib/crypto';
 
 	interface TelegramStatus {
 		is_linked: boolean;
@@ -24,9 +32,33 @@
 		id: string;
 		telegram_file_id: string;
 		backup_size_bytes: number;
-		entity_counts: Record<string, number>;
+		entity_counts: Record<string, number | boolean>;
 		version_number: number;
+		is_encrypted: boolean;
 		created_at: string;
+	}
+
+	interface BackupExportData {
+		version: number;
+		app_version: string;
+		created_at: string;
+		user_id: string;
+		data: {
+			notes: unknown[];
+			todos: unknown[];
+			folders: unknown[];
+			tags: unknown[];
+		};
+		counts: Record<string, number>;
+	}
+
+	interface EncryptedRestoreResponse {
+		backup_id: string;
+		version_number: number;
+		is_encrypted: boolean;
+		encrypted_data?: string;
+		iv?: string;
+		data?: BackupExportData;
 	}
 
 	let status = $state<TelegramStatus | null>(null);
@@ -37,7 +69,13 @@
 	let actionLoading = $state(false);
 	let error = $state<string | null>(null);
 
+	// Encryption state
+	let prfSupported = $state(false);
+	let useEncryption = $state(true); // Default to encrypted backups
+
 	onMount(async () => {
+		// Check PRF support on mount
+		prfSupported = await isPrfSupported();
 		await loadData();
 	});
 
@@ -102,27 +140,75 @@
 		actionLoading = true;
 		error = null;
 		try {
-			await api.post('/api/backup/trigger');
+			if (useEncryption && prfSupported) {
+				// E2E encrypted backup flow
+				// 1. Export data from backend
+				const exportData = await api.get<BackupExportData>('/api/backup/export');
+
+				// 2. Derive encryption key from passkey
+				const { key } = await deriveKeyFromPasskey();
+
+				// 3. Encrypt the data
+				const dataJson = JSON.stringify(exportData);
+				const { ciphertext, iv } = await encryptData(key, dataJson);
+
+				// 4. Send encrypted data to backend
+				await api.post('/api/backup/trigger/encrypted', {
+					encrypted_data: ciphertext,
+					iv: iv
+				});
+			} else {
+				// Unencrypted backup (legacy flow)
+				await api.post('/api/backup/trigger');
+			}
+
 			// Reload backups list
 			const res = await api.get<{ items: BackupItem[] }>('/api/backup/list');
 			backups = res.items;
 			backupSettings = await api.get<BackupSettings>('/api/backup/settings');
-		} catch {
-			error = 'Backup failed (rate limit: 1/hour)';
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : 'Backup failed';
+			error = msg.includes('rate') ? 'Backup failed (rate limit: 1/hour)' : msg;
 		} finally {
 			actionLoading = false;
 		}
 	}
 
-	async function restoreBackup(backupId: string) {
+	async function restoreBackup(backupId: string, isEncrypted: boolean) {
 		if (!confirm('Restore this backup? Your current data will be merged.')) return;
 		actionLoading = true;
 		error = null;
 		try {
-			await api.post(`/api/backup/${backupId}/restore`);
-			alert('Restore complete! Refresh the page to see changes.');
-		} catch {
-			error = 'Restore failed (rate limit: 1/hour)';
+			if (isEncrypted) {
+				// E2E encrypted restore flow
+				// 1. Download encrypted data
+				const downloadRes = await api.get<EncryptedRestoreResponse>(
+					`/api/backup/${backupId}/download`
+				);
+
+				if (!downloadRes.encrypted_data || !downloadRes.iv) {
+					throw new Error('Invalid encrypted backup data');
+				}
+
+				// 2. Derive decryption key from passkey
+				const { key } = await deriveKeyFromPasskey();
+
+				// 3. Decrypt the data
+				const decryptedJson = await decryptData(key, downloadRes.encrypted_data, downloadRes.iv);
+				const decryptedData = JSON.parse(decryptedJson) as BackupExportData;
+
+				// 4. Import the decrypted data via backend
+				await api.post(`/api/backup/import`, decryptedData);
+
+				alert('Encrypted backup restored! Refresh the page to see changes.');
+			} else {
+				// Unencrypted restore (legacy flow)
+				await api.post(`/api/backup/${backupId}/restore`);
+				alert('Restore complete! Refresh the page to see changes.');
+			}
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : 'Restore failed';
+			error = msg.includes('rate') ? 'Restore failed (rate limit: 1/hour)' : msg;
 		} finally {
 			actionLoading = false;
 		}
@@ -253,12 +339,29 @@
 						</p>
 					{/if}
 
+					<!-- Encryption toggle -->
+					{#if prfSupported}
+						<label class="flex items-center gap-2">
+							<input
+								type="checkbox"
+								bind:checked={useEncryption}
+								class="rounded"
+							/>
+							<span class="text-sm text-foreground">Encrypt backup with passkey</span>
+							<span class="text-xs text-muted">(E2E encrypted)</span>
+						</label>
+					{:else}
+						<p class="text-xs text-amber-500">
+							Encrypted backups not available (requires Chrome 116+, Safari 17+, or Edge 116+)
+						</p>
+					{/if}
+
 					<button
 						onclick={triggerBackup}
 						disabled={actionLoading}
 						class="rounded bg-accent/10 px-3 py-1.5 text-sm text-accent hover:bg-accent/20 disabled:opacity-50"
 					>
-						{actionLoading ? 'Working...' : 'Backup Now'}
+						{actionLoading ? 'Working...' : useEncryption && prfSupported ? 'Backup Now (Encrypted)' : 'Backup Now'}
 					</button>
 				</div>
 			{/if}
@@ -272,16 +375,22 @@
 							<div class="flex items-center justify-between rounded bg-background/50 p-2 text-xs">
 								<div>
 									<span class="font-medium">v{backup.version_number}</span>
+									{#if backup.is_encrypted}
+										<span class="ml-1 text-green-500" title="End-to-end encrypted">🔐</span>
+									{/if}
 									<span class="text-muted ml-2">{formatBytes(backup.backup_size_bytes)}</span>
-									<span class="text-muted ml-2">
-										{backup.entity_counts.notes}N {backup.entity_counts.todos}T
-									</span>
+									{#if !backup.is_encrypted}
+										<span class="text-muted ml-2">
+											{backup.entity_counts.notes}N {backup.entity_counts.todos}T
+										</span>
+									{/if}
 									<p class="text-muted">{formatDate(backup.created_at)}</p>
 								</div>
 								<button
-									onclick={() => restoreBackup(backup.id)}
-									disabled={actionLoading}
+									onclick={() => restoreBackup(backup.id, backup.is_encrypted)}
+									disabled={actionLoading || (backup.is_encrypted && !prfSupported)}
 									class="text-accent hover:underline disabled:opacity-50"
+									title={backup.is_encrypted && !prfSupported ? 'Encrypted backup requires supported browser' : ''}
 								>
 									Restore
 								</button>

@@ -113,13 +113,6 @@
 			</button>
 		</div>
 
-		<!-- Note count -->
-		{#if notesStore.loading}
-			<p class="px-4 py-2 text-xs text-muted">Loading...</p>
-		{:else}
-			<p class="px-4 py-2 text-xs text-muted">{notesStore.total} note{notesStore.total !== 1 ? 's' : ''}</p>
-		{/if}
-
 		<!-- Note list -->
 		<div class="flex-1 overflow-hidden">
 			<NoteList

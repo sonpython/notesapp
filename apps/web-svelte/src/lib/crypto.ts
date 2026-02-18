@@ -1,0 +1,247 @@
+/**
+ * E2E encryption module for Telegram backups.
+ * Uses WebAuthn PRF extension to derive AES-GCM keys from passkeys.
+ */
+
+import { startAuthentication } from '@simplewebauthn/browser';
+import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
+import { PUBLIC_API_URL } from '$env/static/public';
+
+const API_URL = PUBLIC_API_URL || 'http://localhost:8000';
+
+// Fixed PRF salt for backup encryption (32 bytes, base64url encoded)
+// This is application-specific and safe to be public
+const PRF_SALT = new Uint8Array([
+	0x4e, 0x6f, 0x74, 0x65, 0x73, 0x41, 0x70, 0x70, // "NotesApp"
+	0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x45, 0x6e, // "BackupEn"
+	0x63, 0x72, 0x79, 0x70, 0x74, 0x69, 0x6f, 0x6e, // "cryption"
+	0x4b, 0x65, 0x79, 0x56, 0x31, 0x00, 0x00, 0x00 // "KeyV1..."
+]);
+
+/**
+ * Check if browser supports WebAuthn PRF extension.
+ * PRF is supported in Chrome 116+, Safari 17+, Edge 116+.
+ * Firefox does not support PRF yet.
+ */
+export async function isPrfSupported(): Promise<boolean> {
+	if (!window.PublicKeyCredential) return false;
+
+	// Check for PRF extension support via getClientCapabilities (newer browsers)
+	try {
+		const pkc = PublicKeyCredential as unknown as {
+			getClientCapabilities?: () => Promise<Record<string, unknown>>;
+		};
+		if (typeof pkc.getClientCapabilities === 'function') {
+			const capabilities = await pkc.getClientCapabilities();
+			const extensions = capabilities?.extensions as Record<string, boolean> | undefined;
+			return extensions?.prf === true;
+		}
+	} catch {
+		// Fall through to feature detection
+	}
+
+	// Fallback: assume modern Chromium/Safari supports it
+	const ua = navigator.userAgent;
+	const isChromium = /Chrome\/(\d+)/.exec(ua);
+	const isSafari = /Safari\/(\d+)/.exec(ua) && !/Chrome/.test(ua);
+	const isFirefox = /Firefox/.test(ua);
+
+	if (isFirefox) return false;
+	if (isChromium) {
+		const version = parseInt(isChromium[1], 10);
+		return version >= 116;
+	}
+	if (isSafari) {
+		// Safari 17+ supports PRF
+		const safariVersion = /Version\/(\d+)/.exec(ua);
+		if (safariVersion) {
+			return parseInt(safariVersion[1], 10) >= 17;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Result from PRF key derivation.
+ */
+export interface PrfKeyResult {
+	key: CryptoKey;
+	credentialId: string;
+}
+
+/**
+ * Derive an AES-GCM key from passkey using WebAuthn PRF extension.
+ * Triggers a passkey authentication ceremony with PRF extension.
+ *
+ * @returns AES-GCM CryptoKey derived from PRF output
+ * @throws Error if PRF not supported or authentication fails
+ */
+export async function deriveKeyFromPasskey(): Promise<PrfKeyResult> {
+	// Check PRF support first
+	const supported = await isPrfSupported();
+	if (!supported) {
+		throw new Error(
+			'Your browser does not support encrypted backups. ' +
+				'Please use Chrome 116+, Safari 17+, or Edge 116+.'
+		);
+	}
+
+	// Get authentication options from backend
+	const optionsRes = await fetch(`${API_URL}/api/auth/login/options`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include'
+	});
+
+	if (!optionsRes.ok) {
+		throw new Error('Failed to get authentication options');
+	}
+
+	const { options, challenge_id } = (await optionsRes.json()) as {
+		options: PublicKeyCredentialRequestOptionsJSON;
+		challenge_id: string;
+	};
+
+	// Add PRF extension to the options
+	const prfOptions = {
+		...options,
+		extensions: {
+			...options.extensions,
+			prf: {
+				eval: {
+					first: bufferToBase64url(PRF_SALT)
+				}
+			}
+		}
+	};
+
+	// Start authentication with PRF
+	const credential = await startAuthentication({
+		optionsJSON: prfOptions as PublicKeyCredentialRequestOptionsJSON
+	});
+
+	// Verify authentication (maintain session)
+	const verifyRes = await fetch(`${API_URL}/api/auth/login/verify`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ credential, challenge_id }),
+		credentials: 'include'
+	});
+
+	if (!verifyRes.ok) {
+		throw new Error('Passkey verification failed');
+	}
+
+	// Extract PRF result from client extension results
+	// @ts-expect-error - PRF extension types not fully defined
+	const prfResult = credential.clientExtensionResults?.prf?.results?.first;
+
+	if (!prfResult) {
+		throw new Error(
+			'PRF extension not available. Your passkey may not support encrypted backups.'
+		);
+	}
+
+	// PRF output is ArrayBuffer, convert to Uint8Array
+	const prfOutput = base64urlToBuffer(prfResult);
+
+	// Derive AES-GCM key from PRF output using HKDF
+	const keyMaterial = await crypto.subtle.importKey(
+		'raw',
+		prfOutput.buffer as ArrayBuffer,
+		'HKDF',
+		false,
+		['deriveKey']
+	);
+
+	const aesKey = await crypto.subtle.deriveKey(
+		{
+			name: 'HKDF',
+			salt: PRF_SALT,
+			info: new TextEncoder().encode('NotesApp Backup Encryption'),
+			hash: 'SHA-256'
+		},
+		keyMaterial,
+		{ name: 'AES-GCM', length: 256 },
+		false,
+		['encrypt', 'decrypt']
+	);
+
+	return {
+		key: aesKey,
+		credentialId: credential.id
+	};
+}
+
+/**
+ * Encrypt data using AES-GCM.
+ *
+ * @param key AES-GCM CryptoKey
+ * @param data String data to encrypt
+ * @returns Base64-encoded ciphertext and IV
+ */
+export async function encryptData(
+	key: CryptoKey,
+	data: string
+): Promise<{ ciphertext: string; iv: string }> {
+	// Generate random 12-byte IV (recommended for AES-GCM)
+	const iv = crypto.getRandomValues(new Uint8Array(12));
+
+	// Encode data as UTF-8
+	const plaintext = new TextEncoder().encode(data);
+
+	// Encrypt
+	const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+
+	return {
+		ciphertext: bufferToBase64(new Uint8Array(ciphertext)),
+		iv: bufferToBase64(iv)
+	};
+}
+
+/**
+ * Decrypt data using AES-GCM.
+ *
+ * @param key AES-GCM CryptoKey
+ * @param ciphertext Base64-encoded ciphertext
+ * @param iv Base64-encoded IV
+ * @returns Decrypted string
+ */
+export async function decryptData(key: CryptoKey, ciphertext: string, iv: string): Promise<string> {
+	const ciphertextBuffer = base64ToBuffer(ciphertext);
+	const ivBuffer = base64ToBuffer(iv);
+
+	const plaintext = await crypto.subtle.decrypt(
+		{ name: 'AES-GCM', iv: ivBuffer.buffer as ArrayBuffer },
+		key,
+		ciphertextBuffer.buffer as ArrayBuffer
+	);
+
+	return new TextDecoder().decode(plaintext);
+}
+
+// --- Utility functions ---
+
+function bufferToBase64(buffer: Uint8Array): string {
+	return btoa(String.fromCharCode(...buffer));
+}
+
+function base64ToBuffer(base64: string): Uint8Array {
+	const binary = atob(base64);
+	const bytes = new Uint8Array(binary.length);
+	for (let i = 0; i < binary.length; i++) {
+		bytes[i] = binary.charCodeAt(i);
+	}
+	return bytes;
+}
+
+function bufferToBase64url(buffer: Uint8Array): string {
+	return bufferToBase64(buffer).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64urlToBuffer(base64url: string): Uint8Array {
+	const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+	const paddedBase64 = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+	return base64ToBuffer(paddedBase64);
+}

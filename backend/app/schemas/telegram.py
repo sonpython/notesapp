@@ -52,6 +52,7 @@ class TelegramBackupItem(BaseModel):
     backup_size_bytes: int
     entity_counts: dict
     version_number: int
+    is_encrypted: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -75,3 +76,19 @@ class RestoreResponse(BaseModel):
     backup_id: str
     version_number: int
     counts: dict[str, RestoreEntityCounts]
+
+
+class EncryptedBackupRequest(BaseModel):
+    """Request body for encrypted backup trigger."""
+    encrypted_data: str  # Base64-encoded encrypted JSON
+    iv: str  # Base64-encoded AES-GCM IV
+
+
+class EncryptedRestoreResponse(BaseModel):
+    """Response for encrypted backup restore (returns raw encrypted data)."""
+    backup_id: str
+    version_number: int
+    is_encrypted: bool
+    encrypted_data: str | None = None  # Base64-encoded encrypted JSON (if encrypted)
+    iv: str | None = None  # Base64-encoded IV (if encrypted)
+    data: dict | None = None  # Plaintext data (if not encrypted)

@@ -33,6 +33,11 @@
 		searchParams.get('tags') ? searchParams.get('tags')!.split(',') : []
 	);
 
+	// Fetch note counts on mount
+	$effect(() => {
+		notesStore.fetchNoteCounts();
+	});
+
 	function selectFolder(id: string | null) {
 		goto(id ? `/notes?folder=${id}` : '/notes');
 	}
@@ -80,6 +85,7 @@
 	<FolderTree
 		folders={foldersStore.folderTree}
 		{selectedFolderId}
+		noteCounts={notesStore.counts}
 		onselectFolder={selectFolder}
 		oncreateFolder={createFolder}
 		onrenameFolder={renameFolder}

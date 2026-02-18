@@ -53,6 +53,11 @@ class TelegramBackup(Base):
         sa.Integer, nullable=False, server_default=sa.text("1"),
     )
 
+    # Whether backup data is E2E encrypted (client-side encryption with passkey)
+    is_encrypted: Mapped[bool] = mapped_column(
+        sa.Boolean, nullable=False, server_default=sa.text("false"), default=False,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
         nullable=False,

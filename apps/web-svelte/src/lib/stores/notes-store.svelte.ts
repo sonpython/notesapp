@@ -8,12 +8,19 @@ import type { Note, PaginatedResponse } from '$lib/types';
 import * as notesDB from '$lib/offline/indexed-db-notes';
 import * as syncQueue from '$lib/offline/indexed-db-sync-queue';
 
+export interface NoteCounts {
+	total: number;
+	by_folder: Record<string, number>;
+	no_folder: number;
+}
+
 export class NotesStore {
 	notes = $state<Note[]>([]);
 	loading = $state(false);
 	error = $state<string | null>(null);
 	total = $state(0);
 	fromCache = $state(false);
+	counts = $state<NoteCounts | null>(null);
 
 	private offset = 0;
 	private limit = 50;
@@ -209,10 +216,20 @@ export class NotesStore {
 		try {
 			await api.put(`/api/notes/${noteId}`, { folder_id: folderId });
 			this.notes = this.notes.map((n) => (n.id === noteId ? { ...n, folder_id: folderId } : n));
+			// Refresh counts after move
+			this.fetchNoteCounts();
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Failed to move note';
 			this.error = message;
 			throw err;
+		}
+	}
+
+	async fetchNoteCounts(): Promise<void> {
+		try {
+			this.counts = await api.get<NoteCounts>('/api/notes/counts');
+		} catch (err) {
+			console.error('[notes-store] Failed to fetch counts:', err);
 		}
 	}
 }

@@ -78,6 +78,47 @@ async def list_notes(
     )
 
 
+@router.get("/counts")
+async def get_note_counts(
+    user_id: str = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> dict:
+    """Get note counts per folder for the current user.
+
+    Returns:
+        { total: int, by_folder: { folder_id: count, ... }, no_folder: int }
+    """
+    uid = UUID(user_id)
+
+    # Total count
+    total_result = await session.execute(
+        select(func.count()).where(Note.user_id == uid, Note.is_archived == False)
+    )
+    total = total_result.scalar_one()
+
+    # Count per folder (only non-archived)
+    folder_counts_result = await session.execute(
+        select(Note.folder_id, func.count())
+        .where(Note.user_id == uid, Note.is_archived == False)
+        .group_by(Note.folder_id)
+    )
+    folder_counts = folder_counts_result.all()
+
+    by_folder = {}
+    no_folder = 0
+    for folder_id, count in folder_counts:
+        if folder_id is None:
+            no_folder = count
+        else:
+            by_folder[str(folder_id)] = count
+
+    return {
+        "total": total,
+        "by_folder": by_folder,
+        "no_folder": no_folder,
+    }
+
+
 @router.post("/", response_model=NoteResponse, status_code=201)
 async def create_note(
     body: NoteCreate,

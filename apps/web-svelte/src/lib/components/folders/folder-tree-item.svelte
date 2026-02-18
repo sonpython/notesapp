@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ChevronRight, ChevronDown, FolderIcon, FolderOpen } from 'lucide-svelte';
   import type { Folder } from '$lib/types';
+  import type { NoteCounts } from '$lib/stores/notes-store.svelte';
   import FolderContextMenu from './folder-context-menu.svelte';
   import FolderTreeItemSelf from './folder-tree-item.svelte';
 
@@ -8,6 +9,7 @@
     folder: Folder;
     depth: number;
     selectedFolderId: string | null;
+    noteCounts?: NoteCounts | null;
     onselect: (id: string) => void;
     onrename: (id: string, name: string) => Promise<Folder>;
     ondelete: (id: string) => Promise<void>;
@@ -15,7 +17,10 @@
     onmoveNote?: (noteId: string, folderId: string | null) => Promise<void>;
   }
 
-  let { folder, depth, selectedFolderId, onselect, onrename, ondelete, oncreate, onmoveNote }: Props = $props();
+  let { folder, depth, selectedFolderId, noteCounts, onselect, onrename, ondelete, oncreate, onmoveNote }: Props = $props();
+
+  // Get count for this folder
+  const folderCount = $derived(noteCounts?.by_folder[folder.id] ?? 0);
 
   let isExpanded = $state(false);
   let showMenu = $state(false);
@@ -169,6 +174,9 @@
       />
     {:else}
       <span class="flex-1 truncate">{folder.name}</span>
+      {#if folderCount > 0}
+        <span class="text-xs text-zinc-500 shrink-0">{folderCount}</span>
+      {/if}
     {/if}
 
     <!-- Context menu (trigger + dropdown) -->
@@ -192,6 +200,7 @@
           folder={child}
           depth={depth + 1}
           {selectedFolderId}
+          {noteCounts}
           onselect={onselect}
           onrename={onrename}
           ondelete={ondelete}

@@ -1,11 +1,13 @@
 <script lang="ts">
   import { FolderIcon, Plus, FileText } from 'lucide-svelte';
   import type { Folder } from '$lib/types';
+  import type { NoteCounts } from '$lib/stores/notes-store.svelte';
   import FolderTreeItem from './folder-tree-item.svelte';
 
   interface Props {
     folders: Folder[];
     selectedFolderId: string | null;
+    noteCounts?: NoteCounts | null;
     onselectFolder: (id: string | null) => void;
     oncreateFolder: (name: string, parentId?: string) => Promise<Folder>;
     onrenameFolder: (id: string, name: string) => Promise<Folder>;
@@ -16,6 +18,7 @@
   let {
     folders,
     selectedFolderId,
+    noteCounts,
     onselectFolder,
     oncreateFolder,
     onrenameFolder,
@@ -62,7 +65,10 @@
         : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}"
   >
     <FileText class="h-4 w-4 shrink-0" />
-    All Notes
+    <span class="flex-1">All Notes</span>
+    {#if noteCounts?.total}
+      <span class="text-xs text-zinc-500">{noteCounts.total}</span>
+    {/if}
   </button>
 
   <!-- Folders header with New Folder button -->
@@ -106,6 +112,7 @@
       {folder}
       depth={0}
       {selectedFolderId}
+      {noteCounts}
       onselect={onselectFolder}
       onrename={onrenameFolder}
       ondelete={ondeleteFolder}

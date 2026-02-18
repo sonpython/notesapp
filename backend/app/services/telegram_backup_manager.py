@@ -19,6 +19,8 @@ from app.models.telegram import TelegramSettings
 from app.models.telegram_backup import TelegramBackup
 from app.services.backup_export_service import export_user_data, serialize_backup
 from app.services.telegram_service import delete_message, send_document
+import gzip
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +151,108 @@ async def create_backup(
         file_id=file_id,
         size_bytes=len(compressed),
         counts=counts,
+        version=version,
+    )
+
+
+async def create_encrypted_backup(
+    db: AsyncSession,
+    user_id: str | UUID,
+    encrypted_data: str,
+    iv: str,
+) -> BackupResult:
+    """Create backup from pre-encrypted data (E2E encrypted by client).
+
+    Steps:
+    1. Verify Telegram is linked for user
+    2. Wrap encrypted data with IV in JSON envelope
+    3. Gzip compress
+    4. Validate size < 50 MB
+    5. Upload to Telegram as document
+    6. Store TelegramBackup metadata row (is_encrypted=True)
+    7. Update TelegramSettings.last_backup_at
+    8. Prune old backups per retention setting
+
+    Args:
+        db: Async database session.
+        user_id: User's UUID.
+        encrypted_data: Base64-encoded encrypted JSON from client.
+        iv: Base64-encoded AES-GCM IV from client.
+
+    Returns:
+        BackupResult with backup_id, file_id, size_bytes, counts, version.
+
+    Raises:
+        ValueError: If Telegram not linked, or backup exceeds size limit.
+        RuntimeError: If Telegram upload fails.
+    """
+    uid = UUID(str(user_id)) if not isinstance(user_id, UUID) else user_id
+
+    # 1. Verify Telegram is linked
+    tg = await _get_telegram_settings(db, uid)
+    if not tg or not tg.chat_id:
+        raise ValueError("Telegram not linked for this user")
+
+    # 2. Create JSON envelope with encrypted data
+    envelope = {
+        "encrypted": True,
+        "encrypted_data": encrypted_data,
+        "iv": iv,
+    }
+    json_bytes = json.dumps(envelope, ensure_ascii=False).encode("utf-8")
+
+    # 3. Gzip compress
+    compressed = gzip.compress(json_bytes, compresslevel=6)
+
+    # 4. Size check
+    if len(compressed) > _MAX_UPLOAD_BYTES:
+        raise ValueError(
+            f"Backup size {len(compressed)} bytes exceeds Telegram 50 MB limit"
+        )
+
+    # 5. Upload to Telegram
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    filename = f"notesapp-backup-{ts}.enc.gz"
+    caption = f"NotesApp Encrypted Backup - {ts}\n(E2E encrypted with passkey)"
+
+    upload_result = await send_document(tg.chat_id, compressed, filename, caption)
+    if upload_result is None:
+        raise RuntimeError("Failed to upload backup to Telegram")
+
+    file_id, message_id = upload_result
+
+    # 6. Determine next version and store metadata
+    version = await _next_version_number(db, uid)
+    backup = TelegramBackup(
+        user_id=uid,
+        telegram_file_id=file_id,
+        telegram_message_id=message_id,
+        backup_size_bytes=len(compressed),
+        entity_counts={"encrypted": True},  # Can't see counts for encrypted backup
+        version_number=version,
+        is_encrypted=True,
+    )
+    db.add(backup)
+
+    # 7. Update last_backup_at on settings
+    tg.last_backup_at = datetime.now(timezone.utc)
+
+    await db.commit()
+    await db.refresh(backup)
+
+    logger.info(
+        "create_encrypted_backup: user=%s version=%d size=%d bytes (encrypted)",
+        uid, version, len(compressed),
+    )
+
+    # 8. Prune old backups
+    await prune_old_backups(db, uid, tg.backup_retention)
+
+    return BackupResult(
+        backup_id=str(backup.id),
+        file_id=file_id,
+        size_bytes=len(compressed),
+        counts={"encrypted": True},
         version=version,
     )
 
