@@ -17,6 +17,7 @@
   import { uploadNoteImage } from '$lib/services/image-upload-service';
   import { imageDropExtension } from '$lib/extensions/codemirror-image-drop-extension';
   import { marked } from 'marked';
+  import TurndownService from 'turndown';
 
   interface Props {
     note: Note | null;
@@ -144,12 +145,16 @@
     setTimeout(() => { uploadError = null; }, 5000);
   }
 
+  const turndown = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+
   function handleToggleMode() {
     if (isMarkdownMode) {
-      // Switching from Markdown to WYSIWYG: convert markdown to HTML
+      // Markdown → WYSIWYG: convert markdown to HTML
       content = marked.parse(content, { async: false }) as string;
+    } else {
+      // WYSIWYG → Markdown: convert HTML to markdown
+      content = turndown.turndown(content);
     }
-    // Note: WYSIWYG to Markdown conversion not implemented (complex)
     isMarkdownMode = !isMarkdownMode;
   }
 

@@ -40,6 +40,7 @@
     "@tiptap/extension-placeholder": "^3.20.0",
     "@tiptap/pm": "^3.20.0",
     "@tiptap/starter-kit": "^3.20.0",
+    "@types/turndown": "^5.0.6",
     "codemirror": "^6.0.2",
     "date-fns": "^4.1.0",
     "idb": "^8.0.3",
@@ -49,7 +50,8 @@
     "remark-gfm": "^4.0.1",
     "svelte-codemirror-editor": "^1.4.0",
     "svelte-markdown": "^0.4.0",
-    "svelte-tiptap": "^3.0.1"
+    "svelte-tiptap": "^3.0.1",
+    "turndown": "^7.2.2"
   },
   "type": "module"
 }
