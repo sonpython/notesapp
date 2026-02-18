@@ -24,38 +24,24 @@ const PRF_SALT = new Uint8Array([
  * Firefox does not support PRF yet.
  */
 export async function isPrfSupported(): Promise<boolean> {
-	if (!window.PublicKeyCredential) return false;
+	if (typeof window === 'undefined' || !window.PublicKeyCredential) return false;
 
-	// Check for PRF extension support via getClientCapabilities (newer browsers)
-	try {
-		const pkc = PublicKeyCredential as unknown as {
-			getClientCapabilities?: () => Promise<Record<string, unknown>>;
-		};
-		if (typeof pkc.getClientCapabilities === 'function') {
-			const capabilities = await pkc.getClientCapabilities();
-			const extensions = capabilities?.extensions as Record<string, boolean> | undefined;
-			return extensions?.prf === true;
-		}
-	} catch {
-		// Fall through to feature detection
-	}
-
-	// Fallback: assume modern Chromium/Safari supports it
 	const ua = navigator.userAgent;
-	const isChromium = /Chrome\/(\d+)/.exec(ua);
-	const isSafari = /Safari\/(\d+)/.exec(ua) && !/Chrome/.test(ua);
-	const isFirefox = /Firefox/.test(ua);
 
-	if (isFirefox) return false;
-	if (isChromium) {
-		const version = parseInt(isChromium[1], 10);
-		return version >= 116;
+	// Firefox doesn't support PRF
+	if (/Firefox/i.test(ua)) return false;
+
+	// Chrome/Edge 116+ support PRF
+	const chromeMatch = /Chrom(?:e|ium)\/(\d+)/i.exec(ua);
+	if (chromeMatch) {
+		return parseInt(chromeMatch[1], 10) >= 116;
 	}
-	if (isSafari) {
-		// Safari 17+ supports PRF
-		const safariVersion = /Version\/(\d+)/.exec(ua);
-		if (safariVersion) {
-			return parseInt(safariVersion[1], 10) >= 17;
+
+	// Safari 17+ supports PRF (check Version/ for actual Safari version)
+	if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) {
+		const versionMatch = /Version\/(\d+)/i.exec(ua);
+		if (versionMatch) {
+			return parseInt(versionMatch[1], 10) >= 17;
 		}
 	}
 

@@ -321,7 +321,7 @@
 							<label class="flex items-center gap-2">
 								<span class="text-muted">Keep:</span>
 								<select
-									value={backupSettings.backup_retention}
+									value={String(backupSettings.backup_retention)}
 									onchange={(e) => updateBackupSettings({ backup_retention: +e.currentTarget.value })}
 									class="rounded border border-border bg-background px-2 py-1 text-foreground"
 								>
