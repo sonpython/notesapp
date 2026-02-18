@@ -201,6 +201,16 @@ async def _handle_start(session: AsyncSession, chat_id: str, code: str) -> None:
     result = await session.execute(stmt)
     record = result.scalar_one_or_none()
     if record:
+        # Clear chat_id from any OTHER accounts that had this Telegram linked
+        clear_stmt = select(TelegramSettings).where(
+            TelegramSettings.chat_id == chat_id,
+            TelegramSettings.user_id != record.user_id,
+        )
+        old_links = await session.execute(clear_stmt)
+        for old in old_links.scalars().all():
+            old.chat_id = None
+            old.bot_linked_at = None
+
         record.chat_id = chat_id
         record.link_code = None
         record.bot_linked_at = datetime.now(timezone.utc)
