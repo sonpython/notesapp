@@ -22,7 +22,7 @@ class Note(Base):
         server_default=sa.text("gen_random_uuid()"),
     )
 
-    # Supabase-managed auth.users -- no FK constraint
+    # Local auth user -- no FK constraint to users table
     user_id: Mapped[uuid.UUID] = mapped_column(sa.Uuid, nullable=False, index=True)
 
     title: Mapped[str] = mapped_column(sa.String, nullable=False, server_default="")

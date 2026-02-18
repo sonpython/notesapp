@@ -160,6 +160,7 @@ async def create_encrypted_backup(
     user_id: str | UUID,
     encrypted_data: str,
     iv: str,
+    encryption_method: str = "prf",
 ) -> BackupResult:
     """Create backup from pre-encrypted data (E2E encrypted by client).
 
@@ -178,6 +179,7 @@ async def create_encrypted_backup(
         user_id: User's UUID.
         encrypted_data: Base64-encoded encrypted JSON from client.
         iv: Base64-encoded AES-GCM IV from client.
+        encryption_method: "prf" (passkey PRF) or "password" (PBKDF2).
 
     Returns:
         BackupResult with backup_id, file_id, size_bytes, counts, version.
@@ -231,6 +233,7 @@ async def create_encrypted_backup(
         entity_counts={"encrypted": True},  # Can't see counts for encrypted backup
         version_number=version,
         is_encrypted=True,
+        encryption_method=encryption_method,
     )
     db.add(backup)
 

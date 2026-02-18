@@ -153,7 +153,7 @@
 - [ ] XSS prevention check
 - **Status**: Not started
 
-## Phase 4: Advanced Features (60% Complete)
+## Phase 4: Advanced Features (65% Complete)
 
 ### User Experience
 - [x] Full-text search on notes (PostgreSQL tsvector)
@@ -164,6 +164,7 @@
 - [ ] Collaborative editing (real-time)
 
 ### Features
+- [x] Image upload in notes (AZD-63) - MinIO backend, drag/drop, 10MB limit
 - [ ] Todo time tracking
 - [x] Todo recurring (daily, weekly, monthly) (AZD-18)
 - [x] Note export (Markdown, PDF, ZIP) (AZD-17)

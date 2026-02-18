@@ -89,4 +89,10 @@
   }
   .note-preview :global(td) { border: 1px solid var(--color-border); padding: 0.5rem 0.75rem; }
   .note-preview :global(hr) { border-color: var(--color-border); margin: 1.5rem 0; }
+  .note-preview :global(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    margin: 0.75rem 0;
+  }
 </style>

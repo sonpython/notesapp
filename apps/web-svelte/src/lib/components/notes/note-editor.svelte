@@ -3,8 +3,9 @@
    * Full note editor with title input, CodeMirror markdown editor,
    * preview toggle, and action toolbar (pin, archive, delete).
    * Auto-saves changes after 500 ms debounce.
+   * Supports drag-and-drop and paste image uploads.
    */
-  import { Pin, Archive, Eye, Edit3, Trash2 } from 'lucide-svelte';
+  import { Pin, Archive, Eye, Edit3, Trash2, ImageIcon } from 'lucide-svelte';
   import CodeMirror from 'svelte-codemirror-editor';
   import { markdown } from '@codemirror/lang-markdown';
   import type { Note, Tag } from '$lib/types';
@@ -13,6 +14,8 @@
   import NoteExportMenu from './note-export-menu.svelte';
   import TagSelector from '$lib/components/tags/tag-selector.svelte';
   import { api } from '$lib/api';
+  import { uploadNoteImage } from '$lib/services/image-upload-service';
+  import { imageDropExtension } from '$lib/extensions/codemirror-image-drop-extension';
 
   interface Props {
     note: Note | null;
@@ -29,6 +32,8 @@
   let content = $state('');
   let isPreview = $state(false);
   let noteTags = $state<Tag[]>([]);
+  let isUploading = $state(false);
+  let uploadError = $state<string | null>(null);
 
   // Debounce timers
   let titleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -121,7 +126,28 @@
     }
   }
 
-  const cmExtensions = [markdown()];
+  // Handle image upload from drag/drop/paste
+  async function handleImageUpload(file: File) {
+    isUploading = true;
+    uploadError = null;
+    try {
+      const result = await uploadNoteImage(file);
+      return { url: result.url };
+    } finally {
+      isUploading = false;
+    }
+  }
+
+  function handleUploadError(message: string) {
+    uploadError = message;
+    // Clear error after 5 seconds
+    setTimeout(() => { uploadError = null; }, 5000);
+  }
+
+  const cmExtensions = [
+    markdown(),
+    imageDropExtension(handleImageUpload, handleUploadError),
+  ];
 </script>
 
 {#if !note}
@@ -158,6 +184,12 @@
         {/if}
       </div>
       <div class="flex items-center gap-1">
+        {#if isUploading}
+          <span class="text-xs text-muted animate-pulse flex items-center gap-1">
+            <ImageIcon class="w-3 h-3" />
+            Uploading...
+          </span>
+        {/if}
         <NoteExportMenu {note} onexportAll={onexportAll} />
         <button
           onclick={() => (isPreview = !isPreview)}
@@ -172,6 +204,13 @@
         </button>
       </div>
     </div>
+
+    <!-- Upload error notification -->
+    {#if uploadError}
+      <div class="px-4 py-2 bg-red-500/10 border-b border-red-500/20 text-red-500 text-sm">
+        {uploadError}
+      </div>
+    {/if}
 
     <!-- Tags selector -->
     <div class="px-4 py-2 border-b border-border/50 bg-note-toolbar">

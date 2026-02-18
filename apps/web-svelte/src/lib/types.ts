@@ -70,3 +70,11 @@ export interface TelegramStatus {
   chat_id: string | null
   bot_linked_at: string | null
 }
+
+export interface ImageUploadResponse {
+  id: string
+  url: string
+  filename: string
+  content_type: string
+  size: number
+}

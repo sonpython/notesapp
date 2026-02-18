@@ -46,6 +46,22 @@ class ApiClient {
 		});
 		if (!res.ok) throw new Error(`API error: ${res.status}`);
 	}
+
+	async uploadFile<T>(path: string, file: File): Promise<T> {
+		const formData = new FormData();
+		formData.append('file', file);
+		const res = await fetch(`${API_URL}${path}`, {
+			method: 'POST',
+			body: formData,
+			credentials: 'include'
+			// No Content-Type header -- browser sets multipart boundary
+		});
+		if (!res.ok) {
+			const error = await res.text();
+			throw new Error(`Upload failed: ${res.status} - ${error}`);
+		}
+		return res.json();
+	}
 }
 
 export const api = new ApiClient();

@@ -40,6 +40,14 @@ class Settings(BaseSettings):
     RATE_LIMIT_AUTH: str = "5/minute"  # Stricter for auth endpoints (login, signup)
     RATE_LIMIT_WEBHOOK: str = "30/minute"  # For telegram webhook
 
+    # --- MinIO / S3 Storage ---
+    MINIO_ENDPOINT: str = "localhost:9000"
+    MINIO_ACCESS_KEY: str = "notesapp"
+    MINIO_SECRET_KEY: str = "notesapp-secret"
+    MINIO_BUCKET: str = "notesapp-images"
+    MINIO_USE_SSL: bool = False
+    MINIO_MAX_IMAGE_SIZE: int = 10 * 1024 * 1024  # 10MB
+
     @property
     def cors_origin_list(self) -> list[str]:
         """Return CORS origins as a list, split on commas."""

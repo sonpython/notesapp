@@ -27,6 +27,7 @@ NotesApp is a lightweight, modern note-taking and task management platform with 
 - Pin important notes to top of list
 - Organize notes into folders (nested hierarchy)
 - Full-text search & filtering by folder/archive status
+- Image uploads via drag-drop or paste (up to 10MB per image)
 - Timestamps (created_at, updated_at)
 
 ### 2. Todo Management
@@ -110,7 +111,8 @@ NotesApp is a lightweight, modern note-taking and task management platform with 
 - [x] Move note to folder
 - [x] Filter by folder, archive, pinned status
 - [x] Sort by created_at, updated_at
-- [ ] Full-text search (planned)
+- [x] Full-text search (PostgreSQL tsvector)
+- [x] Image uploads via drag-drop/paste (up to 10MB)
 - [ ] Collaborative editing (future)
 
 ### Todos Feature

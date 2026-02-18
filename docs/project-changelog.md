@@ -14,7 +14,58 @@ All notable changes to NotesApp are documented here. Format follows [Keep a Chan
 - Mobile apps (React Native, native iOS/Android)
 - Web clipper browser extension
 - Analytics dashboard
-- Phase 4 completion (final SvelteKit migration tasks)
+- Phase 4 completion (final features)
+
+---
+
+## [0.6.0] - 2026-02-19
+
+### Added: Image Upload with MinIO (AZD-63)
+
+#### Backend Image Storage
+- **MinIO Integration**: S3-compatible object storage (local or cloud)
+- **New Service**: minio_storage_service.py (157 LOC)
+- **New Router**: images.py (136 LOC) with endpoints:
+  - POST /api/images/upload (multipart form, 10MB max)
+  - GET /api/images/{id} (serve image with backend proxy auth)
+  - DELETE /api/images/{id} (delete image)
+  - GET /api/images (list user images)
+- **Storage Structure**: users/{user_id}/images/{uuid}.{ext}
+- **Allowed Types**: jpeg, png, gif, webp, svg+xml
+- **Auth**: All image endpoints require Bearer JWT
+- **Caching**: 1-day HTTP cache on GET image requests
+
+#### Frontend Image Handling
+- **New Service**: image-upload-service.ts (validation, upload)
+- **New Extension**: codemirror-image-drop-extension.ts (139 LOC)
+  - Drag-and-drop image insertion
+  - Paste image from clipboard
+  - Upload progress indicator
+  - Error handling & user feedback
+- **Integration**: Note editor supports image upload seamlessly
+- **UI Feedback**: Upload progress, error messages, success confirmation
+
+#### Configuration
+- New .env vars: MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_BUCKET, MINIO_MAX_IMAGE_SIZE
+- Docker Compose: MinIO service (ports 9000/9001) for local development
+- MinIO Console: localhost:9001 for bucket management
+
+#### Docker Updates
+- MinIO service added to docker-compose.yml
+- Bucket initialization on startup
+- Health checks for MinIO service
+
+### Technical Details
+- **Backend Files**: minio_storage_service.py, images.py, image.py schema
+- **Frontend Files**: image-upload-service.ts, codemirror-image-drop-extension.ts
+- **LOC**: ~433 lines added (backend + frontend)
+- **Dependencies**: miniopy-async for async MinIO operations
+
+### Documentation Updated
+- README: Added image upload to Stack, Features, API Endpoints, Config
+- system-architecture.md: MinIO in data tier, Images API section, upload flow diagram
+- codebase-summary.md: New image services and routers documented
+- deployment-guide.md: MinIO service details, env vars
 
 ---
 
@@ -338,6 +389,7 @@ All notable changes to NotesApp are documented here. Format follows [Keep a Chan
 | 0.3.0 | 2026-01-31 | Phase 3: Testing & CI/CD |
 | 0.4.0 | 2026-02-15 | Phase 4: Advanced Features (60%) |
 | 0.5.0 | 2026-02-18 | SvelteKit Migration (Phases 1-3 complete, passkey auth) |
+| 0.6.0 | 2026-02-19 | Image Upload with MinIO (AZD-63) |
 | 1.0.0 | TBD | Production Ready (SvelteKit primary, Phase 4 100%) |
 
 ## Breaking Changes

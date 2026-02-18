@@ -27,9 +27,16 @@ cp backend/.env.example backend/.env
 
 # Edit backend/.env with your values
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/notesapp
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=eyJhbGc...
-SUPABASE_JWT_SECRET=your-jwt-secret
+JWT_SECRET=your-64-char-random-secret
+JWT_EXPIRY_DAYS=7
+WEBAUTHN_RP_ID=localhost
+WEBAUTHN_RP_NAME=NotesApp
+WEBAUTHN_ORIGIN=http://localhost:3000
+MINIO_ENDPOINT=localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET=notesapp-images
+MINIO_MAX_IMAGE_SIZE=10485760
 TELEGRAM_BOT_TOKEN=123456:ABC-DEF  # Optional
 CORS_ORIGINS=http://localhost:3000
 ```
@@ -138,6 +145,10 @@ docker-compose up -d
 Services:
 - **PostgreSQL**: localhost:5432 (user: notesapp, pass: notesapp)
 - **Backend**: localhost:8000 (auto-reload with uvicorn)
+- **MinIO**: localhost:9000 (S3-compatible storage), localhost:9001 (console)
+  - Access Key: minioadmin
+  - Secret Key: minioadmin
+  - Create bucket: `notesapp-images` (set public-read for image serving)
 
 ## Production Deployment
 

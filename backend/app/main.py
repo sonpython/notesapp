@@ -15,6 +15,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.config import settings
 from app.rate_limiter import limiter
 from app.tasks.reminders import start_scheduler, stop_scheduler
+from app.services.minio_storage_service import minio_service
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,11 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan: start scheduler on startup, stop on shutdown."""
     start_scheduler()
+    # Initialize MinIO bucket
+    try:
+        await minio_service.ensure_bucket()
+    except Exception as e:
+        logger.warning(f"MinIO initialization failed (may be unavailable): {e}")
     logger.info("Application startup complete")
     yield
     stop_scheduler()
@@ -58,6 +64,7 @@ All endpoints (except health and telegram webhook) require authentication via:
         {"name": "todos", "description": "Todo/task management"},
         {"name": "tags", "description": "Tag management"},
         {"name": "telegram", "description": "Telegram bot integration"},
+        {"name": "images", "description": "Image upload and management"},
     ],
 )
 
@@ -89,7 +96,7 @@ async def health_check() -> dict[str, str]:
 
 def _register_routers() -> None:
     """Import and include all API routers."""
-    from app.routers import auth, auth_login, auth_register, backup, folders, notes, tags, telegram, todos
+    from app.routers import auth, auth_login, auth_register, backup, folders, images, notes, tags, telegram, todos
 
     app.include_router(auth.router)
     app.include_router(auth_register.router)
@@ -100,6 +107,7 @@ def _register_routers() -> None:
     app.include_router(tags.router)
     app.include_router(telegram.router)
     app.include_router(backup.router)
+    app.include_router(images.router)
 
 
 _register_routers()

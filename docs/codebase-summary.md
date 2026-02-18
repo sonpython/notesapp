@@ -35,6 +35,7 @@ notesapp/
 │   │   │   ├── __init__.py
 │   │   │   ├── auth.py               # POST /register, /authenticate (WebAuthn)
 │   │   │   ├── notes.py              # CRUD + filters
+│   │   │   ├── images.py             # Upload/serve/delete images (AZD-63)
 │   │   │   ├── folders.py            # CRUD
 │   │   │   ├── todos.py              # CRUD + toggle
 │   │   │   └── telegram.py           # Link/unlink/status/webhook
@@ -46,7 +47,8 @@ notesapp/
 │   │   │   ├── telegram_service.py   # Send messages, get bot username, todo commands
 │   │   │   ├── tag_service.py        # Tag CRUD, filtering, validation
 │   │   │   ├── note_export_service.py# Export notes (WeasyPrint with lazy import)
-│   │   │   └── recurrence_service.py # Generate recurring todo instances
+│   │   │   ├── recurrence_service.py # Generate recurring todo instances
+│   │   │   └── minio_storage_service.py # Image upload/download/delete (AZD-63)
 │   │   └── tasks/
 │   │       ├── __init__.py
 │   │       └── reminders.py          # APScheduler background job
@@ -84,6 +86,10 @@ notesapp/
 │   │   │   │   └── debounce.svelte.ts
 │   │   │   ├── api.ts                # API client (Bearer auth)
 │   │   │   ├── auth-api.ts           # Passkey/WebAuthn API
+│   │   │   ├── services/
+│   │   │   │   └── image-upload-service.ts # Image validation + upload (AZD-63)
+│   │   │   ├── extensions/
+│   │   │   │   └── codemirror-image-drop-extension.ts # Drag/drop/paste images (AZD-63)
 │   │   │   ├── types.ts              # TypeScript interfaces
 │   │   │   └── offline/
 │   │   │       ├── indexed-db-client.ts       # IndexedDB wrapper
@@ -151,12 +157,12 @@ notesapp/
 
 | Category | Count | LOC (est) |
 |----------|-------|----------|
-| Backend Python | 33 | ~2,300 |
-| SvelteKit Frontend (TS/Svelte) | 28 | ~2,500 |
+| Backend Python | 34 | ~2,500 |
+| SvelteKit Frontend (TS/Svelte) | 32 | ~3,000 |
 | Next.js Frontend (TS/TSX, deprecated) | 35 | ~4,000 |
 | Tests (Backend & Frontend) | 12 | ~800 |
 | Config & Docs | 8 | ~200 |
-| **Total** | **116** | **~9,800** |
+| **Total** | **121** | **~10,500** |
 
 *Note: Next.js app included for reference during migration. Will be removed in v1.0.*
 
@@ -183,6 +189,7 @@ notesapp/
 ### Routers (API Endpoints)
 - **auth.py** (80 LOC): POST /register (WebAuthn), POST /authenticate (WebAuthn), GET /me
 - **notes.py** (100 LOC): CRUD endpoints, filter by folder/archive/pinned/search
+- **images.py** (136 LOC): POST upload, GET serve, DELETE, GET list (AZD-63)
 - **folders.py** (80 LOC): CRUD endpoints
 - **todos.py** (120 LOC): CRUD, toggle completion, filter by status/priority
 - **telegram.py** (180 LOC): Link, unlink, status, webhook + command handlers
@@ -195,6 +202,7 @@ notesapp/
 - **tag_service.py** (100 LOC): Tag CRUD, bulk assign/remove, validation
 - **note_export_service.py** (160 LOC): Export to Markdown, PDF, ZIP (WeasyPrint with lazy import)
 - **recurrence_service.py** (120 LOC): Generate todo instances from recurrence rules
+- **minio_storage_service.py** (157 LOC): Upload/download/delete images to MinIO (AZD-63)
 
 ### Background Tasks
 - **reminders.py** (60 LOC): APScheduler job to check & send reminders every 60s
@@ -226,6 +234,8 @@ notesapp/
 ### Lib & Utilities
 - **api.ts** (70 LOC): API client (Bearer auth, error handling)
 - **auth-api.ts** (80 LOC): WebAuthn/Passkey API calls
+- **services/image-upload-service.ts** (80 LOC): Image validation, upload, error handling (AZD-63)
+- **extensions/codemirror-image-drop-extension.ts** (139 LOC): Drag/drop/paste image integration (AZD-63)
 - **types.ts** (50 LOC): TypeScript interfaces (Note, Todo, Folder, etc.)
 - **utils/debounce.svelte.ts** (20 LOC): Debounce utility
 

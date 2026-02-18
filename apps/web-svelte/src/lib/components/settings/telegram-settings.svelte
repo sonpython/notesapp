@@ -35,6 +35,7 @@
 		entity_counts: Record<string, number | boolean>;
 		version_number: number;
 		is_encrypted: boolean;
+		encryption_method: 'prf' | 'password' | null;
 		created_at: string;
 	}
 
@@ -56,6 +57,7 @@
 		backup_id: string;
 		version_number: number;
 		is_encrypted: boolean;
+		encryption_method: 'prf' | 'password' | null;
 		encrypted_data?: string;
 		iv?: string;
 		data?: BackupExportData;
@@ -163,9 +165,11 @@
 				// Encrypt and send
 				const dataJson = JSON.stringify(exportData);
 				const { ciphertext, iv } = await encryptData(key, dataJson);
+				const encryptionMethod = prfSupported && !usePasswordEncryption ? 'prf' : 'password';
 				await api.post('/api/backup/trigger/encrypted', {
 					encrypted_data: ciphertext,
-					iv: iv
+					iv: iv,
+					encryption_method: encryptionMethod
 				});
 			} else {
 				// Unencrypted backup
@@ -184,7 +188,7 @@
 		}
 	}
 
-	async function restoreBackup(backupId: string, isEncrypted: boolean) {
+	async function restoreBackup(backupId: string, isEncrypted: boolean, encryptionMethod: 'prf' | 'password' | null) {
 		if (!confirm('Restore this backup? Your current data will be merged.')) return;
 		actionLoading = true;
 		error = null;
@@ -200,8 +204,22 @@
 					throw new Error('Invalid encrypted backup data');
 				}
 
-				// 2. Derive decryption key from passkey
-				const { key } = await deriveKeyFromPasskey();
+				// 2. Derive decryption key based on encryption method
+				let key: CryptoKey;
+				const method = downloadRes.encryption_method || encryptionMethod;
+
+				if (method === 'password') {
+					// Password-encrypted backup - prompt for password
+					const password = prompt('Enter the password used to encrypt this backup:');
+					if (!password) {
+						throw new Error('Password required to decrypt this backup');
+					}
+					key = await deriveKeyFromPassword(password);
+				} else {
+					// PRF-encrypted backup - use passkey
+					const result = await deriveKeyFromPasskey();
+					key = result.key;
+				}
 
 				// 3. Decrypt the data
 				const decryptedJson = await decryptData(key, downloadRes.encrypted_data, downloadRes.iv);
@@ -393,7 +411,9 @@
 								<div>
 									<span class="font-medium">v{backup.version_number}</span>
 									{#if backup.is_encrypted}
-										<span class="ml-1 text-green-500" title="End-to-end encrypted">🔐</span>
+										<span class="ml-1 text-green-500" title={backup.encryption_method === 'password' ? 'Password encrypted' : 'Passkey encrypted'}>
+											{backup.encryption_method === 'password' ? '🔑' : '🔐'}
+										</span>
 									{/if}
 									<span class="text-muted ml-2">{formatBytes(backup.backup_size_bytes)}</span>
 									{#if !backup.is_encrypted}
@@ -404,10 +424,10 @@
 									<p class="text-muted">{formatDate(backup.created_at)}</p>
 								</div>
 								<button
-									onclick={() => restoreBackup(backup.id, backup.is_encrypted)}
-									disabled={actionLoading || (backup.is_encrypted && !prfSupported)}
+									onclick={() => restoreBackup(backup.id, backup.is_encrypted, backup.encryption_method)}
+									disabled={actionLoading || (backup.is_encrypted && backup.encryption_method === 'prf' && !prfSupported)}
 									class="text-accent hover:underline disabled:opacity-50"
-									title={backup.is_encrypted && !prfSupported ? 'Encrypted backup requires supported browser' : ''}
+									title={backup.is_encrypted && backup.encryption_method === 'prf' && !prfSupported ? 'PRF-encrypted backup requires supported browser' : ''}
 								>
 									Restore
 								</button>

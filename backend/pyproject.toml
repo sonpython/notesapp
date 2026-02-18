@@ -19,6 +19,7 @@ dependencies = [
     "weasyprint>=63.0",
     "markdown>=3.7",
     "python-dateutil>=2.9.0",
+    "miniopy-async>=1.21.0",
 ]
 
 [project.optional-dependencies]

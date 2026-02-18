@@ -76,7 +76,7 @@ async def trigger_encrypted_backup(
     """
     try:
         result: BackupResult = await create_encrypted_backup(
-            db, user_id, body.encrypted_data, body.iv
+            db, user_id, body.encrypted_data, body.iv, body.encryption_method
         )
     except ValueError as exc:
         raise HTTPException(
@@ -263,6 +263,7 @@ async def download_backup(
             backup_id=backup_id,
             version_number=backup.version_number,
             is_encrypted=True,
+            encryption_method=backup.encryption_method,
             encrypted_data=parsed.get("encrypted_data"),
             iv=parsed.get("iv"),
         )
@@ -272,6 +273,7 @@ async def download_backup(
             backup_id=backup_id,
             version_number=backup.version_number,
             is_encrypted=False,
+            encryption_method=None,
             data=parsed,
         )
 

@@ -243,9 +243,11 @@ try {
 ### Endpoint Naming
 - **Resources**: `/api/{resource}` (lowercase, plural)
   - `/api/notes` (list), `/api/notes/{id}` (detail)
-  - `/api/folders`, `/api/todos`
+  - `/api/folders`, `/api/todos`, `/api/images`
 - **Actions**: POST `/api/{resource}/{id}/{action}`
   - `/api/todos/{id}/toggle` (complete/incomplete)
+- **File Upload**: POST `/api/{resource}/upload` (multipart/form-data)
+  - `/api/images/upload` (image file + metadata)
 
 ### Request/Response Format
 
@@ -271,10 +273,44 @@ try {
 }
 ```
 
+**File Upload Request (Image)**
+```
+POST /api/images/upload
+Content-Type: multipart/form-data
+
+file: <binary image data>
+filename: screenshot.png (optional, extracted from file)
+```
+
+**File Upload Response**
+```json
+{
+  "id": "uuid-string",
+  "filename": "screenshot.png",
+  "size_bytes": 204800,
+  "mime_type": "image/png",
+  "url": "/api/images/{id}",
+  "created_at": "2024-02-14T10:00:00Z"
+}
+```
+
 **Error Response**
 ```json
 {
   "detail": "Note not found"
+}
+```
+
+**File Upload Error Response**
+```json
+{
+  "detail": "File size exceeds maximum (10MB)"
+}
+```
+or
+```json
+{
+  "detail": "File type not supported. Allowed: jpeg, png, gif, webp, svg+xml"
 }
 ```
 
@@ -465,6 +501,33 @@ raise HTTPException(
     status_code=status.HTTP_400_BAD_REQUEST,
     detail="Note title cannot be empty"
 )
+```
+
+### File Upload Error Handling
+```python
+# Validate file size
+if file.size > MINIO_MAX_IMAGE_SIZE:
+    raise HTTPException(
+        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        detail=f"File size exceeds maximum ({MINIO_MAX_IMAGE_SIZE // 1024 // 1024}MB)"
+    )
+
+# Validate file type
+if file.content_type not in ALLOWED_MIME_TYPES:
+    raise HTTPException(
+        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        detail=f"File type not supported. Allowed: {', '.join(ALLOWED_MIME_TYPES)}"
+    )
+
+# Handle storage errors
+try:
+    await minio_service.upload_image(user_id, file)
+except Exception as e:
+    logger.error(f"Image upload failed: {e}")
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Failed to upload image. Please try again."
+    )
 ```
 
 ### Frontend Error Handling

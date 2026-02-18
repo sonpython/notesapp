@@ -22,7 +22,7 @@ class TelegramSettings(Base):
         server_default=sa.text("gen_random_uuid()"),
     )
 
-    # Supabase-managed auth.users -- no FK constraint. One row per user.
+    # Local auth user -- no FK constraint. One row per user.
     user_id: Mapped[uuid.UUID] = mapped_column(
         sa.Uuid, nullable=False, unique=True, index=True,
     )

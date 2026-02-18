@@ -27,7 +27,7 @@ class TelegramBackup(Base):
         server_default=sa.text("gen_random_uuid()"),
     )
 
-    # Supabase-managed auth.users -- no FK constraint (same pattern as other models)
+    # Local auth user -- no FK constraint (same pattern as other models)
     user_id: Mapped[uuid.UUID] = mapped_column(
         sa.Uuid, nullable=False, index=True,
     )
@@ -56,6 +56,11 @@ class TelegramBackup(Base):
     # Whether backup data is E2E encrypted (client-side encryption with passkey)
     is_encrypted: Mapped[bool] = mapped_column(
         sa.Boolean, nullable=False, server_default=sa.text("false"), default=False,
+    )
+
+    # Encryption method: "prf" (passkey PRF), "password", or null (unencrypted)
+    encryption_method: Mapped[str | None] = mapped_column(
+        sa.String(20), nullable=True, default=None,
     )
 
     created_at: Mapped[datetime] = mapped_column(

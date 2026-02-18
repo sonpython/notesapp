@@ -150,7 +150,7 @@
 							</div>
 							<div class="flex justify-between">
 								<span class="text-muted">Database</span>
-								<span class="text-foreground">PostgreSQL (Supabase)</span>
+								<span class="text-foreground">PostgreSQL + MinIO</span>
 							</div>
 							<div class="flex justify-between">
 								<span class="text-muted">Auth</span>

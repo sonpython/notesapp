@@ -56,15 +56,17 @@ bun run build:desktop    # Build Tauri desktop app
 - **Desktop**: Tauri v2 (macOS, Phases 1-2 done)
 - **Frontend (Legacy)**: Next.js 16 (deprecated, kept for reference)
 - **Database**: PostgreSQL (local or managed)
+- **Storage**: MinIO (S3-compatible object storage for images)
 - **Auth**: Passkey-only (WebAuthn/FIDO2) with local HS256 JWT sessions
 - **Infrastructure**: Bun monorepo + Turborepo, Docker Compose
 
 ### Key Features
 - **Notes**: Rich text editing (CodeMirror), auto-save with debounce, pinned/archived states, folder organization
+- **Images**: Drag-drop/paste image uploads in notes, MinIO backend storage, 10MB file size limit
 - **Todos**: Hierarchical todos with subtasks, priority levels, deadlines, reminder scheduling
 - **Folders**: Nested folder hierarchy for note organization
 - **Telegram**: Direct reminder delivery via Telegram bot, per-user link code pairing
-- **Auth**: Session-based auth with automatic token refresh, role-based access control
+- **Auth**: Passkey-only (WebAuthn/FIDO2) with local HS256 JWT sessions
 
 ## Project Structure
 
@@ -139,6 +141,10 @@ bun run build:desktop    # Build Tauri desktop app
 | PUT | `/api/todos/{id}` | Yes | Update todo |
 | DELETE | `/api/todos/{id}` | Yes | Delete todo |
 | POST | `/api/todos/{id}/toggle` | Yes | Toggle todo completion |
+| POST | `/api/images/upload` | Yes | Upload image (multipart, 10MB max) |
+| GET | `/api/images/{id}` | Yes | Serve image via proxy (cache: 1 day) |
+| DELETE | `/api/images/{id}` | Yes | Delete image |
+| GET | `/api/images` | Yes | List user images |
 | GET | `/api/telegram/status` | Yes | Get Telegram link status |
 | POST | `/api/telegram/link` | Yes | Generate link code |
 | POST | `/api/telegram/unlink` | Yes | Unlink Telegram |
@@ -232,6 +238,11 @@ JWT_EXPIRY_DAYS=7
 WEBAUTHN_RP_ID=localhost
 WEBAUTHN_RP_NAME=NotesApp
 WEBAUTHN_ORIGIN=http://localhost:3000
+MINIO_ENDPOINT=localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET=notesapp-images
+MINIO_MAX_IMAGE_SIZE=10485760
 TELEGRAM_BOT_TOKEN=xxx (optional)
 CORS_ORIGINS=http://localhost:3000,https://example.com
 ```
