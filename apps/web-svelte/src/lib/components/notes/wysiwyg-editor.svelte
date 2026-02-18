@@ -20,7 +20,7 @@
   let { content, onchange, onuploadstart, onuploaderror }: Props = $props();
 
   let element: HTMLDivElement;
-  let editor: Editor | null = null;
+  let editor = $state<Editor | null>(null);
 
   onMount(() => {
     editor = new Editor({
@@ -31,8 +31,12 @@
         Placeholder.configure({ placeholder: 'Start writing...' }),
       ],
       content,
-      onUpdate: ({ editor }) => {
-        onchange(editor.getHTML());
+      onTransaction: () => {
+        // Force Svelte reactivity on editor state change
+        editor = editor;
+      },
+      onUpdate: ({ editor: e }) => {
+        onchange(e.getHTML());
       },
       editorProps: {
         handleDrop: (view, event, slice, moved) => {
