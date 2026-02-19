@@ -9,6 +9,7 @@ from pydantic import BaseModel, field_validator
 
 class TagCreate(BaseModel):
     """Schema for creating a new tag."""
+
     name: str
     color: str = "#6b7280"
 
@@ -30,6 +31,7 @@ class TagCreate(BaseModel):
 
 class TagUpdate(BaseModel):
     """Schema for updating an existing tag."""
+
     name: str | None = None
     color: str | None = None
 
@@ -52,6 +54,7 @@ class TagUpdate(BaseModel):
 
 class TagResponse(BaseModel):
     """Schema for tag responses."""
+
     id: UUID
     user_id: UUID
     name: str
@@ -62,4 +65,5 @@ class TagResponse(BaseModel):
 
 class TagAttachRequest(BaseModel):
     """Schema for attaching tags to notes/todos."""
+
     tag_ids: list[UUID]

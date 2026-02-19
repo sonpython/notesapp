@@ -119,9 +119,7 @@ async def _upsert_entity(
     if existing is not None:
         if str(existing.user_id) != str(user_id):
             # ID belongs to a different user -- skip to prevent data leak
-            logger.warning(
-                "_upsert_entity: ID %s belongs to different user, skipping", entity_id
-            )
+            logger.warning("_upsert_entity: ID %s belongs to different user, skipping", entity_id)
             return "skipped"
         # Update existing fields
         for key, value in entity_data.items():
@@ -190,8 +188,12 @@ async def _restore_todo_tags(
 
 _DT_FIELDS_NOTE = {"created_at", "updated_at"}
 _DT_FIELDS_TODO = {
-    "created_at", "updated_at", "completed_at", "deadline",
-    "reminder_at", "recurrence_end_date",
+    "created_at",
+    "updated_at",
+    "completed_at",
+    "deadline",
+    "reminder_at",
+    "recurrence_end_date",
 }
 _DT_FIELDS_FOLDER = {"created_at", "updated_at"}
 _DT_FIELDS_TAG = {"created_at"}
@@ -242,7 +244,10 @@ async def import_user_data(
     valid_tag_ids: set[str] = set()
     for tag_data in tag_list:
         result = await _upsert_entity(
-            db, Tag, uid, tag_data,
+            db,
+            Tag,
+            uid,
+            tag_data,
             field_parsers=_make_dt_parser(_DT_FIELDS_TAG),
         )
         counts["tags"][result] += 1
@@ -260,7 +265,10 @@ async def import_user_data(
     sorted_folders = _sort_folders_by_depth(folder_list)
     for folder_data in sorted_folders:
         result = await _upsert_entity(
-            db, Folder, uid, folder_data,
+            db,
+            Folder,
+            uid,
+            folder_data,
             field_parsers=_make_dt_parser(_DT_FIELDS_FOLDER),
         )
         counts["folders"][result] += 1
@@ -275,7 +283,10 @@ async def import_user_data(
         tag_ids = note_data.get("tag_ids", [])
         note_tag_map[note_data["id"]] = tag_ids
         result = await _upsert_entity(
-            db, Note, uid, note_data,
+            db,
+            Note,
+            uid,
+            note_data,
             field_parsers=_make_dt_parser(_DT_FIELDS_NOTE),
         )
         counts["notes"][result] += 1
@@ -292,7 +303,10 @@ async def import_user_data(
         tag_ids = todo_data.get("tag_ids", [])
         todo_tag_map[todo_data["id"]] = tag_ids
         result = await _upsert_entity(
-            db, Todo, uid, todo_data,
+            db,
+            Todo,
+            uid,
+            todo_data,
             field_parsers=_make_dt_parser(_DT_FIELDS_TODO),
         )
         counts["todos"][result] += 1
@@ -303,19 +317,16 @@ async def import_user_data(
     # -- 5. Junction tables: note_tags, todo_tags ----------------------------
     for note_id_str, tag_ids in note_tag_map.items():
         if tag_ids:
-            await _restore_note_tags(
-                db, UUID(note_id_str), tag_ids, valid_tag_ids
-            )
+            await _restore_note_tags(db, UUID(note_id_str), tag_ids, valid_tag_ids)
 
     for todo_id_str, tag_ids in todo_tag_map.items():
         if tag_ids:
-            await _restore_todo_tags(
-                db, UUID(todo_id_str), tag_ids, valid_tag_ids
-            )
+            await _restore_todo_tags(db, UUID(todo_id_str), tag_ids, valid_tag_ids)
 
     logger.info(
         "import_user_data: user=%s counts=%s",
-        uid, {k: v for k, v in counts.items()},
+        uid,
+        {k: v for k, v in counts.items()},
     )
 
     return counts

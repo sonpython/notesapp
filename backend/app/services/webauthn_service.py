@@ -62,7 +62,11 @@ async def create_registration_options(
     )
 
     # Store challenge in DB (base64 encode binary challenge)
-    challenge_b64 = base64.urlsafe_b64encode(options.challenge).decode("ascii") if isinstance(options.challenge, bytes) else options.challenge
+    challenge_b64 = (
+        base64.urlsafe_b64encode(options.challenge).decode("ascii")
+        if isinstance(options.challenge, bytes)
+        else options.challenge
+    )
     challenge_record = WebAuthnChallenge(
         challenge=challenge_b64,
         user_id=temp_user_id,
@@ -103,7 +107,11 @@ async def verify_registration(
 
     try:
         # Decode base64 challenge back to bytes
-        expected_challenge = base64.urlsafe_b64decode(challenge_record.challenge) if isinstance(challenge_record.challenge, str) else challenge_record.challenge
+        expected_challenge = (
+            base64.urlsafe_b64decode(challenge_record.challenge)
+            if isinstance(challenge_record.challenge, str)
+            else challenge_record.challenge
+        )
         verification = verify_registration_response(
             credential=credential_json,
             expected_challenge=expected_challenge,
@@ -156,7 +164,11 @@ async def create_authentication_options(db: AsyncSession) -> tuple[dict, str]:
     )
 
     # Store challenge in DB (base64 encode binary challenge)
-    challenge_b64 = base64.urlsafe_b64encode(options.challenge).decode("ascii") if isinstance(options.challenge, bytes) else options.challenge
+    challenge_b64 = (
+        base64.urlsafe_b64encode(options.challenge).decode("ascii")
+        if isinstance(options.challenge, bytes)
+        else options.challenge
+    )
     challenge_record = WebAuthnChallenge(
         challenge=challenge_b64,
         user_id=None,
@@ -205,7 +217,11 @@ async def verify_authentication(
 
     try:
         # Decode base64 challenge back to bytes
-        expected_challenge = base64.urlsafe_b64decode(challenge_record.challenge) if isinstance(challenge_record.challenge, str) else challenge_record.challenge
+        expected_challenge = (
+            base64.urlsafe_b64decode(challenge_record.challenge)
+            if isinstance(challenge_record.challenge, str)
+            else challenge_record.challenge
+        )
         verification = verify_authentication_response(
             credential=credential_json,
             expected_challenge=expected_challenge,

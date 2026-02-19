@@ -14,13 +14,15 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_CONTENT_TYPES = frozenset([
-    "image/jpeg",
-    "image/png",
-    "image/gif",
-    "image/webp",
-    "image/svg+xml",
-])
+ALLOWED_CONTENT_TYPES = frozenset(
+    [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "image/svg+xml",
+    ]
+)
 
 CONTENT_TYPE_TO_EXT = {
     "image/jpeg": "jpg",
@@ -136,11 +138,13 @@ class MinioStorageService:
 
         result = []
         for obj in objects:
-            result.append({
-                "key": obj.object_name,
-                "size": obj.size,
-                "last_modified": obj.last_modified.isoformat() if obj.last_modified else None,
-            })
+            result.append(
+                {
+                    "key": obj.object_name,
+                    "size": obj.size,
+                    "last_modified": obj.last_modified.isoformat() if obj.last_modified else None,
+                }
+            )
         return result
 
     async def find_user_image(self, user_id: str, image_id: str) -> str | None:

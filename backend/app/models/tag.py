@@ -40,9 +40,7 @@ class Tag(Base):
     )
 
     # Unique constraint: one user cannot have duplicate tag names
-    __table_args__ = (
-        sa.UniqueConstraint("user_id", "name", name="uq_tags_user_id_name"),
-    )
+    __table_args__ = (sa.UniqueConstraint("user_id", "name", name="uq_tags_user_id_name"),)
 
     # -- Relationships ----------------------------------------------------------
 

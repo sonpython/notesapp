@@ -42,6 +42,7 @@ class NoteResponse(BaseModel):
 
 class NoteListResponse(BaseModel):
     """Lighter response for listing (no full content)"""
+
     id: UUID
     title: str
     content: str  # First 200 chars preview

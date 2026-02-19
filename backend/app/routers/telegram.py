@@ -97,7 +97,10 @@ async def unlink_telegram(
 
     # Notify user via Telegram before unlinking
     if record.chat_id:
-        await send_telegram_message(record.chat_id, "🔓 Tài khoản đã được hủy liên kết.\n\nBạn sẽ không nhận được thông báo nữa.")
+        await send_telegram_message(
+            record.chat_id,
+            "🔓 Tài khoản đã được hủy liên kết.\n\nBạn sẽ không nhận được thông báo nữa.",
+        )
 
     record.chat_id = None
     record.link_code = None
@@ -148,7 +151,9 @@ async def telegram_webhook(
     # Get user_id from chat_id for other commands
     user_id = await _get_user_id(session, chat_id)
     if user_id is None:
-        await send_telegram_message(chat_id, "⚠️ Please link your account first via the app settings.")
+        await send_telegram_message(
+            chat_id, "⚠️ Please link your account first via the app settings."
+        )
         return {"ok": True}
 
     # /todo <title> - Create todo
@@ -214,9 +219,15 @@ async def _handle_start(session: AsyncSession, chat_id: str, code: str) -> None:
         record.link_code = None
         record.bot_linked_at = datetime.now(UTC)
         await session.commit()
-        await send_telegram_message(chat_id, "✅ Liên kết thành công!\n\nCommands:\n/search <query> - Tìm kiếm note\n/todo <title> - Tạo todo\n/list - Xem danh sách todo\n/done <n> - Hoàn thành todo")
+        await send_telegram_message(
+            chat_id,
+            "✅ Liên kết thành công!\n\nCommands:\n/search <query> - Tìm kiếm note\n/todo <title> - Tạo todo\n/list - Xem danh sách todo\n/done <n> - Hoàn thành todo",
+        )
     else:
-        await send_telegram_message(chat_id, "❌ Mã không hợp lệ hoặc đã hết hạn.\n\nVui lòng tạo mã mới trong Settings → Telegram.")
+        await send_telegram_message(
+            chat_id,
+            "❌ Mã không hợp lệ hoặc đã hết hạn.\n\nVui lòng tạo mã mới trong Settings → Telegram.",
+        )
 
 
 async def _handle_todo(session: AsyncSession, chat_id: str, user_id: str, title: str) -> None:
@@ -229,11 +240,16 @@ async def _handle_todo(session: AsyncSession, chat_id: str, user_id: str, title:
 
 async def _handle_list(session: AsyncSession, chat_id: str, user_id: str) -> None:
     """List active todos."""
-    stmt = select(Todo).where(
-        Todo.user_id == user_id,
-        Todo.is_completed == False,  # noqa: E712
-        Todo.parent_id == None,  # noqa: E711
-    ).order_by(Todo.priority.desc(), Todo.created_at.desc()).limit(10)
+    stmt = (
+        select(Todo)
+        .where(
+            Todo.user_id == user_id,
+            Todo.is_completed == False,  # noqa: E712
+            Todo.parent_id == None,  # noqa: E711
+        )
+        .order_by(Todo.priority.desc(), Todo.created_at.desc())
+        .limit(10)
+    )
     result = await session.execute(stmt)
     todos = list(result.scalars().all())
 
@@ -251,11 +267,16 @@ async def _handle_list(session: AsyncSession, chat_id: str, user_id: str) -> Non
 
 async def _handle_done(session: AsyncSession, chat_id: str, user_id: str, num: int) -> None:
     """Mark todo complete by list number."""
-    stmt = select(Todo).where(
-        Todo.user_id == user_id,
-        Todo.is_completed == False,  # noqa: E712
-        Todo.parent_id == None,  # noqa: E711
-    ).order_by(Todo.priority.desc(), Todo.created_at.desc()).limit(10)
+    stmt = (
+        select(Todo)
+        .where(
+            Todo.user_id == user_id,
+            Todo.is_completed == False,  # noqa: E712
+            Todo.parent_id == None,  # noqa: E711
+        )
+        .order_by(Todo.priority.desc(), Todo.created_at.desc())
+        .limit(10)
+    )
     result = await session.execute(stmt)
     todos = list(result.scalars().all())
 
@@ -279,24 +300,38 @@ async def _handle_search(session: AsyncSession, chat_id: str, user_id: str, quer
     # Check for exact match (query in double quotes)
     if query.startswith('"') and query.endswith('"') and len(query) > 2:
         exact_term = query[1:-1]
-        stmt = select(Note).where(
-            Note.user_id == user_id,
-            Note.is_archived == False,  # noqa: E712
-            or_(
-                Note.title.contains(exact_term),
-                Note.content.contains(exact_term),
-            ),
-        ).order_by(Note.updated_at.desc()).limit(10)
+        stmt = (
+            select(Note)
+            .where(
+                Note.user_id == user_id,
+                Note.is_archived == False,  # noqa: E712
+                or_(
+                    Note.title.contains(exact_term),
+                    Note.content.contains(exact_term),
+                ),
+            )
+            .order_by(Note.updated_at.desc())
+            .limit(10)
+        )
     else:
         # Fuzzy match with unaccent for Vietnamese diacritics
-        stmt = select(Note).where(
-            Note.user_id == user_id,
-            Note.is_archived == False,  # noqa: E712
-            or_(
-                func.unaccent(func.lower(Note.title)).ilike(func.unaccent(func.lower(search_pattern))),
-                func.unaccent(func.lower(Note.content)).ilike(func.unaccent(func.lower(search_pattern))),
-            ),
-        ).order_by(Note.updated_at.desc()).limit(10)
+        stmt = (
+            select(Note)
+            .where(
+                Note.user_id == user_id,
+                Note.is_archived == False,  # noqa: E712
+                or_(
+                    func.unaccent(func.lower(Note.title)).ilike(
+                        func.unaccent(func.lower(search_pattern))
+                    ),
+                    func.unaccent(func.lower(Note.content)).ilike(
+                        func.unaccent(func.lower(search_pattern))
+                    ),
+                ),
+            )
+            .order_by(Note.updated_at.desc())
+            .limit(10)
+        )
     result = await session.execute(stmt)
     notes = list(result.scalars().all())
 
@@ -311,10 +346,14 @@ async def _handle_search(session: AsyncSession, chat_id: str, user_id: str, quer
         # Truncate long titles
         if len(title) > 40:
             title = title[:37] + "..."
-        keyboard.append([{
-            "text": f"📝 {title}",
-            "callback_data": f"view_note:{note.id}",
-        }])
+        keyboard.append(
+            [
+                {
+                    "text": f"📝 {title}",
+                    "callback_data": f"view_note:{note.id}",
+                }
+            ]
+        )
 
     reply_markup = {"inline_keyboard": keyboard}
     await send_telegram_message(
@@ -351,27 +390,34 @@ async def _handle_callback_query(session: AsyncSession, callback_query: dict) ->
 def _html_to_text(html: str) -> str:
     """Convert HTML content to plain text with Telegram markdown."""
     import re
+
     text = html
     # Convert common HTML elements to text/markdown equivalents
-    text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
-    text = re.sub(r'</?p[^>]*>', '\n', text, flags=re.IGNORECASE)
-    text = re.sub(r'<h[1-6][^>]*>(.*?)</h[1-6]>', r'\n*\1*\n', text, flags=re.IGNORECASE | re.DOTALL)
-    text = re.sub(r'<strong[^>]*>(.*?)</strong>', r'*\1*', text, flags=re.IGNORECASE | re.DOTALL)
-    text = re.sub(r'<b[^>]*>(.*?)</b>', r'*\1*', text, flags=re.IGNORECASE | re.DOTALL)
-    text = re.sub(r'<em[^>]*>(.*?)</em>', r'_\1_', text, flags=re.IGNORECASE | re.DOTALL)
-    text = re.sub(r'<i[^>]*>(.*?)</i>', r'_\1_', text, flags=re.IGNORECASE | re.DOTALL)
-    text = re.sub(r'<code[^>]*>(.*?)</code>', r'`\1`', text, flags=re.IGNORECASE | re.DOTALL)
-    text = re.sub(r'<li[^>]*>(.*?)</li>', r'• \1\n', text, flags=re.IGNORECASE | re.DOTALL)
-    text = re.sub(r'<a[^>]*href="([^"]*)"[^>]*>(.*?)</a>', r'\2 (\1)', text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"</?p[^>]*>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"<h[1-6][^>]*>(.*?)</h[1-6]>", r"\n*\1*\n", text, flags=re.IGNORECASE | re.DOTALL
+    )
+    text = re.sub(r"<strong[^>]*>(.*?)</strong>", r"*\1*", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<b[^>]*>(.*?)</b>", r"*\1*", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<em[^>]*>(.*?)</em>", r"_\1_", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<i[^>]*>(.*?)</i>", r"_\1_", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<code[^>]*>(.*?)</code>", r"`\1`", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<li[^>]*>(.*?)</li>", r"• \1\n", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(
+        r'<a[^>]*href="([^"]*)"[^>]*>(.*?)</a>', r"\2 (\1)", text, flags=re.IGNORECASE | re.DOTALL
+    )
     # Remove remaining HTML tags
-    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r"<[^>]+>", "", text)
     # Normalize whitespace
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    text = re.sub(r' +', ' ', text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r" +", " ", text)
     return text.strip()
 
 
-async def _handle_view_note(session: AsyncSession, chat_id: str, user_id: str, note_id: str) -> None:
+async def _handle_view_note(
+    session: AsyncSession, chat_id: str, user_id: str, note_id: str
+) -> None:
     """Display note content."""
     stmt = select(Note).where(Note.id == note_id, Note.user_id == user_id)
     result = await session.execute(stmt)

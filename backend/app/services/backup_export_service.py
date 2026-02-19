@@ -133,9 +133,7 @@ async def export_user_data(
     folders = list(folders_result.scalars().all())
 
     # --- Tags ---
-    tags_result = await db.execute(
-        select(Tag).where(Tag.user_id == uid).order_by(Tag.created_at)
-    )
+    tags_result = await db.execute(select(Tag).where(Tag.user_id == uid).order_by(Tag.created_at))
     tags = list(tags_result.scalars().all())
 
     counts = {
@@ -145,9 +143,7 @@ async def export_user_data(
         "tags": len(tags),
     }
 
-    logger.info(
-        "export_user_data: user=%s counts=%s", uid, counts
-    )
+    logger.info("export_user_data: user=%s counts=%s", uid, counts)
 
     return {
         "version": BACKUP_VERSION,
@@ -211,9 +207,7 @@ def deserialize_backup(data: bytes) -> dict:
 
     version = parsed.get("version")
     if version != BACKUP_VERSION:
-        raise ValueError(
-            f"Unsupported backup version: {version!r} (expected {BACKUP_VERSION})"
-        )
+        raise ValueError(f"Unsupported backup version: {version!r} (expected {BACKUP_VERSION})")
 
     logger.debug("deserialize_backup: version=%s ok", version)
     return parsed

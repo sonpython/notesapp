@@ -69,9 +69,7 @@ async def send_document(
     Raises ValueError if file exceeds Telegram's 50 MB upload limit.
     """
     if len(file_bytes) > TELEGRAM_MAX_UPLOAD_BYTES:
-        raise ValueError(
-            f"File size {len(file_bytes)} bytes exceeds Telegram 50 MB limit"
-        )
+        raise ValueError(f"File size {len(file_bytes)} bytes exceeds Telegram 50 MB limit")
 
     settings = get_settings()
     if not settings.TELEGRAM_BOT_TOKEN:
@@ -155,9 +153,7 @@ async def delete_message(chat_id: str, message_id: int) -> bool:
     url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/deleteMessage"
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(
-                url, json={"chat_id": chat_id, "message_id": message_id}
-            )
+            response = await client.post(url, json={"chat_id": chat_id, "message_id": message_id})
             if response.status_code != 200:
                 logger.warning(
                     "delete_message: Telegram API returned %s: %s",

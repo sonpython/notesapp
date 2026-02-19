@@ -249,9 +249,7 @@ async def remove_tag_from_todo(
 ) -> None:
     """Remove a tag from a todo."""
     # Verify todo exists and belongs to user
-    result = await session.execute(
-        select(Todo).where(Todo.id == todo_id)
-    )
+    result = await session.execute(select(Todo).where(Todo.id == todo_id))
     todo = result.scalar_one_or_none()
     if todo is None:
         raise HTTPException(status_code=404, detail="Todo not found")

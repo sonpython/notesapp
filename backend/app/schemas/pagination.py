@@ -4,7 +4,7 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
@@ -17,6 +17,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
         limit: Maximum items per page
         offset: Number of items skipped
     """
+
     items: list[T]
     total: int
     limit: int

@@ -24,23 +24,23 @@ async def cleanup_webauthn_challenges():
 def start_scheduler():
     scheduler.add_job(
         check_and_send_reminders,
-        'interval',
+        "interval",
         seconds=60,
-        id='reminder_check',
+        id="reminder_check",
         replace_existing=True,
     )
     scheduler.add_job(
         cleanup_webauthn_challenges,
-        'interval',
+        "interval",
         minutes=10,
-        id='webauthn_challenge_cleanup',
+        id="webauthn_challenge_cleanup",
         replace_existing=True,
     )
     scheduler.add_job(
         check_and_run_scheduled_backups,
-        'interval',
+        "interval",
         minutes=15,
-        id='telegram_backup_check',
+        id="telegram_backup_check",
         replace_existing=True,
     )
     scheduler.start()

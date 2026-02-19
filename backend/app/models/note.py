@@ -37,11 +37,15 @@ class Note(Base):
     )
 
     is_pinned: Mapped[bool] = mapped_column(
-        sa.Boolean, nullable=False, server_default=sa.text("false"),
+        sa.Boolean,
+        nullable=False,
+        server_default=sa.text("false"),
     )
 
     is_archived: Mapped[bool] = mapped_column(
-        sa.Boolean, nullable=False, server_default=sa.text("false"),
+        sa.Boolean,
+        nullable=False,
+        server_default=sa.text("false"),
     )
 
     created_at: Mapped[datetime] = mapped_column(

@@ -71,6 +71,7 @@ async def list_notes(
 
     # Get shared note IDs for this batch
     from app.models.shared_note import SharedNote
+
     note_ids = [n.id for n in notes]
     if note_ids:
         shared_result = await session.execute(
@@ -146,7 +147,7 @@ async def create_note(
     # Title starts empty - auto-generation happens on subsequent saves
     note = Note(
         user_id=user_id,
-        title=body.title or '',
+        title=body.title or "",
         content=body.content,
         folder_id=body.folder_id,
         is_pinned=body.is_pinned,
@@ -174,6 +175,7 @@ async def get_note(
 ) -> NoteResponse:
     """Get a single note by ID, verifying ownership."""
     from app.models.shared_note import SharedNote
+
     # Eager load tags
     result = await session.execute(
         select(Note).where(Note.id == note_id).options(selectinload(Note.tags))
@@ -215,9 +217,9 @@ async def update_note(
     if not note.title and body.title is None:
         content = body.content if body.content is not None else note.content
         if content:
-            first_line = content.split('\n')[0].strip()
+            first_line = content.split("\n")[0].strip()
             if first_line:
-                body.title = first_line[:50] + ('...' if len(first_line) > 50 else '')
+                body.title = first_line[:50] + ("..." if len(first_line) > 50 else "")
 
     apply_note_update(note, body)
     await session.commit()
@@ -287,9 +289,7 @@ async def remove_tag_from_note(
 ) -> None:
     """Remove a tag from a note."""
     # Verify note exists and belongs to user
-    result = await session.execute(
-        select(Note).where(Note.id == note_id)
-    )
+    result = await session.execute(select(Note).where(Note.id == note_id))
     note = result.scalar_one_or_none()
     if note is None:
         raise HTTPException(status_code=404, detail="Note not found")

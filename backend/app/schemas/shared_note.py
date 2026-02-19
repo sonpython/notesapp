@@ -11,7 +11,9 @@ class ShareNoteRequest(BaseModel):
     """Request to create a shared link for a note."""
 
     password: str | None = Field(None, description="Optional password protection")
-    expires_in_hours: int | None = Field(None, ge=1, le=720, description="Hours until expiry (max 30 days)")
+    expires_in_hours: int | None = Field(
+        None, ge=1, le=720, description="Hours until expiry (max 30 days)"
+    )
     max_views: int | None = Field(None, ge=1, le=1000, description="Max view count")
 
 

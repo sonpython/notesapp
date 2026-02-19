@@ -34,17 +34,12 @@ async def check_and_send_reminders():
             if todo.description:
                 message += f"\n{todo.description}"
             if todo.deadline:
-                message += (
-                    f"\n\n\U0001f4c5 Deadline: "
-                    f"{todo.deadline.strftime('%Y-%m-%d %H:%M')}"
-                )
+                message += f"\n\n\U0001f4c5 Deadline: {todo.deadline.strftime('%Y-%m-%d %H:%M')}"
 
             success = await send_telegram_message(chat_id, message)
             if success:
                 await session.execute(
-                    update(Todo)
-                    .where(Todo.id == todo.id)
-                    .values(reminder_sent=True)
+                    update(Todo).where(Todo.id == todo.id).values(reminder_sent=True)
                 )
         await session.commit()
 

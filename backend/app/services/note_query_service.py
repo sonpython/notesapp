@@ -40,11 +40,7 @@ def build_notes_list_query(
 
     if tag_ids:
         # Filter notes that have ANY of the specified tags (intersection)
-        stmt = stmt.where(
-            Note.id.in_(
-                select(NoteTag.note_id).where(NoteTag.tag_id.in_(tag_ids))
-            )
-        )
+        stmt = stmt.where(Note.id.in_(select(NoteTag.note_id).where(NoteTag.tag_id.in_(tag_ids))))
 
     if search:
         search = search.strip()
@@ -53,9 +49,7 @@ def build_notes_list_query(
             # Exact match: case-sensitive, accent-sensitive
             exact_term = search[1:-1]
             pattern = f"%{exact_term}%"
-            stmt = stmt.where(
-                Note.title.contains(exact_term) | Note.content.contains(exact_term)
-            )
+            stmt = stmt.where(Note.title.contains(exact_term) | Note.content.contains(exact_term))
         else:
             # Fuzzy match: case-insensitive, accent-insensitive (Vietnamese support)
             # Use unaccent() for diacritics matching (e.g., "anh" matches "ảnh", "ánh")

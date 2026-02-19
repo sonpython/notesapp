@@ -24,19 +24,25 @@ class TelegramSettings(Base):
 
     # Local auth user -- no FK constraint. One row per user.
     user_id: Mapped[uuid.UUID] = mapped_column(
-        sa.Uuid, nullable=False, unique=True, index=True,
+        sa.Uuid,
+        nullable=False,
+        unique=True,
+        index=True,
     )
 
     chat_id: Mapped[str | None] = mapped_column(sa.String, nullable=True)
 
     is_enabled: Mapped[bool] = mapped_column(
-        sa.Boolean, nullable=False, server_default=sa.text("true"),
+        sa.Boolean,
+        nullable=False,
+        server_default=sa.text("true"),
     )
 
     link_code: Mapped[str | None] = mapped_column(sa.String, nullable=True)
 
     bot_linked_at: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True,
+        sa.DateTime(timezone=True),
+        nullable=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(
@@ -47,31 +53,41 @@ class TelegramSettings(Base):
 
     # --- Backup settings ---
     backup_enabled: Mapped[bool] = mapped_column(
-        sa.Boolean, nullable=False, server_default=sa.text("false"),
+        sa.Boolean,
+        nullable=False,
+        server_default=sa.text("false"),
     )
 
     # 'daily' | 'weekly' | None (disabled)
     backup_schedule: Mapped[str | None] = mapped_column(
-        sa.String(16), nullable=True, server_default=sa.text("'daily'"),
+        sa.String(16),
+        nullable=True,
+        server_default=sa.text("'daily'"),
     )
 
     # Number of backup messages to keep before pruning older ones
     backup_retention: Mapped[int] = mapped_column(
-        sa.Integer, nullable=False, server_default=sa.text("5"),
+        sa.Integer,
+        nullable=False,
+        server_default=sa.text("5"),
     )
 
     last_backup_at: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True,
+        sa.DateTime(timezone=True),
+        nullable=True,
     )
 
     next_backup_at: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True,
+        sa.DateTime(timezone=True),
+        nullable=True,
     )
 
     # Stored password for auto-encrypted backups (server-side encryption)
     # When set, auto backups will be encrypted using this password
     backup_password: Mapped[str | None] = mapped_column(
-        sa.String(255), nullable=True, default=None,
+        sa.String(255),
+        nullable=True,
+        default=None,
     )
 
     def __repr__(self) -> str:

@@ -94,6 +94,7 @@ async def health_check() -> dict[str, str]:
 # Routers are imported inside a helper to keep the top of this file clean
 # and to avoid circular-import issues during startup.
 
+
 def _register_routers() -> None:
     """Import and include all API routers."""
     from app.routers import (

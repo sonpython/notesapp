@@ -83,9 +83,7 @@ async def trigger_encrypted_backup(
             detail=str(exc),
         ) from exc
     except RuntimeError as exc:
-        logger.error(
-            "trigger_encrypted_backup: upload failed for user=%s: %s", user_id, exc
-        )
+        logger.error("trigger_encrypted_backup: upload failed for user=%s: %s", user_id, exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Backup upload to Telegram failed",
@@ -399,15 +397,15 @@ async def restore_backup(
 
     logger.info(
         "restore_backup: user=%s backup_id=%s counts=%s",
-        user_id, backup_id, raw_counts,
+        user_id,
+        backup_id,
+        raw_counts,
     )
 
     return RestoreResponse(
         backup_id=backup_id,
         version_number=backup.version_number,
-        counts={
-            entity: RestoreEntityCounts(**c) for entity, c in raw_counts.items()
-        },
+        counts={entity: RestoreEntityCounts(**c) for entity, c in raw_counts.items()},
     )
 
 
@@ -454,9 +452,7 @@ async def restore_latest_backup(
     try:
         data = deserialize_backup(compressed)
     except ValueError as exc:
-        logger.error(
-            "restore_latest_backup: parse failed for user=%s: %s", user_id, exc
-        )
+        logger.error("restore_latest_backup: parse failed for user=%s: %s", user_id, exc)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
@@ -468,9 +464,7 @@ async def restore_latest_backup(
         await db.commit()
     except Exception as exc:
         await db.rollback()
-        logger.error(
-            "restore_latest_backup: import failed for user=%s: %s", user_id, exc
-        )
+        logger.error("restore_latest_backup: import failed for user=%s: %s", user_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Restore failed; no changes were applied",
@@ -478,24 +472,22 @@ async def restore_latest_backup(
 
     logger.info(
         "restore_latest_backup: user=%s backup_id=%s counts=%s",
-        user_id, backup.id, raw_counts,
+        user_id,
+        backup.id,
+        raw_counts,
     )
 
     return RestoreResponse(
         backup_id=str(backup.id),
         version_number=backup.version_number,
-        counts={
-            entity: RestoreEntityCounts(**c) for entity, c in raw_counts.items()
-        },
+        counts={entity: RestoreEntityCounts(**c) for entity, c in raw_counts.items()},
     )
 
 
 async def _get_or_404(db: AsyncSession, user_id: str) -> TelegramSettings:
     """Fetch TelegramSettings or raise 404 if not linked."""
     result = await db.execute(
-        select(TelegramSettings).where(
-            TelegramSettings.user_id == UUID(user_id)
-        )
+        select(TelegramSettings).where(TelegramSettings.user_id == UUID(user_id))
     )
     tg = result.scalar_one_or_none()
     if tg is None:

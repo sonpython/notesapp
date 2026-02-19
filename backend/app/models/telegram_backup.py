@@ -29,7 +29,9 @@ class TelegramBackup(Base):
 
     # Local auth user -- no FK constraint (same pattern as other models)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        sa.Uuid, nullable=False, index=True,
+        sa.Uuid,
+        nullable=False,
+        index=True,
     )
 
     # Persistent Telegram file identifier -- survives message deletion
@@ -37,7 +39,8 @@ class TelegramBackup(Base):
 
     # Message ID in the Telegram chat (needed for deleteMessage cleanup)
     telegram_message_id: Mapped[int | None] = mapped_column(
-        sa.Integer, nullable=True,
+        sa.Integer,
+        nullable=True,
     )
 
     # Size of the backup in bytes
@@ -45,22 +48,31 @@ class TelegramBackup(Base):
 
     # JSONB dict with entity counts, e.g. {"notes": 42, "todos": 5, "folders": 3}
     entity_counts: Mapped[dict] = mapped_column(
-        JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"),
+        JSONB,
+        nullable=False,
+        server_default=sa.text("'{}'::jsonb"),
     )
 
     # Monotonically increasing version (incremented per backup run)
     version_number: Mapped[int] = mapped_column(
-        sa.Integer, nullable=False, server_default=sa.text("1"),
+        sa.Integer,
+        nullable=False,
+        server_default=sa.text("1"),
     )
 
     # Whether backup data is E2E encrypted (client-side encryption with passkey)
     is_encrypted: Mapped[bool] = mapped_column(
-        sa.Boolean, nullable=False, server_default=sa.text("false"), default=False,
+        sa.Boolean,
+        nullable=False,
+        server_default=sa.text("false"),
+        default=False,
     )
 
     # Encryption method: "prf" (passkey PRF), "password", or null (unencrypted)
     encryption_method: Mapped[str | None] = mapped_column(
-        sa.String(20), nullable=True, default=None,
+        sa.String(20),
+        nullable=True,
+        default=None,
     )
 
     created_at: Mapped[datetime] = mapped_column(
@@ -70,7 +82,4 @@ class TelegramBackup(Base):
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<TelegramBackup id={self.id} user_id={self.user_id} "
-            f"version={self.version_number}>"
-        )
+        return f"<TelegramBackup id={self.id} user_id={self.user_id} version={self.version_number}>"

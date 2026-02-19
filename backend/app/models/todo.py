@@ -30,15 +30,19 @@ class Todo(Base):
     description: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
 
     is_completed: Mapped[bool] = mapped_column(
-        sa.Boolean, nullable=False, server_default=sa.text("false"),
+        sa.Boolean,
+        nullable=False,
+        server_default=sa.text("false"),
     )
 
     completed_at: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True,
+        sa.DateTime(timezone=True),
+        nullable=True,
     )
 
     deadline: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True,
+        sa.DateTime(timezone=True),
+        nullable=True,
     )
 
     parent_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -57,43 +61,55 @@ class Todo(Base):
 
     # 0=none, 1=low, 2=medium, 3=high
     priority: Mapped[int] = mapped_column(
-        sa.Integer, nullable=False, server_default=sa.text("0"),
+        sa.Integer,
+        nullable=False,
+        server_default=sa.text("0"),
     )
 
     sort_order: Mapped[int] = mapped_column(
-        sa.Integer, nullable=False, server_default=sa.text("0"),
+        sa.Integer,
+        nullable=False,
+        server_default=sa.text("0"),
     )
 
     reminder_at: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True,
+        sa.DateTime(timezone=True),
+        nullable=True,
     )
 
     reminder_sent: Mapped[bool] = mapped_column(
-        sa.Boolean, nullable=False, server_default=sa.text("false"),
+        sa.Boolean,
+        nullable=False,
+        server_default=sa.text("false"),
     )
 
     # -- Recurrence fields ------------------------------------------------------
 
     # Recurrence type: null=none, 'daily', 'weekly', 'monthly', 'custom'
     recurrence_type: Mapped[str | None] = mapped_column(
-        sa.String(20), nullable=True,
+        sa.String(20),
+        nullable=True,
     )
 
     # Interval multiplier (e.g., every 2 weeks = type='weekly', interval=2)
     recurrence_interval: Mapped[int | None] = mapped_column(
-        sa.Integer, nullable=True, server_default=sa.text("1"),
+        sa.Integer,
+        nullable=True,
+        server_default=sa.text("1"),
     )
 
     # For weekly: comma-separated weekday numbers (0=Mon, 6=Sun)
     # For monthly: day of month (1-31)
     # null for daily
     recurrence_days: Mapped[str | None] = mapped_column(
-        sa.String(20), nullable=True,
+        sa.String(20),
+        nullable=True,
     )
 
     # Stop recurring after this date; null = forever
     recurrence_end_date: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True,
+        sa.DateTime(timezone=True),
+        nullable=True,
     )
 
     # Links back to original recurring todo (for tracking lineage)

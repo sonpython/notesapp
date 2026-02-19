@@ -22,8 +22,7 @@ async def verify_tags_belong_to_user(
 
     if len(tags) != len(tag_ids):
         raise HTTPException(
-            status_code=404,
-            detail="One or more tags not found or don't belong to user"
+            status_code=404, detail="One or more tags not found or don't belong to user"
         )
 
     return list(tags)
@@ -43,9 +42,7 @@ async def attach_tags_to_note(
     await verify_tags_belong_to_user(session, tag_ids, user_id)
 
     # Get existing tag IDs for this note
-    result = await session.execute(
-        select(NoteTag.tag_id).where(NoteTag.note_id == note_id)
-    )
+    result = await session.execute(select(NoteTag.tag_id).where(NoteTag.note_id == note_id))
     existing_tag_ids = {row[0] for row in result.fetchall()}
 
     # Only insert tags that aren't already attached
@@ -69,9 +66,7 @@ async def attach_tags_to_todo(
     await verify_tags_belong_to_user(session, tag_ids, user_id)
 
     # Get existing tag IDs for this todo
-    result = await session.execute(
-        select(TodoTag.tag_id).where(TodoTag.todo_id == todo_id)
-    )
+    result = await session.execute(select(TodoTag.tag_id).where(TodoTag.todo_id == todo_id))
     existing_tag_ids = {row[0] for row in result.fetchall()}
 
     # Only insert tags that aren't already attached

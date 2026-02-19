@@ -19,6 +19,7 @@ class TelegramLinkResponse(BaseModel):
 
 class TelegramWebhookPayload(BaseModel):
     """Simplified Telegram webhook update"""
+
     update_id: int
     message: dict | None = None
     callback_query: dict | None = None  # For inline keyboard button clicks
@@ -31,6 +32,7 @@ BackupSchedule = Literal["daily", "weekly"]
 
 class TelegramBackupSettingsUpdate(BaseModel):
     """Request body for updating backup settings."""
+
     backup_enabled: bool | None = None
     backup_schedule: BackupSchedule | None = None
     backup_retention: int | None = Field(default=None, ge=1, le=20)
@@ -40,6 +42,7 @@ class TelegramBackupSettingsUpdate(BaseModel):
 
 class TelegramBackupSettingsResponse(BaseModel):
     """Current backup settings for a user."""
+
     backup_enabled: bool
     backup_schedule: BackupSchedule | None
     backup_retention: int
@@ -50,6 +53,7 @@ class TelegramBackupSettingsResponse(BaseModel):
 
 class TelegramBackupItem(BaseModel):
     """Single backup entry returned in list responses."""
+
     id: uuid.UUID
     telegram_file_id: str
     telegram_message_id: int | None
@@ -65,12 +69,14 @@ class TelegramBackupItem(BaseModel):
 
 class TelegramBackupListResponse(BaseModel):
     """Paginated list of backups for a user."""
+
     items: list[TelegramBackupItem]
     total: int
 
 
 class RestoreEntityCounts(BaseModel):
     """Created/updated/skipped counts for one entity type during restore."""
+
     created: int = 0
     updated: int = 0
     skipped: int = 0
@@ -78,6 +84,7 @@ class RestoreEntityCounts(BaseModel):
 
 class RestoreResponse(BaseModel):
     """Result of a restore operation."""
+
     backup_id: str
     version_number: int
     counts: dict[str, RestoreEntityCounts]
@@ -85,6 +92,7 @@ class RestoreResponse(BaseModel):
 
 class EncryptedBackupRequest(BaseModel):
     """Request body for encrypted backup trigger."""
+
     encrypted_data: str  # Base64-encoded encrypted JSON
     iv: str  # Base64-encoded AES-GCM IV
     encryption_method: str = "prf"  # "prf" (passkey PRF) or "password"
@@ -92,6 +100,7 @@ class EncryptedBackupRequest(BaseModel):
 
 class EncryptedRestoreResponse(BaseModel):
     """Response for encrypted backup restore (returns raw encrypted data)."""
+
     backup_id: str
     version_number: int
     is_encrypted: bool

@@ -22,9 +22,7 @@ async def list_tags(
 ):
     """List all tags for the current user."""
     result = await session.execute(
-        select(Tag)
-        .where(Tag.user_id == UUID(user_id))
-        .order_by(Tag.name)
+        select(Tag).where(Tag.user_id == UUID(user_id)).order_by(Tag.name)
     )
     tags = result.scalars().all()
     return tags
@@ -52,7 +50,7 @@ async def create_tag(
         await session.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Tag with name '{body.name}' already exists"
+            detail=f"Tag with name '{body.name}' already exists",
         )
 
     return tag
@@ -67,9 +65,7 @@ async def update_tag(
 ):
     """Update an existing tag's name or color."""
     # Fetch tag
-    result = await session.execute(
-        select(Tag).where(Tag.id == tag_id)
-    )
+    result = await session.execute(select(Tag).where(Tag.id == tag_id))
     tag = result.scalar_one_or_none()
 
     if not tag:
@@ -91,7 +87,7 @@ async def update_tag(
         await session.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Tag with name '{body.name}' already exists"
+            detail=f"Tag with name '{body.name}' already exists",
         )
 
     return tag
@@ -105,9 +101,7 @@ async def delete_tag(
 ):
     """Delete a tag (cascades from junction tables)."""
     # Fetch tag
-    result = await session.execute(
-        select(Tag).where(Tag.id == tag_id)
-    )
+    result = await session.execute(select(Tag).where(Tag.id == tag_id))
     tag = result.scalar_one_or_none()
 
     if not tag:

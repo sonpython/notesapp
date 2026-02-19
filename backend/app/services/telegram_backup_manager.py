@@ -74,22 +74,16 @@ class BackupResult:
     version: int
 
 
-async def _get_telegram_settings(
-    db: AsyncSession, user_id: UUID
-) -> TelegramSettings | None:
+async def _get_telegram_settings(db: AsyncSession, user_id: UUID) -> TelegramSettings | None:
     """Fetch TelegramSettings row for user, or None if not found."""
-    result = await db.execute(
-        select(TelegramSettings).where(TelegramSettings.user_id == user_id)
-    )
+    result = await db.execute(select(TelegramSettings).where(TelegramSettings.user_id == user_id))
     return result.scalar_one_or_none()
 
 
 async def _next_version_number(db: AsyncSession, user_id: UUID) -> int:
     """Return max(version_number) + 1 for user's backups, starting at 1."""
     result = await db.execute(
-        select(func.max(TelegramBackup.version_number)).where(
-            TelegramBackup.user_id == user_id
-        )
+        select(func.max(TelegramBackup.version_number)).where(TelegramBackup.user_id == user_id)
     )
     current_max = result.scalar_one_or_none()
     return (current_max or 0) + 1
@@ -165,9 +159,7 @@ async def create_backup(
 
     # 4. Size check
     if len(compressed) > _MAX_UPLOAD_BYTES:
-        raise ValueError(
-            f"Backup size {len(compressed)} bytes exceeds Telegram 50 MB limit"
-        )
+        raise ValueError(f"Backup size {len(compressed)} bytes exceeds Telegram 50 MB limit")
 
     # 5. Upload to Telegram
     ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
@@ -208,7 +200,10 @@ async def create_backup(
 
     logger.info(
         "create_backup: user=%s version=%d size=%d bytes encrypted=%s",
-        uid, version, len(compressed), is_encrypted,
+        uid,
+        version,
+        len(compressed),
+        is_encrypted,
     )
 
     # 8. Prune old backups
@@ -276,9 +271,7 @@ async def create_encrypted_backup(
 
     # 4. Size check
     if len(compressed) > _MAX_UPLOAD_BYTES:
-        raise ValueError(
-            f"Backup size {len(compressed)} bytes exceeds Telegram 50 MB limit"
-        )
+        raise ValueError(f"Backup size {len(compressed)} bytes exceeds Telegram 50 MB limit")
 
     # 5. Upload to Telegram
     ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
@@ -313,7 +306,9 @@ async def create_encrypted_backup(
 
     logger.info(
         "create_encrypted_backup: user=%s version=%d size=%d bytes (encrypted)",
-        uid, version, len(compressed),
+        uid,
+        version,
+        len(compressed),
     )
 
     # 8. Prune old backups
@@ -380,7 +375,9 @@ async def prune_old_backups(
         await db.commit()
         logger.info(
             "prune_old_backups: user=%s pruned=%d (retention=%d)",
-            user_id, deleted_count, retention_count,
+            user_id,
+            deleted_count,
+            retention_count,
         )
 
     return deleted_count
