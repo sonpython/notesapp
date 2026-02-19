@@ -14,10 +14,11 @@
     content: string;
     onchange: (html: string) => void;
     onuploadstart?: () => void;
+    onuploadend?: () => void;
     onuploaderror?: (msg: string) => void;
   }
 
-  let { content, onchange, onuploadstart, onuploaderror }: Props = $props();
+  let { content, onchange, onuploadstart, onuploadend, onuploaderror }: Props = $props();
 
   let element: HTMLDivElement;
   let editor = $state<Editor | null>(null);
@@ -85,6 +86,8 @@
       editor.chain().focus().setImage({ src: result.url, alt: file.name }).run();
     } catch (err) {
       onuploaderror?.(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      onuploadend?.();
     }
   }
 
@@ -145,13 +148,23 @@
   </div>
 
   <!-- Editor -->
-  <div bind:this={element} class="prose prose-sm max-w-none p-4 min-h-[200px] focus:outline-none"></div>
+  <div bind:this={element} class="editor-container"></div>
 </div>
 
 <style>
+  .wysiwyg-editor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .editor-container {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
   .wysiwyg-editor :global(.ProseMirror) {
     outline: none;
-    min-height: 200px;
+    min-height: 100%;
     padding: 1rem;
   }
   .wysiwyg-editor :global(.ProseMirror p.is-editor-empty:first-child::before) {

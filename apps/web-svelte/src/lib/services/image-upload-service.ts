@@ -4,7 +4,20 @@
  */
 
 import { api } from '$lib/api';
+import { PUBLIC_API_URL } from '$env/static/public';
 import type { ImageUploadResponse } from '$lib/types';
+
+const API_URL = PUBLIC_API_URL || 'http://localhost:8000';
+
+/**
+ * Convert relative API URL to absolute URL for image display.
+ */
+export function getAbsoluteImageUrl(relativeUrl: string): string {
+	if (relativeUrl.startsWith('http://') || relativeUrl.startsWith('https://')) {
+		return relativeUrl;
+	}
+	return `${API_URL}${relativeUrl}`;
+}
 
 export const ALLOWED_IMAGE_TYPES = new Set([
 	'image/jpeg',
@@ -39,5 +52,11 @@ export async function uploadNoteImage(file: File): Promise<ImageUploadResponse> 
 		throw new Error(`File too large: ${formatFileSize(file.size)}. Max: ${formatFileSize(MAX_IMAGE_SIZE)}`);
 	}
 
-	return api.uploadFile<ImageUploadResponse>('/api/images/upload', file);
+	const response = await api.uploadFile<ImageUploadResponse>('/api/images/upload', file);
+
+	// Convert relative URL to absolute URL for image display
+	return {
+		...response,
+		url: getAbsoluteImageUrl(response.url)
+	};
 }
