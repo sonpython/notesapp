@@ -2,24 +2,16 @@
 
 from __future__ import annotations
 
+import base64
+import re
+
 import markdown
 
 from app.models.note import Note
 
 
 def export_note_as_markdown(note: Note) -> str:
-    """
-    Export a note as plain markdown text.
-
-    Format:
-    # {title}
-
-    {content}
-
-    ---
-    Created: {created_at}
-    Updated: {updated_at}
-    """
+    """Export a note as plain markdown text."""
     title = note.title or "Untitled"
     content = note.content or ""
     created = note.created_at.strftime("%Y-%m-%d %H:%M:%S")
@@ -35,14 +27,39 @@ Updated: {updated}
 """
 
 
-def export_note_as_pdf(note: Note) -> bytes:
-    """
-    Export a note as PDF by converting markdown to HTML then to PDF.
+async def _embed_images_as_base64(html: str, user_id: str, minio_service) -> str:
+    """Replace image URLs with base64 data URIs."""
+    img_pattern = re.compile(r'src="[^"]*?/api/images/([^"]+)"')
 
-    Uses weasyprint for PDF generation with basic styling.
-    Requires system libraries: libgobject, pango, etc.
+    result = html
+    for match in img_pattern.finditer(html):
+        image_id = match.group(1)
+        try:
+            object_key = await minio_service.find_user_image(user_id, image_id)
+            if not object_key:
+                continue
+
+            image_bytes = await minio_service.get_image_bytes(object_key)
+            info = await minio_service.get_image_info(object_key)
+            content_type = info.get("content_type", "image/png")
+
+            b64 = base64.b64encode(image_bytes).decode("utf-8")
+            data_uri = f'src="data:{content_type};base64,{b64}"'
+            result = result.replace(match.group(0), data_uri, 1)
+        except Exception:
+            continue  # Keep original on error
+
+    return result
+
+
+async def export_note_as_pdf(note: Note) -> bytes:
     """
-    # Lazy import - weasyprint requires system libs not always available
+    Export a note as PDF with embedded images.
+
+    Uses weasyprint for PDF generation. Embeds images as base64 data URIs.
+    """
+    from app.services.minio_storage_service import minio_service
+
     try:
         from weasyprint import HTML
     except OSError as e:
@@ -52,89 +69,41 @@ def export_note_as_pdf(note: Note) -> bytes:
         ) from e
 
     markdown_text = export_note_as_markdown(note)
-
-    # Convert markdown to HTML
     html_content = markdown.markdown(
         markdown_text,
         extensions=["fenced_code", "tables", "nl2br"],
     )
 
-    # Wrap in styled HTML document
-    full_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            @page {{
-                size: A4;
-                margin: 2cm;
-            }}
-            body {{
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                line-height: 1.6;
-                color: #333;
-                max-width: 800px;
-                margin: 0 auto;
-            }}
-            h1 {{
-                color: #2c3e50;
-                border-bottom: 2px solid #3498db;
-                padding-bottom: 0.3em;
-            }}
-            h2, h3, h4, h5, h6 {{
-                color: #34495e;
-                margin-top: 1.5em;
-            }}
-            code {{
-                background: #f4f4f4;
-                padding: 2px 6px;
-                border-radius: 3px;
-                font-family: "Courier New", monospace;
-            }}
-            pre {{
-                background: #f4f4f4;
-                padding: 1em;
-                border-radius: 5px;
-                overflow-x: auto;
-            }}
-            pre code {{
-                background: none;
-                padding: 0;
-            }}
-            blockquote {{
-                border-left: 4px solid #3498db;
-                padding-left: 1em;
-                color: #555;
-                margin: 1em 0;
-            }}
-            table {{
-                border-collapse: collapse;
-                width: 100%;
-                margin: 1em 0;
-            }}
-            th, td {{
-                border: 1px solid #ddd;
-                padding: 8px 12px;
-                text-align: left;
-            }}
-            th {{
-                background: #3498db;
-                color: white;
-            }}
-            hr {{
-                border: none;
-                border-top: 1px solid #ddd;
-                margin: 2em 0;
-            }}
-        </style>
-    </head>
-    <body>
-        {html_content}
-    </body>
-    </html>
-    """
+    # Embed images as base64
+    html_content = await _embed_images_as_base64(html_content, str(note.user_id), minio_service)
 
-    # Generate PDF
-    pdf = HTML(string=full_html).write_pdf()
-    return pdf
+    # Wrap in styled HTML document
+    full_html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page {{ size: A4; margin: 2cm; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto;
+        }}
+        h1 {{ color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.3em; }}
+        h2, h3, h4, h5, h6 {{ color: #34495e; margin-top: 1.5em; }}
+        code {{ background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: monospace; }}
+        pre {{ background: #f4f4f4; padding: 1em; border-radius: 5px; overflow-x: auto; }}
+        pre code {{ background: none; padding: 0; }}
+        blockquote {{ border-left: 4px solid #3498db; padding-left: 1em; color: #555; margin: 1em 0; }}
+        table {{ border-collapse: collapse; width: 100%; margin: 1em 0; }}
+        th, td {{ border: 1px solid #ddd; padding: 8px 12px; text-align: left; }}
+        th {{ background: #3498db; color: white; }}
+        hr {{ border: none; border-top: 1px solid #ddd; margin: 2em 0; }}
+        img {{ max-width: 100%; height: auto; }}
+    </style>
+</head>
+<body>
+    {html_content}
+</body>
+</html>"""
+
+    return HTML(string=full_html).write_pdf()

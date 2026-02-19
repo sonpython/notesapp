@@ -341,7 +341,7 @@ async def export_note_pdf(
     if str(note.user_id) != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    pdf_bytes = export_note_as_pdf(note)
+    pdf_bytes = await export_note_as_pdf(note)
     filename = f"{note.title or 'untitled'}.pdf".replace(" ", "_")
 
     return StreamingResponse(
