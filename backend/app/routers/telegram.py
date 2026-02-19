@@ -6,7 +6,7 @@ import secrets
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import select, or_
+from sqlalchemy import func, select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -274,16 +274,30 @@ async def _handle_done(session: AsyncSession, chat_id: str, user_id: str, num: i
 
 
 async def _handle_search(session: AsyncSession, chat_id: str, user_id: str, query: str) -> None:
-    """Search notes by title or content."""
+    """Search notes by title or content with Vietnamese diacritics support."""
     search_pattern = f"%{query}%"
-    stmt = select(Note).where(
-        Note.user_id == user_id,
-        Note.is_archived == False,  # noqa: E712
-        or_(
-            Note.title.ilike(search_pattern),
-            Note.content.ilike(search_pattern),
-        ),
-    ).order_by(Note.updated_at.desc()).limit(10)
+
+    # Check for exact match (query in double quotes)
+    if query.startswith('"') and query.endswith('"') and len(query) > 2:
+        exact_term = query[1:-1]
+        stmt = select(Note).where(
+            Note.user_id == user_id,
+            Note.is_archived == False,  # noqa: E712
+            or_(
+                Note.title.contains(exact_term),
+                Note.content.contains(exact_term),
+            ),
+        ).order_by(Note.updated_at.desc()).limit(10)
+    else:
+        # Fuzzy match with unaccent for Vietnamese diacritics
+        stmt = select(Note).where(
+            Note.user_id == user_id,
+            Note.is_archived == False,  # noqa: E712
+            or_(
+                func.unaccent(func.lower(Note.title)).ilike(func.unaccent(func.lower(search_pattern))),
+                func.unaccent(func.lower(Note.content)).ilike(func.unaccent(func.lower(search_pattern))),
+            ),
+        ).order_by(Note.updated_at.desc()).limit(10)
     result = await session.execute(stmt)
     notes = list(result.scalars().all())
 
@@ -335,6 +349,29 @@ async def _handle_callback_query(session: AsyncSession, callback_query: dict) ->
         await _handle_view_note(session, chat_id, user_id, note_id)
 
 
+def _html_to_text(html: str) -> str:
+    """Convert HTML content to plain text with Telegram markdown."""
+    import re
+    text = html
+    # Convert common HTML elements to text/markdown equivalents
+    text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
+    text = re.sub(r'</?p[^>]*>', '\n', text, flags=re.IGNORECASE)
+    text = re.sub(r'<h[1-6][^>]*>(.*?)</h[1-6]>', r'\n*\1*\n', text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'<strong[^>]*>(.*?)</strong>', r'*\1*', text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'<b[^>]*>(.*?)</b>', r'*\1*', text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'<em[^>]*>(.*?)</em>', r'_\1_', text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'<i[^>]*>(.*?)</i>', r'_\1_', text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'<code[^>]*>(.*?)</code>', r'`\1`', text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'<li[^>]*>(.*?)</li>', r'• \1\n', text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'<a[^>]*href="([^"]*)"[^>]*>(.*?)</a>', r'\2 (\1)', text, flags=re.IGNORECASE | re.DOTALL)
+    # Remove remaining HTML tags
+    text = re.sub(r'<[^>]+>', '', text)
+    # Normalize whitespace
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r' +', ' ', text)
+    return text.strip()
+
+
 async def _handle_view_note(session: AsyncSession, chat_id: str, user_id: str, note_id: str) -> None:
     """Display note content."""
     stmt = select(Note).where(Note.id == note_id, Note.user_id == user_id)
@@ -346,7 +383,7 @@ async def _handle_view_note(session: AsyncSession, chat_id: str, user_id: str, n
         return
 
     title = note.title or "Untitled"
-    content = note.content or "(Không có nội dung)"
+    content = _html_to_text(note.content) if note.content else "(Không có nội dung)"
 
     # Truncate very long content for Telegram (4096 char limit)
     if len(content) > 3500:

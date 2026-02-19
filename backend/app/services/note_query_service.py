@@ -48,12 +48,22 @@ def build_notes_list_query(
 
     if search:
         search = search.strip()
-        # Use ILIKE for substring matching (matches anywhere in text)
-        # This allows "worl" to match "world", "llo" to match "hello"
-        pattern = f"%{search}%"
-        stmt = stmt.where(
-            Note.title.ilike(pattern) | Note.content.ilike(pattern)
-        )
+        # Check for exact match (query in double quotes)
+        if search.startswith('"') and search.endswith('"') and len(search) > 2:
+            # Exact match: case-sensitive, accent-sensitive
+            exact_term = search[1:-1]
+            pattern = f"%{exact_term}%"
+            stmt = stmt.where(
+                Note.title.contains(exact_term) | Note.content.contains(exact_term)
+            )
+        else:
+            # Fuzzy match: case-insensitive, accent-insensitive (Vietnamese support)
+            # Use unaccent() for diacritics matching (e.g., "anh" matches "ảnh", "ánh")
+            pattern = f"%{search}%"
+            stmt = stmt.where(
+                func.unaccent(func.lower(Note.title)).ilike(func.unaccent(func.lower(pattern)))
+                | func.unaccent(func.lower(Note.content)).ilike(func.unaccent(func.lower(pattern)))
+            )
 
     # Eager load tags to avoid N+1 queries
     stmt = stmt.options(selectinload(Note.tags))
