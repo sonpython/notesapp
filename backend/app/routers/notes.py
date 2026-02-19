@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import re
 import zipfile
 from uuid import UUID
 
@@ -237,7 +238,9 @@ async def update_note(
     if not note.title and body.title is None:
         content = body.content if body.content is not None else note.content
         if content:
-            first_line = content.split("\n")[0].strip()
+            # Strip HTML tags before extracting first line
+            stripped = re.sub(r"<[^>]*>", "", content)
+            first_line = stripped.split("\n")[0].strip()
             if first_line:
                 body.title = first_line[:50] + ("..." if len(first_line) > 50 else "")
 
