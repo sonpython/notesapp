@@ -28,9 +28,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           version: "latest"
-      - run: uv pip install ruff --system
-      - run: ruff check app/
-      - run: ruff format --check app/
+      - run: uv tool run ruff check app/
+      - run: uv tool run ruff format --check app/
 
   backend-typecheck:
     name: Backend Type Check
@@ -43,9 +42,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           version: "latest"
-      - run: uv pip install mypy types-python-jose --system
-      - run: uv pip install -e . --system
-      - run: mypy app/ --ignore-missing-imports
+      - run: uv sync
+      - run: uv run mypy app/ --ignore-missing-imports
 
   backend-test:
     name: Backend Tests
@@ -63,8 +61,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           version: "latest"
-      - run: uv pip install -e ".[test]" --system
-      - run: pytest tests/ -v --tb=short
+      - run: uv sync
+      - run: uv run pytest tests/ -v --tb=short
         if: env.DATABASE_URL != ''
 
   # Frontend jobs
