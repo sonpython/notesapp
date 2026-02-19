@@ -153,173 +153,197 @@ Services:
 ## Production Deployment
 
 ### Prerequisites
-- Docker installed on server
-- Domain name configured
-- SSL certificate (Let's Encrypt)
-- Environment variables set
+- Docker & Docker Compose installed
+- Domain name with DNS configured
+- Supabase project (for database + auth)
+- MinIO or S3-compatible storage
 
-### Option 1: VPS Deployment (DigitalOcean, Linode, AWS EC2)
+### Quick Start (Docker Compose + Caddy)
+
+This is the recommended approach - single command deployment with auto SSL.
 
 #### Step 1: Server Setup
 
 ```bash
-# SSH into VPS
+# SSH into VPS (DigitalOcean, Linode, Hetzner, etc.)
 ssh root@your-server-ip
 
-# Update system
-apt update && apt upgrade -y
+# Install Docker
+curl -fsSL https://get.docker.com | sh
 
-# Install Docker & Docker Compose
-curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
-
-# Install Node.js & Bun (for building frontend)
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-apt install -y nodejs
-curl -fsSL https://bun.sh/install | bash
-
-# Install Python & uv
-apt install -y python3.13 python3-pip
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-#### Step 2: Clone Repository
-
-```bash
+# Clone repo
 cd /opt
 git clone <repo-url> notesapp
 cd notesapp
-
-# Create .env files
-cp backend/.env.example backend/.env
-# Edit backend/.env with production values
-
-cp apps/web-svelte/.env.example apps/web-svelte/.env.production.local
-# Edit frontend .env with production API URL
 ```
 
-#### Step 3: Build & Deploy
+#### Step 2: Configure Environment
 
 ```bash
-# Build frontend (from root)
+# Copy example and edit
+cp .env.production.example .env.production
+
+# Edit with your values
+nano .env.production
+```
+
+Required variables:
+| Variable | Description |
+|----------|-------------|
+| `DOMAIN` | Your domain (e.g., `notes.example.com`) |
+| `DATABASE_URL` | Supabase pooler connection string |
+| `SUPABASE_URL` | `https://[ref].supabase.co` |
+| `SUPABASE_ANON_KEY` | From Supabase dashboard |
+| `JWT_SECRET` | Generate: `openssl rand -hex 32` |
+| `WEBAUTHN_RP_ID` | Same as domain |
+| `WEBAUTHN_ORIGIN` | `https://notes.example.com` |
+| `MINIO_*` | S3/MinIO credentials |
+| `CORS_ORIGINS` | `https://notes.example.com` |
+| `PUBLIC_API_URL` | `https://notes.example.com` |
+
+#### Step 3: Deploy
+
+```bash
+# Load env vars
+set -a && source .env.production && set +a
+
+# Build and start with Caddy (auto SSL)
+docker compose -f docker-compose.prod.yml --profile with-caddy up -d --build
+
+# Or without Caddy (if using external reverse proxy)
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+#### Step 4: Verify
+
+```bash
+# Check services
+docker compose -f docker-compose.prod.yml ps
+
+# View logs
+docker compose -f docker-compose.prod.yml logs -f
+
+# Test API
+curl https://notes.example.com/api/health
+```
+
+### Manual VPS Setup (Without Docker)
+
+#### Step 1: Install Dependencies
+
+```bash
+# System packages
+apt update && apt install -y nginx certbot python3-certbot-nginx
+
+# Bun (for frontend)
+curl -fsSL https://bun.sh/install | bash
+
+# uv (for backend)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+#### Step 2: Build Frontend
+
+```bash
+cd /opt/notesapp/apps/web-svelte
+
+# Set env
+echo "PUBLIC_API_URL=https://notes.example.com" > .env.production
+
+# Build
 bun install
-bun run build:web-svelte
+bun run build
 
-# Build backend Docker image
-cd /opt/notesapp
-docker build -t notesapp-backend ./backend
-
-# Create docker-compose for production
-# (See below for production docker-compose.yml)
+# The built app is in ./build
 ```
 
-#### Step 4: Production Docker Compose
+#### Step 3: Build Backend
 
-Create `docker-compose.prod.yml`:
+```bash
+cd /opt/notesapp/backend
+cp .env.example .env
+# Edit .env with production values
 
-```yaml
-version: '3.8'
-
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: notesapp
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: notesapp
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5432:5432"  # Only internal access
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U notesapp"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  backend:
-    image: notesapp-backend:latest
-    environment:
-      DATABASE_URL: postgresql+asyncpg://notesapp:${DB_PASSWORD}@postgres:5432/notesapp
-      SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
-      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      CORS_ORIGINS: ${CORS_ORIGINS}
-    ports:
-      - "127.0.0.1:8000:8000"  # Only internal access
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: always
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  frontend:
-    image: node:22-alpine
-    working_dir: /app/apps/web
-    command: npm run start
-    volumes:
-      - ./apps/web:/app/apps/web
-      - /app/apps/web/.next
-    environment:
-      NEXT_PUBLIC_API_URL: https://api.yourdomain.com
-      NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
-    ports:
-      - "127.0.0.1:3000:3000"
-    restart: always
-
-volumes:
-  postgres_data:
-    driver: local
+uv sync --frozen
 ```
 
-#### Step 5: Nginx Reverse Proxy
+#### Step 4: Create Systemd Services
+
+**Backend** (`/etc/systemd/system/notesapp-backend.service`):
+```ini
+[Unit]
+Description=NotesApp Backend
+After=network.target
+
+[Service]
+Type=exec
+User=www-data
+WorkingDirectory=/opt/notesapp/backend
+EnvironmentFile=/opt/notesapp/backend/.env
+ExecStart=/root/.local/bin/uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Frontend** (`/etc/systemd/system/notesapp-frontend.service`):
+```ini
+[Unit]
+Description=NotesApp Frontend
+After=network.target
+
+[Service]
+Type=exec
+User=www-data
+WorkingDirectory=/opt/notesapp/apps/web-svelte
+Environment=NODE_ENV=production
+ExecStart=/root/.bun/bin/bun ./build
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+systemctl daemon-reload
+systemctl enable --now notesapp-backend notesapp-frontend
+```
+
+#### Step 5: Nginx + SSL
+
+```bash
+# Get SSL cert
+certbot certonly --nginx -d notes.example.com
+```
 
 Create `/etc/nginx/sites-available/notesapp`:
-
 ```nginx
-upstream backend {
-    server 127.0.0.1:8000;
-}
-
-upstream frontend {
-    server 127.0.0.1:3000;
-}
-
 server {
     listen 80;
-    server_name yourdomain.com;
-    return 301 https://$server_name$request_uri;
+    server_name notes.example.com;
+    return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name yourdomain.com;
+    server_name notes.example.com;
 
-    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_certificate /etc/letsencrypt/live/notes.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/notes.example.com/privkey.pem;
 
-    # API routes → backend
-    location /api/ {
-        proxy_pass http://backend;
+    # API + public shared notes
+    location ~ ^/(api|pub)/ {
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 30s;
     }
 
-    # Everything else → frontend
+    # Frontend
     location / {
-        proxy_pass http://frontend;
+        proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -328,79 +352,66 @@ server {
 }
 ```
 
-#### Step 6: SSL Certificate (Let's Encrypt)
-
 ```bash
-# Install Certbot
-apt install -y certbot python3-certbot-nginx
-
-# Get certificate
-certbot certonly --standalone -d yourdomain.com
-
-# Enable auto-renewal
-systemctl enable certbot.timer
+ln -s /etc/nginx/sites-available/notesapp /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
 ```
 
-#### Step 7: Start Production
+### Cloud Platform Deployments
+
+#### Vercel (Frontend) + Railway (Backend)
+
+**Frontend on Vercel:**
+1. Connect repo → select `apps/web-svelte`
+2. Framework: SvelteKit
+3. Build: `bun run build`
+4. Output: `build`
+5. Env: `PUBLIC_API_URL=https://api.railway.app`
+
+**Backend on Railway:**
+1. Connect repo → select `backend` directory
+2. Dockerfile deployment (auto-detected)
+3. Add env vars from `.env.production.example`
+4. Custom domain: `api.yourdomain.com`
+
+#### Fly.io (Full Stack)
 
 ```bash
-cd /opt/notesapp
+# Backend
+cd backend
+fly launch --name notesapp-api
+fly secrets set DATABASE_URL=... JWT_SECRET=...
+fly deploy
 
-# Create .env with all secrets
-export DB_PASSWORD="random-secure-password"
-export SUPABASE_URL="https://xxx.supabase.co"
-# ... set all vars
-
-# Run migrations
-docker-compose -f docker-compose.prod.yml run backend alembic upgrade head
-
-# Start services
-docker-compose -f docker-compose.prod.yml up -d
-
-# Verify
-docker-compose -f docker-compose.prod.yml logs -f
-curl https://yourdomain.com/api/health
+# Frontend
+cd apps/web-svelte
+fly launch --name notesapp-web
+fly secrets set PUBLIC_API_URL=https://notesapp-api.fly.dev
+fly deploy
 ```
 
-### Option 2: Vercel Deployment (Recommended for Frontend)
+#### AWS (ECS + RDS)
 
-#### Frontend on Vercel
+1. Create RDS PostgreSQL (or use Supabase)
+2. Create ECR repos for backend + frontend
+3. Push Docker images
+4. Deploy via ECS Fargate
+5. ALB for load balancing
+6. CloudFront for CDN
 
-1. Push repo to GitHub
-2. Connect to Vercel at https://vercel.com
-3. Set environment variables:
-   ```
-   NEXT_PUBLIC_API_URL=https://api.yourdomain.com
-   NEXT_PUBLIC_SUPABASE_URL=<value>
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=<value>
-   ```
-4. Deploy (automatic on push)
-
-#### Backend on Heroku/Railway
-
-Deploy via Docker:
+### Database Migrations
 
 ```bash
-# Railway example
-railway link
-railway up -d
+# Via Docker
+docker compose -f docker-compose.prod.yml exec backend uv run alembic upgrade head
 
-# Heroku example
-heroku container:push web
-heroku container:release web
+# Via systemd
+cd /opt/notesapp/backend
+uv run alembic upgrade head
+
+# Check current migration
+uv run alembic current
 ```
-
-### Option 3: AWS Deployment
-
-#### Using ECS + RDS
-
-1. Create RDS PostgreSQL instance
-2. Create ECR repository
-3. Build & push backend Docker image
-4. Deploy via CloudFormation/Terraform
-5. Use CloudFront for CDN
-
-See AWS documentation for detailed steps.
 
 ## Monitoring & Logging
 

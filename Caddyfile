@@ -1,0 +1,36 @@
+# Caddyfile for NotesApp production
+# Replace {$DOMAIN} with your actual domain or set DOMAIN env var
+
+{$DOMAIN:localhost} {
+    # API routes → backend
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+
+    # Public shared notes → backend
+    handle /pub/* {
+        reverse_proxy backend:8000
+    }
+
+    # Everything else → frontend
+    handle {
+        reverse_proxy frontend:3000
+    }
+
+    # Logging
+    log {
+        output stdout
+        format console
+    }
+
+    # Security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+
+    # Compression
+    encode gzip zstd
+}

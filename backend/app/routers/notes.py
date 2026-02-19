@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -28,6 +28,22 @@ from app.services.tag_service import attach_tags_to_note, detach_tag_from_note
 router = APIRouter(prefix="/api/notes", tags=["notes"])
 
 
+async def _cleanup_empty_notes(session: AsyncSession, user_id: str) -> int:
+    """Delete notes with no title and no content. Returns count deleted."""
+    stmt = (
+        delete(Note)
+        .where(Note.user_id == UUID(user_id))
+        .where(or_(Note.title == "", Note.title.is_(None)))
+        .where(or_(Note.content == "", Note.content.is_(None)))
+        .returning(Note.id)
+    )
+    result = await session.execute(stmt)
+    deleted = result.fetchall()
+    if deleted:
+        await session.commit()
+    return len(deleted)
+
+
 @router.get("/", response_model=PaginatedResponse[NoteListResponse])
 async def list_notes(
     folder_id: UUID | None = Query(None),
@@ -41,6 +57,10 @@ async def list_notes(
     session: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[NoteListResponse]:
     """List notes for the current user with optional filters and pagination."""
+    # Cleanup empty notes on refresh (only on first page)
+    if offset == 0:
+        await _cleanup_empty_notes(session, user_id)
+
     # Parse tag_ids from comma-separated string
     parsed_tag_ids = None
     if tag_ids:
