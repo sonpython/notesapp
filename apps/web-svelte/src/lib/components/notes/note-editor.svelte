@@ -222,17 +222,6 @@
       </div>
     {/if}
 
-    <!-- Tags selector -->
-    <div class="px-4 py-2 border-b border-border/50 bg-note-toolbar">
-      <TagSelector
-        selectedTags={noteTags}
-        allTags={tagsStore.tags}
-        onadd={handleAddTag}
-        onremove={handleRemoveTag}
-        oncreate={handleCreateTag}
-      />
-    </div>
-
     <!-- Title input -->
     <input
       type="text"
@@ -242,9 +231,9 @@
     />
 
     <!-- Editor: WYSIWYG (default) or Markdown -->
-    <div class="flex-1 overflow-y-auto">
+    <div class="flex-1 min-h-0 flex flex-col">
       {#if isMarkdownMode}
-        <div class="px-4 pb-4">
+        <div class="flex-1 overflow-y-auto px-4 pb-4">
           <CodeMirror
             bind:value={content}
             extensions={cmExtensions}
@@ -259,13 +248,27 @@
           />
         </div>
       {:else}
-        <WysiwygEditor
-          {content}
-          onchange={(html) => { content = html; }}
-          onuploadstart={() => { isUploading = true; }}
-          onuploaderror={handleUploadError}
-        />
+        <div class="flex-1 min-h-0">
+          <WysiwygEditor
+            {content}
+            onchange={(html) => { content = html; }}
+            onuploadstart={() => { isUploading = true; }}
+            onuploadend={() => { isUploading = false; }}
+            onuploaderror={handleUploadError}
+          />
+        </div>
       {/if}
+    </div>
+
+    <!-- Tags selector (bottom) -->
+    <div class="px-4 py-2 border-t border-border/50 bg-note-toolbar shrink-0">
+      <TagSelector
+        selectedTags={noteTags}
+        allTags={tagsStore.tags}
+        onadd={handleAddTag}
+        onremove={handleRemoveTag}
+        oncreate={handleCreateTag}
+      />
     </div>
   </div>
 {/if}
