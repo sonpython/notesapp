@@ -20,6 +20,11 @@
   import { marked } from 'marked';
   import TurndownService from 'turndown';
 
+  /** Strip HTML tags from text */
+  function stripHtml(text: string): string {
+    return text?.replace(/<[^>]*>/g, '').trim() || '';
+  }
+
   interface Props {
     note: Note | null;
     onsave: (id: string, data: { title?: string; content?: string; is_pinned?: boolean; is_archived?: boolean }) => void;
@@ -46,7 +51,7 @@
   // Sync local state when selected note changes
   $effect(() => {
     if (note) {
-      title = note.title;
+      title = stripHtml(note.title);
       content = note.content;
       noteTags = note.tags ?? [];
     }
