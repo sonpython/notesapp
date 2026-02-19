@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package.json bun.lock* ./
 
 # Install dependencies
-RUN bun install --frozen-lockfile
+RUN bun install
 
 # Copy source
 COPY . .
@@ -26,7 +26,7 @@ COPY --from=builder /app/build ./build
 COPY --from=builder /app/package.json ./
 
 # Install only production deps
-RUN bun install --production --frozen-lockfile
+RUN bun install --production
 
 # Expose port
 EXPOSE 3000
