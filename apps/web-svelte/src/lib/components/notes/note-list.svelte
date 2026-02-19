@@ -13,10 +13,15 @@
 
   let { notes, selectedId, onselect, onmoveNote }: Props = $props();
 
+  /** Strip HTML tags from text. */
+  function stripHtml(text: string): string {
+    return text.replace(/<[^>]*>/g, '').trim();
+  }
+
   /** Extracts the first non-empty line of content as a preview snippet. */
   function getContentPreview(content: string): string {
     // Strip HTML tags for WYSIWYG content
-    const stripped = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    const stripped = stripHtml(content).replace(/\s+/g, ' ');
     const firstLine = stripped
       .split('\n')
       .map((line) => line.replace(/^#+\s*/, '').trim())
@@ -70,7 +75,7 @@
           {#if note.is_pinned}
             <Pin class="w-3 h-3 text-accent shrink-0" />
           {/if}
-          <span class="font-medium text-sm text-foreground truncate">{note.title || 'Untitled'}</span>
+          <span class="font-medium text-sm text-foreground truncate">{stripHtml(note.title) || 'Untitled'}</span>
         </div>
         <p class="text-xs text-muted truncate mb-1">{getContentPreview(note.content)}</p>
         {#if note.tags && note.tags.length > 0}
