@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { PUBLIC_API_URL } from '$env/static/public';
-	import { Lock, Copy, Download, Check } from 'lucide-svelte';
+	import { Lock, Copy, Check } from 'lucide-svelte';
 
 	const API_URL = PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -57,11 +57,22 @@
 				loading = false;
 				return;
 			}
-			note = await res.json();
+			const data = await res.json();
+			// Rewrite image URLs to use public endpoint
+			if (pubId) data.content = rewriteImageUrls(data.content, pubId);
+			note = data;
 		} catch {
 			error = 'Failed to load note';
 		}
 		loading = false;
+	}
+
+	function rewriteImageUrls(content: string, pubId: string): string {
+		// Replace /api/images/{id} with /api/pub/{pubId}/image/{id}
+		return content.replace(
+			/src="([^"]*\/api\/images\/([^"]+))"/g,
+			`src="${API_URL}/api/pub/${pubId}/image/$2"`
+		);
 	}
 
 	async function handlePasswordSubmit(e: SubmitEvent) {
@@ -72,106 +83,72 @@
 
 	async function copyContent() {
 		if (!note) return;
-		// Strip HTML tags for plain text copy
 		const text = note.content.replace(/<[^>]+>/g, '');
 		await navigator.clipboard.writeText(text);
 		copied = true;
 		setTimeout(() => (copied = false), 2000);
 	}
-
-	async function importNote() {
-		try {
-			const res = await fetch(`${API_URL}/api/pub/${pubId}/import`, {
-				method: 'POST',
-				credentials: 'include',
-			});
-			if (res.ok) {
-				const data = await res.json();
-				alert(`Note imported: ${data.title}`);
-			} else if (res.status === 401) {
-				alert('Please login to import this note');
-			} else {
-				alert('Failed to import note');
-			}
-		} catch {
-			alert('Failed to import note');
-		}
-	}
 </script>
 
 <svelte:head>
-	<title>{note?.title || 'Shared Note'} - NotesApp</title>
+	<title>{note?.title || 'Shared Note'}</title>
 </svelte:head>
 
-<div class="min-h-screen bg-background">
-	<div class="mx-auto max-w-3xl px-4 py-8">
-		{#if loading}
-			<div class="flex justify-center py-20">
-				<div class="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent"></div>
-			</div>
-		{:else if error}
-			<div class="rounded-lg border border-red-300 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-900/20">
-				<p class="text-red-700 dark:text-red-400">{error}</p>
-				<a href="/login" class="mt-4 inline-block text-sm text-accent hover:underline">Go to login</a>
-			</div>
-		{:else if requiresPassword && !note}
-			<div class="mx-auto max-w-sm">
+<div class="min-h-screen bg-white dark:bg-zinc-900">
+	{#if loading}
+		<div class="flex h-screen items-center justify-center">
+			<div class="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+		</div>
+	{:else if error}
+		<div class="flex h-screen flex-col items-center justify-center px-4">
+			<p class="text-lg text-red-500">{error}</p>
+		</div>
+	{:else if requiresPassword && !note}
+		<div class="flex h-screen items-center justify-center px-4">
+			<div class="w-full max-w-sm">
 				<div class="mb-6 text-center">
-					<div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted/30">
-						<Lock class="h-8 w-8 text-muted" />
-					</div>
-					<h1 class="text-xl font-semibold text-foreground">Password Protected</h1>
-					<p class="mt-2 text-sm text-muted">This note requires a password to view.</p>
+					<Lock class="mx-auto mb-4 h-12 w-12 text-zinc-400" />
+					<h1 class="text-xl font-semibold text-zinc-900 dark:text-white">Password Protected</h1>
+					<p class="mt-2 text-sm text-zinc-500">Enter password to view this note.</p>
 				</div>
 				<form onsubmit={handlePasswordSubmit} class="space-y-4">
 					<input
 						type="password"
 						bind:value={password}
-						placeholder="Enter password"
+						placeholder="Password"
 						required
-						class="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+						class="h-10 w-full rounded-lg border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
 					/>
 					<button
 						type="submit"
-						class="h-10 w-full rounded-lg bg-accent text-sm font-medium text-black hover:opacity-90"
+						class="h-10 w-full rounded-lg bg-blue-500 text-sm font-medium text-white hover:bg-blue-600"
 					>
 						View Note
 					</button>
 				</form>
 			</div>
-		{:else if note}
-			<article>
-				<header class="mb-6 border-b border-border pb-4">
-					<h1 class="text-2xl font-bold text-foreground">{note.title || 'Untitled'}</h1>
-					<p class="mt-2 text-xs text-muted">
-						Last updated: {new Date(note.updated_at).toLocaleDateString()}
-					</p>
-					<div class="mt-4 flex gap-2">
-						<button
-							onclick={copyContent}
-							class="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-muted hover:bg-muted/10"
-						>
-							{#if copied}
-								<Check class="h-3.5 w-3.5" />
-								Copied
-							{:else}
-								<Copy class="h-3.5 w-3.5" />
-								Copy
-							{/if}
-						</button>
-						<button
-							onclick={importNote}
-							class="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-muted hover:bg-muted/10"
-						>
-							<Download class="h-3.5 w-3.5" />
-							Import to my notes
-						</button>
-					</div>
-				</header>
-				<div class="prose prose-sm dark:prose-invert max-w-none">
-					{@html note.content}
+		</div>
+	{:else if note}
+		<article class="mx-auto max-w-3xl px-6 py-12">
+			<header class="mb-8">
+				<h1 class="text-3xl font-bold text-zinc-900 dark:text-white">{note.title || 'Untitled'}</h1>
+				<div class="mt-3 flex items-center gap-4 text-sm text-zinc-500">
+					<span>Updated {new Date(note.updated_at).toLocaleDateString()}</span>
+					<button
+						onclick={copyContent}
+						class="flex items-center gap-1 hover:text-zinc-700 dark:hover:text-zinc-300"
+					>
+						{#if copied}
+							<Check class="h-4 w-4" /> Copied
+						{:else}
+							<Copy class="h-4 w-4" /> Copy
+						{/if}
+					</button>
 				</div>
-			</article>
-		{/if}
-	</div>
+			</header>
+			<div class="prose prose-zinc dark:prose-invert max-w-none">
+				{@html note.content}
+			</div>
+		</article>
+	{/if}
 </div>

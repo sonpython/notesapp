@@ -10,6 +10,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from fastapi.responses import StreamingResponse
+
 from app.database import get_db
 from app.deps import get_current_user
 from app.models.note import Note
@@ -20,6 +22,7 @@ from app.schemas.shared_note import (
     ShareNoteRequest,
     ShareNoteResponse,
 )
+from app.services.minio_storage_service import minio_service
 
 router = APIRouter(tags=["shared"])
 
@@ -255,3 +258,53 @@ async def import_shared_note(
     await db.refresh(new_note)
 
     return {"id": str(new_note.id), "title": new_note.title}
+
+
+@router.get("/api/pub/{pub_id}/image/{image_id}")
+async def get_shared_image(
+    pub_id: str,
+    image_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """Serve an image from a shared note (no auth required)."""
+    # Find the shared note
+    stmt = select(SharedNote).where(SharedNote.pub_id == pub_id)
+    result = await db.execute(stmt)
+    shared = result.scalar_one_or_none()
+
+    if not shared:
+        raise HTTPException(status_code=404, detail="Shared note not found")
+
+    # Check expiry
+    if shared.expires_at and datetime.now(timezone.utc) > shared.expires_at:
+        raise HTTPException(status_code=410, detail="This shared note has expired")
+
+    # Check view limit
+    if shared.max_views and shared.view_count > shared.max_views:
+        raise HTTPException(status_code=410, detail="This shared note has reached its view limit")
+
+    # Get the note owner's user_id
+    note = shared.note
+    user_id = str(note.user_id)
+
+    # Find the image in MinIO
+    object_key = await minio_service.find_user_image(user_id, image_id)
+
+    if not object_key:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    # Get metadata for content-type
+    info = await minio_service.get_image_info(object_key)
+    if not info:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    content_type = info.get("content_type", "application/octet-stream")
+
+    # Stream the image with caching
+    return StreamingResponse(
+        minio_service.get_image(object_key),
+        media_type=content_type,
+        headers={
+            "Cache-Control": "public, max-age=3600",  # 1 hour cache for public images
+        },
+    )

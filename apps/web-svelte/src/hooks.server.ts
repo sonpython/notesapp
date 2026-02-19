@@ -20,12 +20,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return resolve(event);
 	}
 
-	// Redirect unauthenticated users to login (except auth pages and landing)
+	// Redirect unauthenticated users to login (except auth pages, landing, and public routes)
 	if (
 		!hasSession &&
 		!pathname.startsWith('/login') &&
 		!pathname.startsWith('/signup') &&
 		!pathname.startsWith('/offline') &&
+		!pathname.startsWith('/pub') &&
 		pathname !== '/'
 	) {
 		throw redirect(303, '/login');
