@@ -68,5 +68,11 @@ class TelegramSettings(Base):
         sa.DateTime(timezone=True), nullable=True,
     )
 
+    # Stored password for auto-encrypted backups (server-side encryption)
+    # When set, auto backups will be encrypted using this password
+    backup_password: Mapped[str | None] = mapped_column(
+        sa.String(255), nullable=True, default=None,
+    )
+
     def __repr__(self) -> str:
         return f"<TelegramSettings id={self.id} user_id={self.user_id}>"

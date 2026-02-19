@@ -169,6 +169,7 @@ async def get_backup_settings(
         backup_enabled=tg.backup_enabled,
         backup_schedule=tg.backup_schedule,  # type: ignore[arg-type]
         backup_retention=tg.backup_retention,
+        has_backup_password=bool(tg.backup_password),
         last_backup_at=tg.last_backup_at,
         next_backup_at=tg.next_backup_at,
     )
@@ -180,7 +181,7 @@ async def update_backup_settings(
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> TelegramBackupSettingsResponse:
-    """Update backup settings (enabled flag, schedule, retention count)."""
+    """Update backup settings (enabled flag, schedule, retention count, password)."""
     tg = await _get_or_404(db, user_id)
 
     if body.backup_enabled is not None:
@@ -189,6 +190,10 @@ async def update_backup_settings(
         tg.backup_schedule = body.backup_schedule
     if body.backup_retention is not None:
         tg.backup_retention = body.backup_retention
+    if body.clear_backup_password:
+        tg.backup_password = None
+    elif body.backup_password is not None:
+        tg.backup_password = body.backup_password
 
     await db.commit()
     await db.refresh(tg)
@@ -197,6 +202,7 @@ async def update_backup_settings(
         backup_enabled=tg.backup_enabled,
         backup_schedule=tg.backup_schedule,  # type: ignore[arg-type]
         backup_retention=tg.backup_retention,
+        has_backup_password=bool(tg.backup_password),
         last_backup_at=tg.last_backup_at,
         next_backup_at=tg.next_backup_at,
     )

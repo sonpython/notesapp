@@ -34,6 +34,8 @@ class TelegramBackupSettingsUpdate(BaseModel):
     backup_enabled: bool | None = None
     backup_schedule: BackupSchedule | None = None
     backup_retention: int | None = Field(default=None, ge=1, le=20)
+    backup_password: str | None = Field(default=None, min_length=4, max_length=128)
+    clear_backup_password: bool = False  # Set True to remove stored password
 
 
 class TelegramBackupSettingsResponse(BaseModel):
@@ -41,6 +43,7 @@ class TelegramBackupSettingsResponse(BaseModel):
     backup_enabled: bool
     backup_schedule: BackupSchedule | None
     backup_retention: int
+    has_backup_password: bool = False  # True if password is set for auto-encrypted backups
     last_backup_at: datetime | None = None
     next_backup_at: datetime | None = None
 

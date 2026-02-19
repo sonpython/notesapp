@@ -19,13 +19,49 @@ from app.models.telegram import TelegramSettings
 from app.models.telegram_backup import TelegramBackup
 from app.services.backup_export_service import export_user_data, serialize_backup
 from app.services.telegram_service import delete_message, send_document
+import base64
 import gzip
+import hashlib
 import json
+import os
+
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 logger = logging.getLogger(__name__)
 
 # Telegram file size hard limit (50 MB)
 _MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+
+# PBKDF2 parameters (must match client-side)
+_PBKDF2_ITERATIONS = 100000
+_PBKDF2_HASH = "sha256"
+_KEY_LENGTH = 32  # 256 bits for AES-256
+
+
+def _derive_key_from_password(password: str, salt: bytes) -> bytes:
+    """Derive AES-256 key from password using PBKDF2 (matches client-side)."""
+    return hashlib.pbkdf2_hmac(
+        _PBKDF2_HASH, password.encode("utf-8"), salt, _PBKDF2_ITERATIONS, _KEY_LENGTH
+    )
+
+
+def _encrypt_with_password(data: bytes, password: str) -> tuple[str, str, str]:
+    """Encrypt data with password using AES-256-GCM.
+
+    Returns (encrypted_data_b64, iv_b64, salt_b64) matching client format.
+    """
+    salt = os.urandom(16)
+    iv = os.urandom(12)  # GCM nonce
+
+    key = _derive_key_from_password(password, salt)
+    aesgcm = AESGCM(key)
+    ciphertext = aesgcm.encrypt(iv, data, None)
+
+    return (
+        base64.b64encode(ciphertext).decode("ascii"),
+        base64.b64encode(iv).decode("ascii"),
+        base64.b64encode(salt).decode("ascii"),
+    )
 
 
 @dataclass
@@ -66,10 +102,12 @@ async def create_backup(
 ) -> BackupResult:
     """Full backup pipeline: export -> serialize -> upload -> store.
 
+    If user has backup_password set, auto-encrypts with that password.
+
     Steps:
     1. Verify Telegram is linked for user
     2. Export all user data
-    3. Serialize to gzip-compressed JSON
+    3. Serialize to gzip-compressed JSON (or encrypt if password set)
     4. Validate size < 50 MB
     5. Upload to Telegram as document
     6. Store TelegramBackup metadata row
@@ -94,9 +132,37 @@ async def create_backup(
     if not tg or not tg.chat_id:
         raise ValueError("Telegram not linked for this user")
 
-    # 2. Export + 3. Serialize
+    # 2. Export all user data
     data = await export_user_data(db, uid)
-    compressed = serialize_backup(data)
+    counts = data["counts"]
+
+    # 3. Serialize (and optionally encrypt if password is set)
+    is_encrypted = False
+    encryption_method = None
+
+    if tg.backup_password:
+        # Encrypt with stored password (server-side encryption)
+        json_bytes = json.dumps(data, ensure_ascii=False, default=str).encode("utf-8")
+        encrypted_data, iv, salt = _encrypt_with_password(json_bytes, tg.backup_password)
+
+        envelope = {
+            "encrypted": True,
+            "encrypted_data": encrypted_data,
+            "iv": iv,
+            "salt": salt,  # Client needs salt for PBKDF2
+        }
+        compressed = gzip.compress(
+            json.dumps(envelope, ensure_ascii=False).encode("utf-8"), compresslevel=6
+        )
+        is_encrypted = True
+        encryption_method = "password"
+        filename_suffix = ".enc.gz"
+        caption_suffix = "(encrypted with password)"
+    else:
+        # Plain backup
+        compressed = serialize_backup(data)
+        filename_suffix = ".gz"
+        caption_suffix = ""
 
     # 4. Size check
     if len(compressed) > _MAX_UPLOAD_BYTES:
@@ -106,13 +172,14 @@ async def create_backup(
 
     # 5. Upload to Telegram
     ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    filename = f"notesapp-backup-{ts}.gz"
-    counts = data["counts"]
+    filename = f"notesapp-backup-{ts}{filename_suffix}"
     caption = (
         f"NotesApp Backup - {ts}\n"
         f"Notes: {counts['notes']}, Todos: {counts['todos']}, "
         f"Folders: {counts['folders']}, Tags: {counts['tags']}"
     )
+    if caption_suffix:
+        caption = f"{caption}\n{caption_suffix}"
 
     upload_result = await send_document(tg.chat_id, compressed, filename, caption)
     if upload_result is None:
@@ -129,6 +196,8 @@ async def create_backup(
         backup_size_bytes=len(compressed),
         entity_counts=counts,
         version_number=version,
+        is_encrypted=is_encrypted,
+        encryption_method=encryption_method,
     )
     db.add(backup)
 
@@ -139,8 +208,8 @@ async def create_backup(
     await db.refresh(backup)
 
     logger.info(
-        "create_backup: user=%s version=%d size=%d bytes",
-        uid, version, len(compressed),
+        "create_backup: user=%s version=%d size=%d bytes encrypted=%s",
+        uid, version, len(compressed), is_encrypted,
     )
 
     # 8. Prune old backups
