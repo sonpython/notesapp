@@ -64,7 +64,7 @@ class Folder(Base):
         remote_side=[id],
     )
 
-    notes: Mapped[list["Note"]] = relationship(  # noqa: F821
+    notes: Mapped[list[Note]] = relationship(  # noqa: F821
         "Note",
         back_populates="folder",
         passive_deletes=True,

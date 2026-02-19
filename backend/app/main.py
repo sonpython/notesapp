@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import logging
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,8 +14,8 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import settings
 from app.rate_limiter import limiter
-from app.tasks.reminders import start_scheduler, stop_scheduler
 from app.services.minio_storage_service import minio_service
+from app.tasks.reminders import start_scheduler, stop_scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,20 @@ async def health_check() -> dict[str, str]:
 
 def _register_routers() -> None:
     """Import and include all API routers."""
-    from app.routers import auth, auth_login, auth_register, backup, folders, images, notes, public_config, shared_notes, tags, telegram, todos
+    from app.routers import (
+        auth,
+        auth_login,
+        auth_register,
+        backup,
+        folders,
+        images,
+        notes,
+        public_config,
+        shared_notes,
+        tags,
+        telegram,
+        todos,
+    )
 
     app.include_router(public_config.router)
     app.include_router(shared_notes.router)

@@ -1,20 +1,19 @@
 # Reminder checking service - called by APScheduler
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import async_session_factory
-from app.models.todo import Todo
 from app.models.telegram import TelegramSettings
+from app.models.todo import Todo
 from app.services.telegram_service import send_telegram_message
 
 
 async def check_and_send_reminders():
     """Check for due reminders and send Telegram notifications."""
     async with async_session_factory() as session:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         # Find todos with due reminders that haven't been sent
         # Join with telegram_settings to get chat_id
         stmt = (

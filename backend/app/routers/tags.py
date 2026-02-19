@@ -1,16 +1,16 @@
 """API endpoints for tag CRUD operations."""
 
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.deps import get_current_user
 from app.models.tag import Tag
-from app.schemas.tag import TagCreate, TagUpdate, TagResponse
-
+from app.schemas.tag import TagCreate, TagResponse, TagUpdate
 
 router = APIRouter(prefix="/api/tags", tags=["tags"])
 

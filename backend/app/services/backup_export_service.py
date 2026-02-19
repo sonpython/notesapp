@@ -9,12 +9,12 @@ from __future__ import annotations
 import gzip
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.folder import Folder
 from app.models.note import Note
@@ -32,7 +32,7 @@ def _dt_to_str(dt: datetime | None) -> str | None:
     if dt is None:
         return None
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt.isoformat()
 
 
@@ -152,7 +152,7 @@ async def export_user_data(
     return {
         "version": BACKUP_VERSION,
         "app_version": APP_VERSION,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
         "user_id": str(uid),
         "data": {
             "notes": [_note_to_dict(n) for n in notes],

@@ -31,7 +31,6 @@ from app.schemas.telegram import (
 from app.services.backup_export_service import (
     deserialize_backup,
     export_user_data,
-    serialize_backup,
 )
 from app.services.backup_import_service import import_user_data
 from app.services.telegram_backup_manager import (

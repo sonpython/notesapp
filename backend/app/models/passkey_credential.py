@@ -84,7 +84,7 @@ class PasskeyCredential(Base):
 
     # -- Relationships ----------------------------------------------------------
 
-    user: Mapped["User"] = relationship(
+    user: Mapped[User] = relationship(
         "User",
         back_populates="passkey_credentials",
     )

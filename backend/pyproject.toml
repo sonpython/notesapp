@@ -63,7 +63,7 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
-ignore = ["E501"]
+ignore = ["E501", "E712", "E402", "UP046"]  # E712/E402 needed for SQLAlchemy, UP046 for Generic
 
 [tool.mypy]
 python_version = "3.12"
@@ -74,5 +74,6 @@ ignore_missing_imports = true
 [tool.uv]
 dev-dependencies = [
     "mypy>=1.19.1",
+    "ruff>=0.15.1",
     "types-python-jose>=3.5.0.20250531",
 ]

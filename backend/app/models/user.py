@@ -46,7 +46,7 @@ class User(Base):
 
     # -- Relationships ----------------------------------------------------------
 
-    passkey_credentials: Mapped[list["PasskeyCredential"]] = relationship(
+    passkey_credentials: Mapped[list[PasskeyCredential]] = relationship(
         "PasskeyCredential",
         back_populates="user",
         cascade="all, delete-orphan",

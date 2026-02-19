@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from dateutil.rrule import DAILY, MONTHLY, WEEKLY, rrule
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -75,7 +75,7 @@ async def create_next_occurrence(
         return None
 
     # Use deadline as base, fallback to completed_at or now
-    base = todo.deadline or todo.completed_at or datetime.now(timezone.utc)
+    base = todo.deadline or todo.completed_at or datetime.now(UTC)
 
     next_date = compute_next_date(
         base,

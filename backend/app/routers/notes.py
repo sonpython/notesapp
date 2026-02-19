@@ -8,23 +8,22 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.deps import get_current_user
+from app.models.note import Note
 from app.schemas.note import NoteCreate, NoteListResponse, NoteResponse, NoteUpdate
-from app.schemas.tag import TagAttachRequest
 from app.schemas.pagination import PaginatedResponse
-from app.services.note_query_service import build_notes_list_query, apply_note_update
+from app.schemas.tag import TagAttachRequest
 from app.services.note_export_service import (
     export_note_as_markdown,
     export_note_as_pdf,
 )
+from app.services.note_query_service import apply_note_update, build_notes_list_query
 from app.services.tag_service import attach_tags_to_note, detach_tag_from_note
-
-from app.models.note import Note
 
 router = APIRouter(prefix="/api/notes", tags=["notes"])
 

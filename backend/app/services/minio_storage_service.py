@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import AsyncGenerator
 from io import BytesIO
-from typing import AsyncGenerator
 
 from miniopy_async import Minio
 from miniopy_async.error import S3Error

@@ -59,18 +59,18 @@ class Note(Base):
 
     # -- Relationships ----------------------------------------------------------
 
-    folder: Mapped["Folder | None"] = relationship(  # noqa: F821
+    folder: Mapped[Folder | None] = relationship(  # noqa: F821
         "Folder",
         back_populates="notes",
     )
 
-    todos: Mapped[list["Todo"]] = relationship(  # noqa: F821
+    todos: Mapped[list[Todo]] = relationship(  # noqa: F821
         "Todo",
         back_populates="note",
         passive_deletes=True,
     )
 
-    tags: Mapped[list["Tag"]] = relationship(  # noqa: F821
+    tags: Mapped[list[Tag]] = relationship(  # noqa: F821
         "Tag",
         secondary="note_tags",
         back_populates="notes",

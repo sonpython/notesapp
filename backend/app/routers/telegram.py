@@ -3,25 +3,24 @@
 from __future__ import annotations
 
 import secrets
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import func, select, or_
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user
 from app.models.note import Note
 from app.models.telegram import TelegramSettings
 from app.models.todo import Todo
+from app.rate_limiter import WEBHOOK_RATE_LIMIT, limiter
 from app.schemas.telegram import (
     TelegramLinkResponse,
     TelegramStatusResponse,
     TelegramWebhookPayload,
 )
-from app.services.telegram_service import send_telegram_message, answer_callback_query
-from app.rate_limiter import limiter, WEBHOOK_RATE_LIMIT
+from app.services.telegram_service import answer_callback_query, send_telegram_message
 
 router = APIRouter(prefix="/api/telegram", tags=["telegram"])
 
@@ -213,7 +212,7 @@ async def _handle_start(session: AsyncSession, chat_id: str, code: str) -> None:
 
         record.chat_id = chat_id
         record.link_code = None
-        record.bot_linked_at = datetime.now(timezone.utc)
+        record.bot_linked_at = datetime.now(UTC)
         await session.commit()
         await send_telegram_message(chat_id, "✅ Liên kết thành công!\n\nCommands:\n/search <query> - Tìm kiếm note\n/todo <title> - Tạo todo\n/list - Xem danh sách todo\n/done <n> - Hoàn thành todo")
     else:
@@ -268,7 +267,7 @@ async def _handle_done(session: AsyncSession, chat_id: str, user_id: str, num: i
     title = todo.title
 
     todo.is_completed = True
-    todo.completed_at = datetime.now(timezone.utc)
+    todo.completed_at = datetime.now(UTC)
     await session.commit()
     await send_telegram_message(chat_id, f"✅ Completed: *{title}*")
 

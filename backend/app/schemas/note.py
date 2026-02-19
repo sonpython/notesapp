@@ -1,6 +1,7 @@
-from pydantic import BaseModel
-from uuid import UUID
 from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel
 
 # Forward reference for TagResponse
 if False:
@@ -56,5 +57,6 @@ class NoteListResponse(BaseModel):
 
 # Resolve forward references
 from app.schemas.tag import TagResponse
+
 NoteResponse.model_rebuild()
 NoteListResponse.model_rebuild()

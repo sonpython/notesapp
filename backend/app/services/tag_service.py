@@ -1,11 +1,12 @@
 """Service layer for tag operations on notes and todos."""
 
 from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from fastapi import HTTPException
 
-from app.models.tag import Tag, NoteTag, TodoTag
+from fastapi import HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.tag import NoteTag, Tag, TodoTag
 
 
 async def verify_tags_belong_to_user(

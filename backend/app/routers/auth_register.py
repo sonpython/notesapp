@@ -7,7 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.deps import get_db
-from app.schemas.auth import AuthOptionsResponse, AuthResponse, RegisterOptionsRequest, RegisterVerifyRequest
+from app.schemas.auth import (
+    AuthOptionsResponse,
+    AuthResponse,
+    RegisterOptionsRequest,
+    RegisterVerifyRequest,
+)
 from app.services.jwt_service import create_jwt, set_session_cookie
 from app.services.webauthn_service import create_registration_options, verify_registration
 

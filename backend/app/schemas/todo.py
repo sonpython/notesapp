@@ -1,6 +1,7 @@
-from pydantic import BaseModel
-from uuid import UUID
 from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel
 
 # Forward reference for TagResponse
 if False:
@@ -71,5 +72,6 @@ class TodoWithChildrenResponse(TodoResponse):
 
 # Resolve forward references
 from app.schemas.tag import TagResponse
+
 TodoResponse.model_rebuild()
 TodoWithChildrenResponse.model_rebuild()

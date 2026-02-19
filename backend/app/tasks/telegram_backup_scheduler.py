@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
@@ -61,7 +61,7 @@ async def check_and_run_scheduled_backups() -> None:
     from app.services.telegram_backup_manager import create_backup
 
     async with async_session_factory() as session:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         stmt = (
             select(TelegramSettings)
@@ -91,7 +91,7 @@ async def check_and_run_scheduled_backups() -> None:
                 await create_backup(backup_session, user_id)
 
                 # Advance next_backup_at after successful backup
-                now_after = datetime.now(timezone.utc)
+                now_after = datetime.now(UTC)
                 tg_row = await backup_session.get(TelegramSettings, tg.id)
                 if tg_row is not None:
                     tg_row.next_backup_at = compute_next_backup_at(schedule, now_after)

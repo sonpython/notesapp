@@ -14,7 +14,7 @@ Entity ordering (respects FK dependencies):
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.folder import Folder
 from app.models.note import Note
-from app.models.tag import Tag, NoteTag, TodoTag
+from app.models.tag import NoteTag, Tag, TodoTag
 from app.models.todo import Todo
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ def _parse_dt(value: str | None) -> datetime | None:
     try:
         dt = datetime.fromisoformat(value)
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
         return dt
     except (ValueError, TypeError):
         return None

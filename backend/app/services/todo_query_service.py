@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import Select
 
-from app.models.todo import Todo
 from app.models.tag import TodoTag
+from app.models.todo import Todo
 
 
 def build_todos_list_query(
@@ -48,7 +48,7 @@ def build_todos_list_query(
 
     if overdue:
         # Overdue: has deadline in the past and not completed
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         stmt = stmt.where(
             Todo.deadline.isnot(None),
             Todo.deadline < now,
@@ -83,4 +83,4 @@ def build_todos_list_query(
 def toggle_todo_completion(todo: Todo) -> None:
     """Flip is_completed and set/clear completed_at."""
     todo.is_completed = not todo.is_completed
-    todo.completed_at = datetime.now(timezone.utc) if todo.is_completed else None
+    todo.completed_at = datetime.now(UTC) if todo.is_completed else None

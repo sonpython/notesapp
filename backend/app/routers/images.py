@@ -9,7 +9,7 @@ from fastapi.responses import Response, StreamingResponse
 
 from app.deps import get_current_user
 from app.schemas.image import ImageListItem, ImageUploadResponse
-from app.services.minio_storage_service import minio_service, ALLOWED_CONTENT_TYPES
+from app.services.minio_storage_service import ALLOWED_CONTENT_TYPES, minio_service
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ async def upload_image(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except Exception:
         logger.exception("Image upload failed")
         raise HTTPException(status_code=500, detail="Upload failed")
 

@@ -7,11 +7,17 @@ telegram_backups table and prunes old entries per user retention setting.
 
 from __future__ import annotations
 
+import base64
+import gzip
+import hashlib
+import json
 import logging
+import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,13 +25,6 @@ from app.models.telegram import TelegramSettings
 from app.models.telegram_backup import TelegramBackup
 from app.services.backup_export_service import export_user_data, serialize_backup
 from app.services.telegram_service import delete_message, send_document
-import base64
-import gzip
-import hashlib
-import json
-import os
-
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +170,7 @@ async def create_backup(
         )
 
     # 5. Upload to Telegram
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     filename = f"notesapp-backup-{ts}{filename_suffix}"
     caption = (
         f"NotesApp Backup - {ts}\n"
@@ -202,7 +201,7 @@ async def create_backup(
     db.add(backup)
 
     # 7. Update last_backup_at on settings
-    tg.last_backup_at = datetime.now(timezone.utc)
+    tg.last_backup_at = datetime.now(UTC)
 
     await db.commit()
     await db.refresh(backup)
@@ -282,7 +281,7 @@ async def create_encrypted_backup(
         )
 
     # 5. Upload to Telegram
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     filename = f"notesapp-backup-{ts}.enc.gz"
     caption = f"NotesApp Encrypted Backup - {ts}\n(E2E encrypted with passkey)"
 
@@ -307,7 +306,7 @@ async def create_encrypted_backup(
     db.add(backup)
 
     # 7. Update last_backup_at on settings
-    tg.last_backup_at = datetime.now(timezone.utc)
+    tg.last_backup_at = datetime.now(UTC)
 
     await db.commit()
     await db.refresh(backup)

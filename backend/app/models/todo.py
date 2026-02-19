@@ -134,7 +134,7 @@ class Todo(Base):
         passive_deletes=True,
     )
 
-    note: Mapped["Note | None"] = relationship(  # noqa: F821
+    note: Mapped[Note | None] = relationship(  # noqa: F821
         "Note",
         back_populates="todos",
     )
@@ -145,7 +145,7 @@ class Todo(Base):
         remote_side=[id],
     )
 
-    tags: Mapped[list["Tag"]] = relationship(  # noqa: F821
+    tags: Mapped[list[Tag]] = relationship(  # noqa: F821
         "Tag",
         secondary="todo_tags",
         back_populates="todos",

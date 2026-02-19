@@ -7,7 +7,6 @@ import logging
 import jwt as pyjwt
 from fastapi import HTTPException, Request, status
 
-from app.config import settings
 from app.database import get_db as _get_db
 from app.services.jwt_service import decode_jwt
 

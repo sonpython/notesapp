@@ -1,7 +1,8 @@
 """Generic pagination schema for paginated API responses."""
 
+from typing import Generic, TypeVar
+
 from pydantic import BaseModel
-from typing import Generic, TypeVar, List
 
 T = TypeVar('T')
 
@@ -16,7 +17,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
         limit: Maximum items per page
         offset: Number of items skipped
     """
-    items: List[T]
+    items: list[T]
     total: int
     limit: int
     offset: int

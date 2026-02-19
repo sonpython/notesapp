@@ -5,7 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -16,8 +16,8 @@ from app.schemas.pagination import PaginatedResponse
 from app.schemas.tag import TagAttachRequest
 from app.schemas.todo import TodoCreate, TodoResponse, TodoUpdate, TodoWithChildrenResponse
 from app.services.recurrence_service import create_next_occurrence
-from app.services.todo_query_service import build_todos_list_query, toggle_todo_completion
 from app.services.tag_service import attach_tags_to_todo, detach_tag_from_todo
+from app.services.todo_query_service import build_todos_list_query, toggle_todo_completion
 
 router = APIRouter(prefix="/api/todos", tags=["todos"])
 

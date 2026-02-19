@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from fastapi.responses import StreamingResponse
 
 from app.database import get_db
 from app.deps import get_current_user
@@ -60,7 +59,7 @@ async def share_note(
     # Calculate expiry
     expires_at = None
     if request.expires_in_hours:
-        expires_at = datetime.now(timezone.utc) + timedelta(hours=request.expires_in_hours)
+        expires_at = datetime.now(UTC) + timedelta(hours=request.expires_in_hours)
 
     # Hash password if provided
     password_hash = _hash_password(request.password) if request.password else None
@@ -172,7 +171,7 @@ async def check_shared_note(
         raise HTTPException(status_code=404, detail="Shared note not found")
 
     # Check expiry
-    if shared.expires_at and datetime.now(timezone.utc) > shared.expires_at:
+    if shared.expires_at and datetime.now(UTC) > shared.expires_at:
         raise HTTPException(status_code=410, detail="This shared note has expired")
 
     # Check view limit
@@ -197,7 +196,7 @@ async def view_shared_note(
         raise HTTPException(status_code=404, detail="Shared note not found")
 
     # Check expiry
-    if shared.expires_at and datetime.now(timezone.utc) > shared.expires_at:
+    if shared.expires_at and datetime.now(UTC) > shared.expires_at:
         raise HTTPException(status_code=410, detail="This shared note has expired")
 
     # Check view limit
@@ -239,7 +238,7 @@ async def import_shared_note(
         raise HTTPException(status_code=404, detail="Shared note not found")
 
     # Check expiry
-    if shared.expires_at and datetime.now(timezone.utc) > shared.expires_at:
+    if shared.expires_at and datetime.now(UTC) > shared.expires_at:
         raise HTTPException(status_code=410, detail="This shared note has expired")
 
     # Check view limit
@@ -276,7 +275,7 @@ async def get_shared_image(
         raise HTTPException(status_code=404, detail="Shared note not found")
 
     # Check expiry
-    if shared.expires_at and datetime.now(timezone.utc) > shared.expires_at:
+    if shared.expires_at and datetime.now(UTC) > shared.expires_at:
         raise HTTPException(status_code=410, detail="This shared note has expired")
 
     # Check view limit

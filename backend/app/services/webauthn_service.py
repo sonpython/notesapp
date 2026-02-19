@@ -6,7 +6,7 @@ import base64
 import json
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,7 +68,7 @@ async def create_registration_options(
         user_id=temp_user_id,
         display_name=display_name,
         type="register",
-        expires_at=datetime.now(timezone.utc) + timedelta(minutes=CHALLENGE_TTL_MINUTES),
+        expires_at=datetime.now(UTC) + timedelta(minutes=CHALLENGE_TTL_MINUTES),
     )
     db.add(challenge_record)
     await db.commit()
@@ -161,7 +161,7 @@ async def create_authentication_options(db: AsyncSession) -> tuple[dict, str]:
         challenge=challenge_b64,
         user_id=None,
         type="login",
-        expires_at=datetime.now(timezone.utc) + timedelta(minutes=CHALLENGE_TTL_MINUTES),
+        expires_at=datetime.now(UTC) + timedelta(minutes=CHALLENGE_TTL_MINUTES),
     )
     db.add(challenge_record)
     await db.commit()
@@ -242,7 +242,7 @@ async def cleanup_expired_challenges(db: AsyncSession) -> int:
         Number of deleted records.
     """
     result = await db.execute(
-        delete(WebAuthnChallenge).where(WebAuthnChallenge.expires_at < datetime.now(timezone.utc))
+        delete(WebAuthnChallenge).where(WebAuthnChallenge.expires_at < datetime.now(UTC))
     )
     await db.commit()
     return result.rowcount
@@ -282,7 +282,7 @@ async def _get_and_delete_challenge(
     if challenge.type != expected_type:
         raise ValueError(f"Challenge type mismatch: expected {expected_type}, got {challenge.type}")
 
-    if challenge.expires_at < datetime.now(timezone.utc):
+    if challenge.expires_at < datetime.now(UTC):
         await db.delete(challenge)
         await db.commit()
         raise ValueError("Challenge expired")

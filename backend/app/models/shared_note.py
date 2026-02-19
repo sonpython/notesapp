@@ -70,7 +70,7 @@ class SharedNote(Base):
     )
 
     # Relationship to Note
-    note: Mapped["Note"] = relationship("Note", lazy="joined")  # noqa: F821
+    note: Mapped[Note] = relationship("Note", lazy="joined")  # noqa: F821
 
     def __repr__(self) -> str:
         return f"<SharedNote pub_id={self.pub_id} note_id={self.note_id}>"

@@ -46,13 +46,13 @@ class Tag(Base):
 
     # -- Relationships ----------------------------------------------------------
 
-    notes: Mapped[list["Note"]] = relationship(  # noqa: F821
+    notes: Mapped[list[Note]] = relationship(  # noqa: F821
         "Note",
         secondary="note_tags",
         back_populates="tags",
     )
 
-    todos: Mapped[list["Todo"]] = relationship(  # noqa: F821
+    todos: Mapped[list[Todo]] = relationship(  # noqa: F821
         "Todo",
         secondary="todo_tags",
         back_populates="tags",

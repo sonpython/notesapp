@@ -1,9 +1,10 @@
 """Pydantic schemas for tag CRUD operations."""
 
-from pydantic import BaseModel, field_validator
-from uuid import UUID
-from datetime import datetime
 import re
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel, field_validator
 
 
 class TagCreate(BaseModel):

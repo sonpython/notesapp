@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from fastapi import Response
@@ -21,8 +21,8 @@ def create_jwt(user_id: str) -> str:
     """
     payload = {
         "sub": user_id,
-        "iat": datetime.now(timezone.utc),
-        "exp": datetime.now(timezone.utc) + timedelta(days=settings.JWT_EXPIRY_DAYS),
+        "iat": datetime.now(UTC),
+        "exp": datetime.now(UTC) + timedelta(days=settings.JWT_EXPIRY_DAYS),
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 

@@ -2,6 +2,7 @@
 import logging
 
 import httpx
+
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
