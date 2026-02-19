@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # --- CORS ---
     CORS_ORIGINS: str = "http://localhost:3000"
 
+    # --- Registration ---
+    ALLOW_REGISTRATION: bool = True  # Set to False to disable new user signups
+
     # --- Rate Limiting ---
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_DEFAULT: str = "60/minute"  # Default for authenticated endpoints

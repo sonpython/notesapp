@@ -2,10 +2,28 @@
 	import { goto } from '$app/navigation';
 	import { Fingerprint } from 'lucide-svelte';
 	import { registerPasskey, isPasskeySupported } from '$lib/auth-api';
+	import { PUBLIC_API_URL } from '$env/static/public';
+
+	const API_URL = PUBLIC_API_URL || 'http://localhost:8000';
 
 	let displayName = $state('');
 	let error = $state<string | null>(null);
 	let loading = $state(false);
+	let allowRegistration = $state(true);
+	let configLoaded = $state(false);
+
+	$effect(() => {
+		fetch(`${API_URL}/api/config/public`, { credentials: 'include' })
+			.then((res) => res.json())
+			.then((data) => {
+				allowRegistration = data.allow_registration;
+				configLoaded = true;
+			})
+			.catch(() => {
+				allowRegistration = true;
+				configLoaded = true;
+			});
+	});
 
 	async function handleSubmit(e: SubmitEvent) {
 		e.preventDefault();
@@ -55,6 +73,22 @@
 
 <div class="flex min-h-screen items-center justify-center bg-background px-4">
 	<div class="w-full max-w-sm">
+		{#if !configLoaded}
+			<div class="text-center text-muted">Loading...</div>
+		{:else if !allowRegistration}
+			<div class="mb-8 text-center">
+				<h1 class="text-2xl font-bold text-foreground">Registration Closed</h1>
+				<p class="mt-4 text-sm text-muted">
+					Registration is currently closed. Please contact admin if you need an account.
+				</p>
+				<a
+					href="/login"
+					class="mt-6 inline-block font-medium text-accent hover:underline"
+				>
+					Back to login
+				</a>
+			</div>
+		{:else}
 		<div class="mb-8 text-center">
 			<h1 class="text-2xl font-bold text-foreground">Create your account</h1>
 			<p class="mt-2 text-sm text-muted">Set up a passkey to secure your account.</p>
@@ -102,5 +136,6 @@
 			Already have an account?
 			<a href="/login" class="font-medium text-accent hover:underline">Sign in</a>
 		</p>
+		{/if}
 	</div>
 </div>

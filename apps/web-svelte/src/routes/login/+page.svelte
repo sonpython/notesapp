@@ -2,9 +2,25 @@
 	import { goto } from '$app/navigation';
 	import { Fingerprint } from 'lucide-svelte';
 	import { loginPasskey, isPasskeySupported } from '$lib/auth-api';
+	import { PUBLIC_API_URL } from '$env/static/public';
+
+	const API_URL = PUBLIC_API_URL || 'http://localhost:8000';
 
 	let error = $state<string | null>(null);
 	let loading = $state(false);
+	let allowRegistration = $state(true);
+
+	$effect(() => {
+		fetch(`${API_URL}/api/config/public`, { credentials: 'include' })
+			.then((res) => res.json())
+			.then((data) => {
+				allowRegistration = data.allow_registration;
+			})
+			.catch(() => {
+				// Default to true if fetch fails
+				allowRegistration = true;
+			});
+	});
 
 	async function handleLogin() {
 		error = null;
@@ -66,9 +82,11 @@
 			Your device will prompt you to authenticate using Face ID, Touch ID, or your device PIN.
 		</p>
 
-		<p class="mt-6 text-center text-sm text-muted">
-			Don't have an account?
-			<a href="/signup" class="font-medium text-accent hover:underline">Create one</a>
-		</p>
+		{#if allowRegistration}
+			<p class="mt-6 text-center text-sm text-muted">
+				Don't have an account?
+				<a href="/signup" class="font-medium text-accent hover:underline">Create one</a>
+			</p>
+		{/if}
 	</div>
 </div>
