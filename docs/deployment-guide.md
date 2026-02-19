@@ -1,557 +1,364 @@
 # Deployment Guide
 
-## Local Development Setup
+## Architecture Overview
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Caddy     │────▶│   Backend   │────▶│  PostgreSQL │
+│  (SSL/LB)   │     │  (FastAPI)  │     │  (Database) │
+└─────────────┘     └─────────────┘     └─────────────┘
+       │                   │
+       ▼                   ▼
+┌─────────────┐     ┌─────────────┐
+│  Frontend   │     │    MinIO    │
+│ (SvelteKit) │     │  (Storage)  │
+└─────────────┘     └─────────────┘
+```
+
+**Stack:**
+- Backend: FastAPI + SQLAlchemy + asyncpg
+- Frontend: SvelteKit + Bun
+- Auth: WebAuthn/Passkey (self-hosted, no external auth)
+- Database: PostgreSQL (self-hosted or managed)
+- Storage: MinIO (S3-compatible)
+- Reverse Proxy: Caddy (auto SSL)
+
+---
+
+## VPS Deployment (Recommended)
 
 ### Prerequisites
-- Docker & Docker Compose
-- Python 3.13 (via `uv`)
-- Node.js 22+
-- Bun 1.2.4+
-- Git
+- VPS with 1GB+ RAM (DigitalOcean, Hetzner, Linode)
+- Domain pointing to VPS IP
+- SSH access
 
-### Step 1: Clone & Install
+### Step 1: Server Setup
 
 ```bash
-git clone <repo-url>
-cd notesapp
-
-# Install all dependencies
-bun install
-```
-
-### Step 2: Environment Configuration
-
-**Backend (.env)**
-```bash
-cp backend/.env.example backend/.env
-
-# Edit backend/.env with your values
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/notesapp
-JWT_SECRET=your-64-char-random-secret
-JWT_EXPIRY_DAYS=7
-WEBAUTHN_RP_ID=localhost
-WEBAUTHN_RP_NAME=NotesApp
-WEBAUTHN_ORIGIN=http://localhost:3000
-MINIO_ENDPOINT=localhost:9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
-MINIO_BUCKET=notesapp-images
-MINIO_MAX_IMAGE_SIZE=10485760
-TELEGRAM_BOT_TOKEN=123456:ABC-DEF  # Optional
-CORS_ORIGINS=http://localhost:3000
-```
-
-**Frontend (.env.local)**
-```bash
-# apps/web-svelte/.env.local
-PUBLIC_API_URL=http://localhost:8000
-```
-
-### Step 3: Start Database
-
-```bash
-# Start PostgreSQL in Docker
-docker-compose up -d postgres
-
-# Verify container is running
-docker-compose logs postgres
-```
-
-### Step 4: Database Migrations
-
-```bash
-cd backend
-
-# Create virtual environment (if using uv)
-uv venv
-
-# Install dependencies
-uv sync
-
-# Run migrations
-alembic upgrade head
-
-# Check migrations applied
-alembic current
-```
-
-### Step 5: Start Development Servers
-
-```bash
-# From project root
-bun run dev
-
-# This starts:
-# - Frontend (SvelteKit): http://localhost:3000 (or configured port)
-# - Backend: http://localhost:8000
-# - Turborepo watches for changes
-```
-
-### Step 6: Verify Setup
-
-```bash
-# Test backend health
-curl http://localhost:8000/api/health
-
-# Test frontend
-open http://localhost:3000
-
-# Check API docs
-open http://localhost:8000/docs
-```
-
-## Local Development Commands
-
-```bash
-# Development (using Bun)
-bun run dev              # Run all services
-bun run dev:web-svelte   # SvelteKit frontend only
-bun run dev:desktop      # Tauri desktop app
-bun run build            # Build all
-bun run lint             # Lint all
-
-# Backend specific
-cd backend
-uv sync               # Install deps
-alembic upgrade head  # Run migrations
-alembic revision --autogenerate -m "message"  # New migration
-
-# Frontend specific (SvelteKit)
-cd apps/web-svelte
-bun dev              # Dev server
-bun run build        # Build for production
-bun run lint         # Lint code
-```
-
-## Docker Local Environment
-
-The `docker-compose.yml` file provides PostgreSQL + backend:
-
-```bash
-# Start services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-
-# Reset database (delete volume)
-docker-compose down -v
-docker-compose up -d
-```
-
-Services:
-- **PostgreSQL**: localhost:5432 (user: notesapp, pass: notesapp)
-- **Backend**: localhost:8000 (auto-reload with uvicorn)
-- **MinIO**: localhost:9000 (S3-compatible storage), localhost:9001 (console)
-  - Access Key: minioadmin
-  - Secret Key: minioadmin
-  - Create bucket: `notesapp-images` (set public-read for image serving)
-
-## Production Deployment
-
-### Prerequisites
-- Docker & Docker Compose installed
-- Domain name with DNS configured
-- Supabase project (for database + auth)
-- MinIO or S3-compatible storage
-
-### Quick Start (Docker Compose + Caddy)
-
-This is the recommended approach - single command deployment with auto SSL.
-
-#### Step 1: Server Setup
-
-```bash
-# SSH into VPS (DigitalOcean, Linode, Hetzner, etc.)
+# SSH into VPS
 ssh root@your-server-ip
 
 # Install Docker
 curl -fsSL https://get.docker.com | sh
 
 # Clone repo
-cd /opt
-git clone <repo-url> notesapp
-cd notesapp
+git clone https://github.com/your/notesapp.git /opt/notesapp
+cd /opt/notesapp
 ```
 
-#### Step 2: Configure Environment
+### Step 2: Environment Configuration
 
 ```bash
-# Copy example and edit
-cp .env.production.example .env.production
+# Create production env file
+cat > .env.production << 'EOF'
+# Domain
+DOMAIN=notes.yourdomain.com
 
-# Edit with your values
+# Database (PostgreSQL)
+DATABASE_URL=postgresql+asyncpg://notesapp:YOUR_DB_PASSWORD@postgres:5432/notesapp
+DB_PASSWORD=YOUR_DB_PASSWORD
+
+# Auth (WebAuthn)
+JWT_SECRET=$(openssl rand -hex 32)
+JWT_EXPIRY_DAYS=7
+WEBAUTHN_RP_ID=notes.yourdomain.com
+WEBAUTHN_RP_NAME=NotesApp
+WEBAUTHN_ORIGIN=https://notes.yourdomain.com
+
+# Storage (MinIO)
+MINIO_ENDPOINT=minio:9000
+MINIO_ACCESS_KEY=notesapp
+MINIO_SECRET_KEY=YOUR_MINIO_SECRET
+MINIO_BUCKET=notesapp-images
+MINIO_SECURE=false
+
+# CORS
+CORS_ORIGINS=https://notes.yourdomain.com
+
+# Frontend
+PUBLIC_API_URL=https://notes.yourdomain.com
+EOF
+
+# Generate secrets
+sed -i "s/YOUR_DB_PASSWORD/$(openssl rand -hex 16)/g" .env.production
+sed -i "s/YOUR_MINIO_SECRET/$(openssl rand -hex 16)/g" .env.production
+
+# Review and edit
 nano .env.production
 ```
 
-Required variables:
-| Variable | Description |
-|----------|-------------|
-| `DOMAIN` | Your domain (e.g., `notes.example.com`) |
-| `DATABASE_URL` | Supabase pooler connection string |
-| `SUPABASE_URL` | `https://[ref].supabase.co` |
-| `SUPABASE_ANON_KEY` | From Supabase dashboard |
-| `JWT_SECRET` | Generate: `openssl rand -hex 32` |
-| `WEBAUTHN_RP_ID` | Same as domain |
-| `WEBAUTHN_ORIGIN` | `https://notes.example.com` |
-| `MINIO_*` | S3/MinIO credentials |
-| `CORS_ORIGINS` | `https://notes.example.com` |
-| `PUBLIC_API_URL` | `https://notes.example.com` |
+### Step 3: Create Production Docker Compose
 
-#### Step 3: Deploy
+```bash
+cat > docker-compose.production.yml << 'EOF'
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: notesapp
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: notesapp
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notesapp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    restart: always
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRY_DAYS: ${JWT_EXPIRY_DAYS}
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID}
+      WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME}
+      WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      MINIO_SECURE: ${MINIO_SECURE}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+
+  frontend:
+    build:
+      context: ./apps/web-svelte
+      args:
+        PUBLIC_API_URL: ${PUBLIC_API_URL}
+    depends_on:
+      - backend
+    restart: always
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      DOMAIN: ${DOMAIN}
+    depends_on:
+      - frontend
+      - backend
+    restart: always
+
+volumes:
+  postgres_data:
+  minio_data:
+  caddy_data:
+  caddy_config:
+EOF
+```
+
+### Step 4: Deploy
 
 ```bash
 # Load env vars
 set -a && source .env.production && set +a
 
-# Build and start with Caddy (auto SSL)
-docker compose -f docker-compose.prod.yml --profile with-caddy up -d --build
+# Build and start
+docker compose -f docker-compose.production.yml up -d --build
 
-# Or without Caddy (if using external reverse proxy)
-docker compose -f docker-compose.prod.yml up -d --build
-```
-
-#### Step 4: Verify
-
-```bash
-# Check services
-docker compose -f docker-compose.prod.yml ps
+# Check status
+docker compose -f docker-compose.production.yml ps
 
 # View logs
-docker compose -f docker-compose.prod.yml logs -f
+docker compose -f docker-compose.production.yml logs -f
 
-# Test API
-curl https://notes.example.com/api/health
+# Run migrations
+docker compose -f docker-compose.production.yml exec backend uv run alembic upgrade head
 ```
 
-### Manual VPS Setup (Without Docker)
-
-#### Step 1: Install Dependencies
+### Step 5: Create MinIO Bucket
 
 ```bash
-# System packages
-apt update && apt install -y nginx certbot python3-certbot-nginx
+# Access MinIO console at https://your-domain:9001
+# Or via CLI:
+docker compose -f docker-compose.production.yml exec minio \
+  mc alias set local http://localhost:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
 
-# Bun (for frontend)
-curl -fsSL https://bun.sh/install | bash
-
-# uv (for backend)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+docker compose -f docker-compose.production.yml exec minio \
+  mc mb local/notesapp-images
 ```
 
-#### Step 2: Build Frontend
+### Step 6: Verify
 
 ```bash
-cd /opt/notesapp/apps/web-svelte
-
-# Set env
-echo "PUBLIC_API_URL=https://notes.example.com" > .env.production
-
-# Build
-bun install
-bun run build
-
-# The built app is in ./build
+curl https://notes.yourdomain.com/api/health
 ```
 
-#### Step 3: Build Backend
+---
+
+## CI/CD with GitHub Actions
+
+### Setup Deploy Keys
 
 ```bash
-cd /opt/notesapp/backend
-cp .env.example .env
-# Edit .env with production values
+# On VPS: Generate SSH key for deployments
+ssh-keygen -t ed25519 -f ~/.ssh/deploy_key -N ""
 
-uv sync --frozen
+# Add to authorized_keys
+cat ~/.ssh/deploy_key.pub >> ~/.ssh/authorized_keys
+
+# Copy private key (add to GitHub Secrets as DEPLOY_KEY)
+cat ~/.ssh/deploy_key
 ```
 
-#### Step 4: Create Systemd Services
+### GitHub Secrets Required
 
-**Backend** (`/etc/systemd/system/notesapp-backend.service`):
-```ini
-[Unit]
-Description=NotesApp Backend
-After=network.target
+Add these in GitHub → Settings → Secrets → Actions:
 
-[Service]
-Type=exec
-User=www-data
-WorkingDirectory=/opt/notesapp/backend
-EnvironmentFile=/opt/notesapp/backend/.env
-ExecStart=/root/.local/bin/uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
-Restart=always
+| Secret | Value |
+|--------|-------|
+| `DEPLOY_HOST` | Your VPS IP |
+| `DEPLOY_USER` | `root` or deploy user |
+| `DEPLOY_KEY` | SSH private key |
+| `DEPLOY_PATH` | `/opt/notesapp` |
 
-[Install]
-WantedBy=multi-user.target
-```
+### Create CD Workflow
 
-**Frontend** (`/etc/systemd/system/notesapp-frontend.service`):
-```ini
-[Unit]
-Description=NotesApp Frontend
-After=network.target
+The workflow is at `.github/workflows/cd.yml` - it will:
+1. Run on push to `main` (after CI passes)
+2. SSH to VPS
+3. Pull latest code
+4. Rebuild and restart containers
 
-[Service]
-Type=exec
-User=www-data
-WorkingDirectory=/opt/notesapp/apps/web-svelte
-Environment=NODE_ENV=production
-ExecStart=/root/.bun/bin/bun ./build
-Restart=always
+---
 
-[Install]
-WantedBy=multi-user.target
-```
+## Database Management
+
+### Run Migrations
 
 ```bash
-systemctl daemon-reload
-systemctl enable --now notesapp-backend notesapp-frontend
+# Production
+docker compose -f docker-compose.production.yml exec backend uv run alembic upgrade head
+
+# Check current
+docker compose -f docker-compose.production.yml exec backend uv run alembic current
 ```
 
-#### Step 5: Nginx + SSL
+### Backup Database
 
 ```bash
-# Get SSL cert
-certbot certonly --nginx -d notes.example.com
+# Backup
+docker compose -f docker-compose.production.yml exec postgres \
+  pg_dump -U notesapp notesapp > backup_$(date +%Y%m%d).sql
+
+# Restore
+cat backup.sql | docker compose -f docker-compose.production.yml exec -T postgres \
+  psql -U notesapp notesapp
 ```
 
-Create `/etc/nginx/sites-available/notesapp`:
-```nginx
-server {
-    listen 80;
-    server_name notes.example.com;
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name notes.example.com;
-
-    ssl_certificate /etc/letsencrypt/live/notes.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/notes.example.com/privkey.pem;
-
-    # API + public shared notes
-    location ~ ^/(api|pub)/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # Frontend
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
+### Automated Backups
 
 ```bash
-ln -s /etc/nginx/sites-available/notesapp /etc/nginx/sites-enabled/
-nginx -t && systemctl reload nginx
+# Add to crontab
+crontab -e
+
+# Daily backup at 2am
+0 2 * * * cd /opt/notesapp && docker compose -f docker-compose.production.yml exec -T postgres pg_dump -U notesapp notesapp | gzip > /backups/notesapp_$(date +\%Y\%m\%d).sql.gz
 ```
 
-### Cloud Platform Deployments
+---
 
-#### Vercel (Frontend) + Railway (Backend)
+## Updating Production
 
-**Frontend on Vercel:**
-1. Connect repo → select `apps/web-svelte`
-2. Framework: SvelteKit
-3. Build: `bun run build`
-4. Output: `build`
-5. Env: `PUBLIC_API_URL=https://api.railway.app`
-
-**Backend on Railway:**
-1. Connect repo → select `backend` directory
-2. Dockerfile deployment (auto-detected)
-3. Add env vars from `.env.production.example`
-4. Custom domain: `api.yourdomain.com`
-
-#### Fly.io (Full Stack)
+### Manual Update
 
 ```bash
-# Backend
-cd backend
-fly launch --name notesapp-api
-fly secrets set DATABASE_URL=... JWT_SECRET=...
-fly deploy
-
-# Frontend
-cd apps/web-svelte
-fly launch --name notesapp-web
-fly secrets set PUBLIC_API_URL=https://notesapp-api.fly.dev
-fly deploy
+cd /opt/notesapp
+git pull origin main
+docker compose -f docker-compose.production.yml up -d --build
+docker compose -f docker-compose.production.yml exec backend uv run alembic upgrade head
 ```
 
-#### AWS (ECS + RDS)
+### Via CI/CD
 
-1. Create RDS PostgreSQL (or use Supabase)
-2. Create ECR repos for backend + frontend
-3. Push Docker images
-4. Deploy via ECS Fargate
-5. ALB for load balancing
-6. CloudFront for CDN
+Push to `main` branch → GitHub Actions auto-deploys
 
-### Database Migrations
-
-```bash
-# Via Docker
-docker compose -f docker-compose.prod.yml exec backend uv run alembic upgrade head
-
-# Via systemd
-cd /opt/notesapp/backend
-uv run alembic upgrade head
-
-# Check current migration
-uv run alembic current
-```
-
-## Monitoring & Logging
-
-### Application Logging
-
-Backend logs to stdout (captured by Docker):
-```bash
-docker-compose logs -f backend
-```
-
-Frontend logs to browser console.
-
-### Health Checks
-
-```bash
-# Backend health
-curl https://yourdomain.com/api/health
-
-# Database connectivity
-curl https://yourdomain.com/api/auth/me \
-  -H "Authorization: Bearer <token>"
-```
-
-### Uptime Monitoring (Future)
-
-Configure monitoring via:
-- Sentry for error tracking
-- DataDog for metrics
-- UptimeRobot for uptime monitoring
-
-## Backup & Recovery
-
-### Database Backup
-
-```bash
-# Backup PostgreSQL
-docker exec notesapp-postgres-1 pg_dump -U notesapp notesapp > backup.sql
-
-# Restore from backup
-cat backup.sql | docker exec -i notesapp-postgres-1 psql -U notesapp notesapp
-```
-
-### Automated Daily Backup (Supabase)
-- Supabase includes daily automated backups
-- Accessible from dashboard
-- Point-in-time recovery available
-
-## Scaling Considerations
-
-### Load Testing
-```bash
-# Using ab (Apache Bench)
-ab -n 1000 -c 10 http://localhost:8000/api/health
-```
-
-### Horizontal Scaling
-- Run multiple backend instances behind load balancer
-- Frontend deployed to CDN (Vercel, Netlify, CloudFront)
-- Database: upgrade Supabase plan or use managed RDS
-
-### Vertical Scaling
-- Increase VPS RAM/CPU
-- Increase database instance size
-- Adjust connection pool size
+---
 
 ## Troubleshooting
 
-### Backend won't start
+### Check Logs
+
 ```bash
-# Check logs
-docker-compose logs backend
+# All services
+docker compose -f docker-compose.production.yml logs -f
 
-# Verify database connection
-docker exec notesapp-postgres-1 pg_isready -U notesapp
-
-# Check env vars
-env | grep SUPABASE
+# Specific service
+docker compose -f docker-compose.production.yml logs -f backend
 ```
 
-### Database migrations fail
-```bash
-# Check current migration
-cd backend && alembic current
+### Backend Won't Start
 
-# Reset (DANGEROUS - drops data)
-alembic downgrade base
-alembic upgrade head
+```bash
+# Check database connection
+docker compose -f docker-compose.production.yml exec backend \
+  python -c "from app.database import engine; print('OK')"
+
+# Check migrations
+docker compose -f docker-compose.production.yml exec backend uv run alembic current
 ```
 
-### Frontend can't reach API
-```bash
-# Check CORS
-curl -H "Origin: http://localhost:3000" http://localhost:8000/api/health
+### SSL Issues
 
-# Check API URL
-cat apps/web/.env.local | grep API_URL
+```bash
+# Check Caddy logs
+docker compose -f docker-compose.production.yml logs caddy
+
+# Verify domain DNS
+dig +short notes.yourdomain.com
 ```
+
+### Reset Everything
+
+```bash
+# WARNING: Destroys all data
+docker compose -f docker-compose.production.yml down -v
+docker compose -f docker-compose.production.yml up -d --build
+```
+
+---
 
 ## Security Checklist
 
-- [ ] Environment variables not in .env.example
-- [ ] Database password is strong (20+ chars)
-- [ ] SSL/TLS certificate valid
-- [ ] CORS origins restricted to domain
-- [ ] No debug mode in production
-- [ ] Rate limiting configured (future)
-- [ ] Database backups automated
-- [ ] Secrets rotation scheduled
+- [ ] Strong passwords in .env.production
+- [ ] Firewall enabled (only 80, 443, 22)
+- [ ] SSH key auth only (disable password)
+- [ ] Regular backups configured
+- [ ] Secrets not committed to git
+- [ ] CORS restricted to your domain
 
-## Performance Optimization
+---
 
-### Frontend
-- CDN caching: 1 year for /public/*
-- Gzip compression enabled
-- Code splitting by route
-- Image optimization
+## Local Development
 
-### Backend
-- Connection pooling: 10-20 connections
-- Query caching: 1 hour (future)
-- Compression: gzip for all responses
+See [README.md](../README.md) for local development setup.
 
-### Database
-- Index optimization
-- Query analysis
-- Auto-vacuum tuning
-
-## Rollback Plan
-
-If deployment fails:
 ```bash
-# Rollback to previous Docker image
-docker-compose down
-git checkout previous-commit
-docker-compose up -d
+# Quick start
+docker-compose up -d postgres minio
+cd backend && uv sync && uv run uvicorn app.main:app --reload
+cd apps/web-svelte && bun dev
 ```
-
-## References
-
-- Supabase Docs: https://supabase.com/docs
-- FastAPI Docs: https://fastapi.tiangolo.com/deployment/
-- Next.js Deployment: https://nextjs.org/docs/deployment
-- Docker Docs: https://docs.docker.com
