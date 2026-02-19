@@ -5,13 +5,14 @@
    * Auto-saves changes after 500 ms debounce.
    * Supports drag-and-drop and paste image uploads.
    */
-  import { Pin, Archive, Code, Trash2, ImageIcon } from 'lucide-svelte';
+  import { Pin, Archive, Code, Trash2, ImageIcon, Share2 } from 'lucide-svelte';
   import CodeMirror from 'svelte-codemirror-editor';
   import { markdown } from '@codemirror/lang-markdown';
   import type { Note, Tag } from '$lib/types';
   import { TagsStore } from '$lib/stores/tags-store.svelte';
   import WysiwygEditor from './wysiwyg-editor.svelte';
   import NoteExportMenu from './note-export-menu.svelte';
+  import ShareNoteModal from './share-note-modal.svelte';
   import TagSelector from '$lib/components/tags/tag-selector.svelte';
   import { api } from '$lib/api';
   import { uploadNoteImage } from '$lib/services/image-upload-service';
@@ -36,6 +37,7 @@
   let noteTags = $state<Tag[]>([]);
   let isUploading = $state(false);
   let uploadError = $state<string | null>(null);
+  let showShareModal = $state(false);
 
   // Debounce timers
   let titleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -204,6 +206,13 @@
             Uploading...
           </span>
         {/if}
+        <button
+          onclick={() => { showShareModal = true; }}
+          title="Share"
+          class="p-1.5 rounded-md transition-colors cursor-pointer {note.is_shared ? 'text-blue-500 bg-blue-500/10' : 'text-muted hover:text-foreground hover:bg-sidebar'}"
+        >
+          <Share2 class="w-4 h-4" />
+        </button>
         <NoteExportMenu {note} onexportAll={onexportAll} />
         <button
           onclick={handleToggleMode}
@@ -270,5 +279,10 @@
         oncreate={handleCreateTag}
       />
     </div>
+
+    <!-- Share modal -->
+    {#if showShareModal}
+      <ShareNoteModal noteId={note.id} onclose={() => { showShareModal = false; }} />
+    {/if}
   </div>
 {/if}

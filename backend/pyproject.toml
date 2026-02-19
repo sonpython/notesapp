@@ -21,6 +21,7 @@ dependencies = [
     "python-dateutil>=2.9.0",
     "miniopy-async>=1.21.0",
     "cryptography>=46.0.5",
+    "bcrypt>=5.0.0",
 ]
 
 [project.optional-dependencies]

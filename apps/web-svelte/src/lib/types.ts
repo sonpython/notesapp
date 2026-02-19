@@ -34,6 +34,7 @@ export interface Note {
   folder_id: string | null
   is_pinned: boolean
   is_archived: boolean
+  is_shared?: boolean
   created_at: string
   updated_at: string
   tags: Tag[]

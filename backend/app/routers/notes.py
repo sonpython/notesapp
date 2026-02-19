@@ -68,7 +68,25 @@ async def list_notes(
     # Apply pagination
     paginated_stmt = base_stmt.limit(limit).offset(offset)
     result = await session.execute(paginated_stmt)
-    items = result.scalars().all()
+    notes = result.scalars().all()
+
+    # Get shared note IDs for this batch
+    from app.models.shared_note import SharedNote
+    note_ids = [n.id for n in notes]
+    if note_ids:
+        shared_result = await session.execute(
+            select(SharedNote.note_id).where(SharedNote.note_id.in_(note_ids))
+        )
+        shared_ids = {row[0] for row in shared_result.fetchall()}
+    else:
+        shared_ids = set()
+
+    # Build response with is_shared
+    items = []
+    for note in notes:
+        item = NoteListResponse.model_validate(note)
+        item.is_shared = note.id in shared_ids
+        items.append(item)
 
     return PaginatedResponse(
         items=items,
@@ -156,6 +174,7 @@ async def get_note(
     session: AsyncSession = Depends(get_db),
 ) -> NoteResponse:
     """Get a single note by ID, verifying ownership."""
+    from app.models.shared_note import SharedNote
     # Eager load tags
     result = await session.execute(
         select(Note).where(Note.id == note_id).options(selectinload(Note.tags))
@@ -165,7 +184,14 @@ async def get_note(
         raise HTTPException(status_code=404, detail="Note not found")
     if str(note.user_id) != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    return note
+    # Check if shared
+    shared_result = await session.execute(
+        select(SharedNote.id).where(SharedNote.note_id == note_id).limit(1)
+    )
+    is_shared = shared_result.scalar_one_or_none() is not None
+    response = NoteResponse.model_validate(note)
+    response.is_shared = is_shared
+    return response
 
 
 @router.put("/{note_id}", response_model=NoteResponse)

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Pin } from 'lucide-svelte';
+  import { Pin, Share2 } from 'lucide-svelte';
   import { formatDistanceToNow } from 'date-fns';
   import type { Note } from '$lib/types';
   import TagPill from '$lib/components/tags/tag-pill.svelte';
@@ -64,6 +64,9 @@
             : 'hover:bg-sidebar border-l-2 border-l-transparent'}"
       >
         <div class="flex items-center gap-1.5 mb-1">
+          {#if note.is_shared}
+            <Share2 class="w-3 h-3 text-blue-500 shrink-0" />
+          {/if}
           {#if note.is_pinned}
             <Pin class="w-3 h-3 text-accent shrink-0" />
           {/if}
