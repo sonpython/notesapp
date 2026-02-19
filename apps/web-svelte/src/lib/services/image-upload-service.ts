@@ -4,10 +4,9 @@
  */
 
 import { api } from '$lib/api';
-import { PUBLIC_API_URL } from '$env/static/public';
 import type { ImageUploadResponse } from '$lib/types';
 
-const API_URL = PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = '';
 
 /**
  * Convert relative API URL to absolute URL for image display.

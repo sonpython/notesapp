@@ -12,9 +12,7 @@ import type {
 	PublicKeyCredentialCreationOptionsJSON,
 	PublicKeyCredentialRequestOptionsJSON
 } from '@simplewebauthn/browser';
-import { PUBLIC_API_URL } from '$env/static/public';
-
-const API_URL = PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = '';
 
 export interface AuthUser {
 	user_id: string;

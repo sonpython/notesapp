@@ -5,9 +5,7 @@
 
 import { startAuthentication } from '@simplewebauthn/browser';
 import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
-import { PUBLIC_API_URL } from '$env/static/public';
-
-const API_URL = PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = '';
 
 // Fixed PRF salt for backup encryption (32 bytes, base64url encoded)
 // This is application-specific and safe to be public

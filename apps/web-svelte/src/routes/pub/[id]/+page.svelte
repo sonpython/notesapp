@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { PUBLIC_API_URL } from '$env/static/public';
 	import { Lock, Copy, Check } from 'lucide-svelte';
 
-	const API_URL = PUBLIC_API_URL || 'http://localhost:8000';
+	const API_URL = '';
 
 	let loading = $state(true);
 	let error = $state<string | null>(null);

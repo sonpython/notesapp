@@ -56,8 +56,6 @@ services:
   frontend:
     build:
       context: ./apps/web-svelte
-      args:
-        PUBLIC_API_URL: ${PUBLIC_API_URL}
     depends_on:
       backend:
         condition: service_healthy

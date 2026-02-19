@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { X, Link, Copy, Check, Trash2 } from 'lucide-svelte';
-	import { PUBLIC_API_URL } from '$env/static/public';
 
-	const API_URL = PUBLIC_API_URL || 'http://localhost:8000';
+	const API_URL = '';
 
 	interface Props {
 		noteId: string;

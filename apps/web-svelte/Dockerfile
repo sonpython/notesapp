@@ -10,11 +10,7 @@ RUN bun install
 # Copy source
 COPY . .
 
-# Build args for environment
-ARG PUBLIC_API_URL
-ENV PUBLIC_API_URL=$PUBLIC_API_URL
-
-# Build the app
+# Build the app (uses relative URLs, no env vars needed)
 RUN bun run build
 
 # Production image

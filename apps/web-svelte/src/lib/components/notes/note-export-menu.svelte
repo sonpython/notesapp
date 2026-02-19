@@ -4,10 +4,9 @@
    * Provides markdown, PDF, and bulk ZIP export options.
    */
   import { Download, FileDown, FileText, FolderArchive } from 'lucide-svelte';
-  import { PUBLIC_API_URL } from '$env/static/public';
   import type { Note } from '$lib/types';
 
-  const API_URL = PUBLIC_API_URL || 'http://localhost:8000';
+  const API_URL = '';
 
   interface Props {
     note: Note | null;

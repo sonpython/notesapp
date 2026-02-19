@@ -1,11 +1,10 @@
 /**
  * API client for the NotesApp backend.
  * Uses HttpOnly session cookie for authentication (set by passkey login).
+ * Uses relative URLs - works for both dev (with proxy) and prod (same domain).
  */
 
-import { PUBLIC_API_URL } from '$env/static/public';
-
-const API_URL = PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = '';
 
 class ApiClient {
 	private async request<T>(path: string, init?: RequestInit): Promise<T> {

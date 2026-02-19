@@ -2,9 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { Fingerprint } from 'lucide-svelte';
 	import { loginPasskey, isPasskeySupported } from '$lib/auth-api';
-	import { PUBLIC_API_URL } from '$env/static/public';
 
-	const API_URL = PUBLIC_API_URL || 'http://localhost:8000';
+	const API_URL = '';
 
 	let error = $state<string | null>(null);
 	let loading = $state(false);
