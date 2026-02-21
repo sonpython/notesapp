@@ -1,9 +1,14 @@
 /**
  * API client for the NotesApp backend.
  * Uses HttpOnly session cookie for authentication (set by passkey login).
- * Uses relative URLs - works for both dev (with proxy) and prod (same domain).
+ *
+ * ALWAYS uses relative URLs - routing handled by:
+ * - Local dev: Vite proxy (vite.config.ts) → localhost:8001
+ * - Docker dev: Vite proxy → backend:8000
+ * - Production: Reverse proxy (Cloudflare/nginx)
  */
 
+// Always empty - relative URLs only. Never use env vars for API URL.
 const API_URL = '';
 
 class ApiClient {

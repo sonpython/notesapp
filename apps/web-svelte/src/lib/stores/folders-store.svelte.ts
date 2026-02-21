@@ -61,7 +61,7 @@ export class FoldersStore {
 			params.set('limit', this.limit.toString());
 			params.set('offset', '0');
 
-			const data = await api.get<PaginatedResponse<Folder>>(`/api/folders?${params}`);
+			const data = await api.get<PaginatedResponse<Folder>>(`/api/folders/?${params}`);
 			this.folders = data.items;
 			this.total = data.total;
 			this.fromCache = false;
@@ -113,7 +113,7 @@ export class FoldersStore {
 		}
 
 		try {
-			const created = await api.post<Folder>('/api/folders', { name, parent_id: parentId });
+			const created = await api.post<Folder>('/api/folders/', { name, parent_id: parentId });
 			this.folders = [...this.folders, created];
 			await foldersDB.putFolder(created).catch(console.error);
 			return created;

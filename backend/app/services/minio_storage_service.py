@@ -21,6 +21,9 @@ ALLOWED_CONTENT_TYPES = frozenset(
         "image/gif",
         "image/webp",
         "image/svg+xml",
+        "image/heic",
+        "image/heif",
+        "image/tiff",
     ]
 )
 
@@ -30,6 +33,9 @@ CONTENT_TYPE_TO_EXT = {
     "image/gif": "gif",
     "image/webp": "webp",
     "image/svg+xml": "svg",
+    "image/heic": "heic",
+    "image/heif": "heif",
+    "image/tiff": "tiff",
 }
 
 

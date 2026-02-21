@@ -77,7 +77,7 @@ export class TodosStore {
 			params.set('offset', '0');
 			const query = params.toString();
 
-			const data = await api.get<PaginatedResponse<Todo>>(`/api/todos${query ? `?${query}` : ''}`);
+			const data = await api.get<PaginatedResponse<Todo>>(`/api/todos/${query ? `?${query}` : ''}`);
 			this.todos = data.items;
 			this.total = data.total;
 			this.fromCache = false;
@@ -143,7 +143,7 @@ export class TodosStore {
 		}
 
 		try {
-			const created = await api.post<Todo>('/api/todos', data);
+			const created = await api.post<Todo>('/api/todos/', data);
 			this.todos = [created, ...this.todos];
 			await todosDB.putTodo(created).catch(console.error);
 			return created;

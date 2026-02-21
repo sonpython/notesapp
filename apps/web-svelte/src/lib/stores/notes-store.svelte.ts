@@ -14,6 +14,15 @@ export interface NoteCounts {
 	no_folder: number;
 }
 
+// Custom event for cross-store communication
+const NOTES_CHANGED_EVENT = 'notesapp:notes-changed';
+
+function emitNotesChanged() {
+	if (browser) {
+		window.dispatchEvent(new CustomEvent(NOTES_CHANGED_EVENT));
+	}
+}
+
 export class NotesStore {
 	notes = $state<Note[]>([]);
 	loading = $state(false);
@@ -48,7 +57,7 @@ export class NotesStore {
 			params.set('limit', this.limit.toString());
 			params.set('offset', '0');
 			const query = params.toString();
-			const path = `/api/notes${query ? `?${query}` : ''}`;
+			const path = `/api/notes/${query ? `?${query}` : ''}`;
 
 			const data = await api.get<PaginatedResponse<Note>>(path);
 			this.notes = data.items;
@@ -94,7 +103,7 @@ export class NotesStore {
 			params.set('limit', this.limit.toString());
 			params.set('offset', newOffset.toString());
 			const query = params.toString();
-			const path = `/api/notes${query ? `?${query}` : ''}`;
+			const path = `/api/notes/${query ? `?${query}` : ''}`;
 
 			const data = await api.get<PaginatedResponse<Note>>(path);
 			this.notes = [...this.notes, ...data.items];
@@ -140,9 +149,11 @@ export class NotesStore {
 
 		// Online: normal API call + write-through
 		try {
-			const created = await api.post<Note>('/api/notes', data);
+			const created = await api.post<Note>('/api/notes/', data);
 			this.notes = [created, ...this.notes];
 			await notesDB.putNote(created).catch(console.error);
+			// Notify other stores that notes changed
+			emitNotesChanged();
 			return created;
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Failed to create note';
@@ -205,6 +216,8 @@ export class NotesStore {
 			await api.delete(`/api/notes/${id}`);
 			this.notes = this.notes.filter((n) => n.id !== id);
 			await notesDB.deleteNoteLocal(id).catch(console.error);
+			// Notify other stores that notes changed
+			emitNotesChanged();
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Failed to delete note';
 			this.error = message;
@@ -216,8 +229,8 @@ export class NotesStore {
 		try {
 			await api.put(`/api/notes/${noteId}`, { folder_id: folderId });
 			this.notes = this.notes.map((n) => (n.id === noteId ? { ...n, folder_id: folderId } : n));
-			// Refresh counts after move
-			this.fetchNoteCounts();
+			// Notify other stores that notes changed
+			emitNotesChanged();
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Failed to move note';
 			this.error = message;
@@ -231,5 +244,16 @@ export class NotesStore {
 		} catch (err) {
 			console.error('[notes-store] Failed to fetch counts:', err);
 		}
+	}
+
+	/** Subscribe to note changes from other store instances. Returns cleanup function. */
+	subscribeToChanges(): () => void {
+		if (!browser) return () => {};
+
+		const handler = () => {
+			this.fetchNoteCounts();
+		};
+		window.addEventListener(NOTES_CHANGED_EVENT, handler);
+		return () => window.removeEventListener(NOTES_CHANGED_EVENT, handler);
 	}
 }

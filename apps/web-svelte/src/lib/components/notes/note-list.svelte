@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Pin, Share2 } from 'lucide-svelte';
+  import { Image, Pin, Share2 } from 'lucide-svelte';
   import { formatDistanceToNow } from 'date-fns';
   import type { Note } from '$lib/types';
   import TagPill from '$lib/components/tags/tag-pill.svelte';
@@ -16,6 +16,11 @@
   /** Strip HTML tags from text. */
   function stripHtml(text: string): string {
     return text.replace(/<[^>]*>/g, '').trim();
+  }
+
+  /** Check if content contains images. */
+  function hasImages(content: string): boolean {
+    return /<img\s/i.test(content) || /!\[.*?\]\(.*?\)/.test(content);
   }
 
   /** Extracts the first non-empty line of content as a preview snippet. */
@@ -69,6 +74,9 @@
             : 'hover:bg-sidebar border-l-2 border-l-transparent'}"
       >
         <div class="flex items-center gap-1.5 mb-1">
+          {#if hasImages(note.content)}
+            <Image class="w-3 h-3 text-emerald-500 shrink-0" />
+          {/if}
           {#if note.is_shared}
             <Share2 class="w-3 h-3 text-blue-500 shrink-0" />
           {/if}
