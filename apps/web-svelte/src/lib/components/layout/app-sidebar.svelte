@@ -16,8 +16,9 @@
 	interface Props {
 		oncollapse?: () => void;
 		collapsed?: boolean;
+		onnavigate?: () => void;
 	}
-	let { oncollapse, collapsed = false }: Props = $props();
+	let { oncollapse, collapsed = false, onnavigate }: Props = $props();
 
 	// Instantiate stores as singletons for this sidebar session
 	const foldersStore = new FoldersStore();
@@ -43,13 +44,13 @@
 			<button onclick={oncollapse} class="p-2 text-zinc-400 hover:text-white" title="Expand">
 				<PanelLeftClose class="h-5 w-5 rotate-180" />
 			</button>
-			<a href="/notes" class="p-2 text-zinc-400 hover:text-white" title="Notes">
+			<a href="/notes" onclick={onnavigate} class="p-2 text-zinc-400 hover:text-white" title="Notes">
 				<FileText class="h-5 w-5" />
 			</a>
-			<a href="/todos?filter=active" class="p-2 text-zinc-400 hover:text-white" title="Todos">
+			<a href="/todos?filter=active" onclick={onnavigate} class="p-2 text-zinc-400 hover:text-white" title="Todos">
 				<CheckSquare class="h-5 w-5" />
 			</a>
-			<a href="/settings" class="p-2 text-zinc-400 hover:text-white" title="Settings">
+			<a href="/settings" onclick={onnavigate} class="p-2 text-zinc-400 hover:text-white" title="Settings">
 				<Settings class="h-5 w-5" />
 			</a>
 		</div>
@@ -70,7 +71,7 @@
 				</button>
 			{/if}
 		</div>
-		<AppSidebarNav {foldersStore} {tagsStore} {notesStore} />
+		<AppSidebarNav {foldersStore} {tagsStore} {notesStore} {onnavigate} />
 		<div class="border-t border-border px-4 py-3">
 			<div class="flex items-center justify-between gap-2">
 				<div class="flex items-center gap-2 min-w-0">

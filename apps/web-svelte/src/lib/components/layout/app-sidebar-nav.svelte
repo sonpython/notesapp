@@ -15,9 +15,10 @@
 		foldersStore: FoldersStore;
 		tagsStore: TagsStore;
 		notesStore: NotesStore;
+		onnavigate?: () => void;
 	}
 
-	let { foldersStore, tagsStore, notesStore }: Props = $props();
+	let { foldersStore, tagsStore, notesStore, onnavigate }: Props = $props();
 
 	let isCreatingFolder = $state(false);
 
@@ -33,13 +34,16 @@
 		searchParams.get('tags') ? searchParams.get('tags')!.split(',') : []
 	);
 
-	// Fetch note counts on mount
+	// Fetch note counts on mount and subscribe to changes from other store instances
 	$effect(() => {
 		notesStore.fetchNoteCounts();
+		const unsubscribe = notesStore.subscribeToChanges();
+		return unsubscribe;
 	});
 
 	function selectFolder(id: string | null) {
 		goto(id ? `/notes?folder=${id}` : '/notes');
+		onnavigate?.();
 	}
 
 	async function createFolder(name: string, parentId?: string) {
@@ -71,12 +75,14 @@
 			params.delete('tags');
 		}
 		goto(`${pathname}?${params.toString()}`);
+		onnavigate?.();
 	}
 
 	function clearTagFilters() {
 		const params = new URLSearchParams(searchParams.toString());
 		params.delete('tags');
 		goto(`${pathname}?${params.toString()}`);
+		onnavigate?.();
 	}
 </script>
 
@@ -102,6 +108,7 @@
 		{@const isActive = pathname.startsWith(item.href)}
 		<a
 			href={item.href}
+			onclick={onnavigate}
 			class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors {isActive
 				? 'bg-accent/15 text-accent'
 				: 'text-muted hover:bg-border hover:text-foreground'}"
@@ -119,6 +126,7 @@
 	<span class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Tags</span>
 	<a
 		href="/settings?tab=tags"
+		onclick={onnavigate}
 		class="rounded p-1 text-zinc-500 transition-colors hover:bg-border hover:text-zinc-300"
 		title="Manage Tags"
 	>

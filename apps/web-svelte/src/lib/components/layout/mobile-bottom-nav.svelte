@@ -4,20 +4,21 @@
 	 * Shows on mobile only (lg:hidden).
 	 */
 	import { page } from '$app/stores';
-	import { FileText, CheckSquare, Settings, FolderOpen } from 'lucide-svelte';
+	import { FileText, CheckSquare, Settings, Tag } from 'lucide-svelte';
 
 	const pathname = $derived($page.url.pathname);
 
 	const navItems = [
 		{ label: 'Notes', href: '/notes', icon: FileText },
-		{ label: 'Folders', href: '/notes?view=folders', icon: FolderOpen },
+		{ label: 'Tags', href: '/settings?tab=tags', icon: Tag },
 		{ label: 'Todos', href: '/todos?filter=active', icon: CheckSquare },
 		{ label: 'Settings', href: '/settings', icon: Settings },
 	] as const;
 
 	function isActive(href: string): boolean {
-		if (href === '/notes') return pathname === '/notes' && !$page.url.searchParams.has('view');
-		if (href.includes('view=folders')) return pathname === '/notes' && $page.url.searchParams.get('view') === 'folders';
+		if (href === '/notes') return pathname === '/notes';
+		if (href.includes('tab=tags')) return pathname === '/settings' && $page.url.searchParams.get('tab') === 'tags';
+		if (href === '/settings') return pathname === '/settings' && !$page.url.searchParams.has('tab');
 		return pathname.startsWith(href.split('?')[0]);
 	}
 </script>

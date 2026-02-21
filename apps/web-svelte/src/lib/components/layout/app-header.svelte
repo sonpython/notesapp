@@ -109,6 +109,6 @@
 		aria-hidden="true"
 	></div>
 	<div class="fixed inset-y-0 left-0 z-50 w-72 lg:hidden">
-		<AppSidebar />
+		<AppSidebar onnavigate={closeSidebar} />
 	</div>
 {/if}
