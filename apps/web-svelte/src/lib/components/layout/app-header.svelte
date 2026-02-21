@@ -20,6 +20,16 @@
 	const folderName = $derived($page.url.searchParams.get('fn'));
 	const isNotesPage = $derived($page.url.pathname === '/notes');
 
+	// Dynamic page title based on pathname
+	const pageTitle = $derived(() => {
+		const path = $page.url.pathname;
+		const tab = $page.url.searchParams.get('tab');
+		if (path === '/settings' && tab === 'tags') return 'Tags';
+		if (path === '/settings') return 'Settings';
+		if (path === '/todos') return 'Todos';
+		return title;
+	});
+
 	let sidebarOpen = $state(false);
 	let searchOpen = $state(false);
 	let searchValue = $state('');
@@ -102,7 +112,7 @@
 					<span class="text-foreground font-medium">All Notes</span>
 				{/if}
 			{:else}
-				<span class="text-foreground font-semibold">{title}</span>
+				<span class="text-foreground font-semibold">{pageTitle()}</span>
 			{/if}
 		</div>
 
