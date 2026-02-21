@@ -39,9 +39,9 @@ class Settings(BaseSettings):
 
     # --- Rate Limiting ---
     RATE_LIMIT_ENABLED: bool = True
-    RATE_LIMIT_DEFAULT: str = "60/minute"  # Default for authenticated endpoints
-    RATE_LIMIT_AUTH: str = "5/minute"  # Stricter for auth endpoints (login, signup)
-    RATE_LIMIT_WEBHOOK: str = "30/minute"  # For telegram webhook
+    RATE_LIMIT_DEFAULT: str = "600/minute"  # Default for authenticated endpoints
+    RATE_LIMIT_AUTH: str = "15/minute"  # Stricter for auth endpoints (login, signup)
+    RATE_LIMIT_WEBHOOK: str = "60/minute"  # For telegram webhook
 
     # --- MinIO / S3 Storage ---
     MINIO_ENDPOINT: str = "localhost:9000"
