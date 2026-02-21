@@ -41,6 +41,11 @@
 
 	onMount(() => {
 		tagsStore.fetchTags();
+
+		// Listen for back-to-list event from bottom nav
+		const handleBackToList = () => { mobileShowEditor = false; };
+		window.addEventListener('notesapp:back-to-list', handleBackToList);
+		return () => window.removeEventListener('notesapp:back-to-list', handleBackToList);
 	});
 
 	const selectedNote = $derived(

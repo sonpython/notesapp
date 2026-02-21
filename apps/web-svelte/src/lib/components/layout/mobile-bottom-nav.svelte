@@ -6,6 +6,7 @@
 	 */
 	import { page } from '$app/stores';
 	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
 	import { FileText, CheckSquare, Settings, Tag } from 'lucide-svelte';
 
 	interface Props {
@@ -75,6 +76,12 @@
 			{@const active = isActive(item.href)}
 			<a
 				href={item.href}
+				onclick={(e) => {
+					if (active && item.href === '/notes') {
+						e.preventDefault();
+						window.dispatchEvent(new CustomEvent('notesapp:back-to-list'));
+					}
+				}}
 				class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 transition-colors
 					{active ? 'text-accent' : 'text-muted hover:text-foreground'}"
 			>
