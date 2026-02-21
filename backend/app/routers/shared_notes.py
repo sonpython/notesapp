@@ -223,6 +223,42 @@ async def view_shared_note(
     )
 
 
+@router.get("/api/pub/{pub_id}/raw")
+async def view_shared_note_raw(
+    pub_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> str:
+    """View shared note as raw plain text (strips HTML)."""
+    import re
+
+    stmt = select(SharedNote).where(SharedNote.pub_id == pub_id)
+    result = await db.execute(stmt)
+    shared = result.scalar_one_or_none()
+
+    if not shared:
+        raise HTTPException(status_code=404, detail="Shared note not found")
+
+    # Check expiry
+    if shared.expires_at and datetime.now(UTC) > shared.expires_at:
+        raise HTTPException(status_code=410, detail="This shared note has expired")
+
+    # Check view limit
+    if shared.max_views and shared.view_count >= shared.max_views:
+        raise HTTPException(status_code=410, detail="This shared note has reached its view limit")
+
+    # Password protected notes cannot be viewed as raw without auth
+    if shared.password_hash:
+        raise HTTPException(status_code=401, detail="Password protected notes cannot be viewed as raw")
+
+    # Strip HTML tags
+    content = shared.note.content or ""
+    clean = re.sub(r"<[^>]+>", "", content)
+    clean = clean.replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(content=clean, media_type="text/plain; charset=utf-8")
+
+
 @router.post("/api/pub/{pub_id}/import", status_code=201)
 async def import_shared_note(
     pub_id: str,

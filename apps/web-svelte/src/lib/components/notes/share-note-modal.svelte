@@ -88,6 +88,11 @@
 		return `${window.location.origin}/pub/${shareInfo.pub_id}`;
 	}
 
+	function getRawUrl() {
+		if (!shareInfo) return '';
+		return `${window.location.origin}/api/pub/${shareInfo.pub_id}/raw`;
+	}
+
 	async function copyLink() {
 		await navigator.clipboard.writeText(getFullUrl());
 		copied = true;
@@ -117,7 +122,7 @@
 			<!-- Already shared -->
 			<div class="space-y-4">
 				<div class="rounded-lg border border-border bg-muted/10 p-3">
-					<p class="mb-2 text-xs text-muted">Share link</p>
+					<p class="mb-2 text-xs text-muted">Share link (formatted)</p>
 					<div class="flex items-center gap-2">
 						<input
 							type="text"
@@ -137,6 +142,26 @@
 						</button>
 					</div>
 				</div>
+
+				{#if !shareInfo.has_password}
+				<div class="rounded-lg border border-border bg-muted/10 p-3">
+					<p class="mb-2 text-xs text-muted">Raw text link (plain text, no formatting)</p>
+					<div class="flex items-center gap-2">
+						<input
+							type="text"
+							readonly
+							value={getRawUrl()}
+							class="h-9 flex-1 rounded border border-border bg-background px-2 text-sm"
+						/>
+						<button
+							onclick={() => navigator.clipboard.writeText(getRawUrl())}
+							class="flex h-9 w-9 items-center justify-center rounded border border-border hover:bg-muted/20"
+						>
+							<Copy class="h-4 w-4" />
+						</button>
+					</div>
+				</div>
+				{/if}
 
 				<div class="flex items-center justify-between text-sm">
 					<span class="text-muted">Views</span>
