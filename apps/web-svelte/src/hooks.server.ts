@@ -37,5 +37,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 		throw redirect(303, '/notes');
 	}
 
-	return resolve(event);
+	const response = await resolve(event);
+
+	// Allow eval for TipTap/ProseMirror editor
+	response.headers.set(
+		'Content-Security-Policy',
+		"default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https:; font-src 'self' data:;"
+	);
+
+	return response;
 };
