@@ -39,18 +39,15 @@ jobs:
 
       - name: Deploy
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/notesapp' }}
         run: |
-          ssh ${{ secrets.DEPLOY_HOST }} "GH_TOKEN=$GH_TOKEN DEPLOY_PATH=$DEPLOY_PATH bash -s" << 'DEPLOY_SCRIPT'
+          ssh ${{ secrets.DEPLOY_HOST }} "DEPLOY_PATH=$DEPLOY_PATH bash -s" << 'DEPLOY_SCRIPT'
             set -e
             cd "$DEPLOY_PATH"
 
             echo "📥 Pulling latest code..."
-            git config credential.helper '!f() { echo "password=$GH_TOKEN"; }; f'
             git fetch origin main
             git reset --hard origin/main
-            git config --unset credential.helper
 
             echo "🔧 Loading environment..."
             set -a && source .env.production && set +a
