@@ -5,7 +5,7 @@
 	 */
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Menu, X, Search, ArrowLeft } from 'lucide-svelte';
+	import { Menu, X, Search, ArrowLeft, FolderOpen } from 'lucide-svelte';
 	import AppSidebar from './app-sidebar.svelte';
 
 	interface Props {
@@ -14,6 +14,10 @@
 		onback?: () => void;
 	}
 	let { title = 'NotesApp', showBack = false, onback }: Props = $props();
+
+	// Get current folder from URL
+	const currentFolder = $derived($page.url.searchParams.get('folder'));
+	const isNotesPage = $derived($page.url.pathname === '/notes');
 
 	let sidebarOpen = $state(false);
 	let searchOpen = $state(false);
@@ -85,8 +89,22 @@
 					<Menu class="h-5 w-5" />
 				</button>
 			{/if}
-			<h1 class="text-base font-semibold text-foreground">{title}</h1>
 		</div>
+
+		<!-- Center: current context -->
+		<div class="flex items-center gap-1.5 text-sm">
+			{#if isNotesPage}
+				{#if currentFolder}
+					<FolderOpen class="h-4 w-4 text-accent" />
+					<span class="text-foreground font-medium">Folder</span>
+				{:else}
+					<span class="text-foreground font-medium">All Notes</span>
+				{/if}
+			{:else}
+				<span class="text-foreground font-semibold">{title}</span>
+			{/if}
+		</div>
+
 		<div class="flex items-center gap-1">
 			<button
 				onclick={() => (searchOpen = true)}
