@@ -1,11 +1,12 @@
 <script lang="ts">
 	/**
 	 * Resizable app layout with sidebar, divider, and main content.
-	 * Sidebar width is persisted to localStorage.
+	 * Mobile: bottom nav + full-screen views. Desktop: sidebar + split pane.
 	 */
 	import type { Snippet } from 'svelte';
 	import AppSidebar from './app-sidebar.svelte';
 	import AppHeader from './app-header.svelte';
+	import MobileBottomNav from './mobile-bottom-nav.svelte';
 	import ResizableDivider from '$lib/components/ui/resizable-divider.svelte';
 
 	interface Props {
@@ -44,7 +45,7 @@
 </script>
 
 <div class="flex h-screen flex-col bg-background">
-	<!-- Mobile header with menu toggle -->
+	<!-- Mobile header - hidden on desktop -->
 	<AppHeader />
 
 	<div class="flex flex-1 overflow-hidden">
@@ -56,9 +57,12 @@
 			<ResizableDivider onresize={handleSidebarResize} class="hidden lg:block" />
 		{/if}
 
-		<!-- Main content -->
-		<main class="flex flex-1 overflow-hidden">
+		<!-- Main content - with bottom padding on mobile for nav -->
+		<main class="flex flex-1 overflow-hidden pb-16 lg:pb-0">
 			{@render children()}
 		</main>
 	</div>
+
+	<!-- Mobile bottom navigation -->
+	<MobileBottomNav />
 </div>
