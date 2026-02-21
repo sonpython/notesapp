@@ -8,7 +8,7 @@
     folders: Folder[];
     selectedFolderId: string | null;
     noteCounts?: NoteCounts | null;
-    onselectFolder: (id: string | null) => void;
+    onselectFolder: (id: string | null, name?: string) => void;
     oncreateFolder: (name: string, parentId?: string) => Promise<Folder>;
     onrenameFolder: (id: string, name: string) => Promise<Folder>;
     ondeleteFolder: (id: string) => Promise<void>;

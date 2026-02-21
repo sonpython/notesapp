@@ -41,8 +41,12 @@
 		return unsubscribe;
 	});
 
-	function selectFolder(id: string | null) {
-		goto(id ? `/notes?folder=${id}` : '/notes');
+	function selectFolder(id: string | null, name?: string) {
+		if (id && name) {
+			goto(`/notes?folder=${id}&fn=${encodeURIComponent(name)}`);
+		} else {
+			goto('/notes');
+		}
 		onnavigate?.();
 	}
 

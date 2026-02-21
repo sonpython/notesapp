@@ -241,13 +241,14 @@ try {
 ## API Design
 
 ### Endpoint Naming
-- **Resources**: `/api/{resource}` (lowercase, plural)
-  - `/api/notes` (list), `/api/notes/{id}` (detail)
-  - `/api/folders`, `/api/todos`, `/api/images`
-- **Actions**: POST `/api/{resource}/{id}/{action}`
-  - `/api/todos/{id}/toggle` (complete/incomplete)
-- **File Upload**: POST `/api/{resource}/upload` (multipart/form-data)
-  - `/api/images/upload` (image file + metadata)
+- **Resources**: `/api/{resource}/` (lowercase, plural, trailing slash)
+  - `/api/notes/` (list), `/api/notes/{id}/` (detail)
+  - `/api/folders/`, `/api/todos/`, `/api/images/`
+  - **Note**: Trailing slashes prevent FastAPI 307 redirects
+- **Actions**: POST `/api/{resource}/{id}/{action}/` (trailing slash)
+  - `/api/todos/{id}/toggle/` (complete/incomplete)
+- **File Upload**: POST `/api/{resource}/upload/` (multipart/form-data)
+  - `/api/images/upload/` (image file + metadata)
 
 ### Request/Response Format
 
@@ -310,7 +311,7 @@ filename: screenshot.png (optional, extracted from file)
 or
 ```json
 {
-  "detail": "File type not supported. Allowed: jpeg, png, gif, webp, svg+xml"
+  "detail": "Invalid file type. Allowed: image/jpeg, image/png, image/gif, image/webp, image/svg+xml, image/heic, image/heif, image/tiff"
 }
 ```
 

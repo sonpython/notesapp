@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Image, Pin, Share2 } from 'lucide-svelte';
+  import { Image, Pin, Share2, Loader2 } from 'lucide-svelte';
   import { formatDistanceToNow } from 'date-fns';
   import type { Note } from '$lib/types';
   import TagPill from '$lib/components/tags/tag-pill.svelte';
@@ -9,9 +9,14 @@
     selectedId: string | null;
     onselect: (id: string) => void;
     onmoveNote?: (noteId: string, folderId: string | null) => Promise<void>;
+    onLoadMore?: () => Promise<void>;
+    hasMore?: boolean;
+    loading?: boolean;
   }
 
-  let { notes, selectedId, onselect, onmoveNote }: Props = $props();
+  let { notes, selectedId, onselect, onmoveNote, onLoadMore, hasMore = false, loading = false }: Props = $props();
+
+  let listContainer = $state<HTMLDivElement | null>(null);
 
   /** Strip HTML tags from text. */
   function stripHtml(text: string): string {
@@ -56,18 +61,62 @@
     e.dataTransfer?.setData('noteId', noteId);
     if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
   }
+
+  /** Handle scroll for lazy loading. */
+  function handleScroll(e: Event) {
+    if (!onLoadMore || !hasMore || loading) return;
+    const target = e.target as HTMLDivElement;
+    const nearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 200;
+    if (nearBottom) {
+      onLoadMore();
+    }
+  }
+
+  /** Handle keyboard navigation. */
+  function handleKeyDown(e: KeyboardEvent) {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+
+    const currentIndex = sortedNotes.findIndex((n) => n.id === selectedId);
+    let newIndex: number;
+
+    if (e.key === 'ArrowUp') {
+      newIndex = currentIndex <= 0 ? sortedNotes.length - 1 : currentIndex - 1;
+    } else {
+      newIndex = currentIndex >= sortedNotes.length - 1 ? 0 : currentIndex + 1;
+    }
+
+    const newNote = sortedNotes[newIndex];
+    if (newNote) {
+      onselect(newNote.id);
+      // Scroll into view
+      const button = listContainer?.querySelector(`[data-note-id="${newNote.id}"]`);
+      button?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }
 </script>
 
 {#if !sortedNotes?.length}
   <div class="flex items-center justify-center h-full text-muted text-sm">No notes yet</div>
 {:else}
-  <div class="overflow-y-auto h-full">
+  <div
+    bind:this={listContainer}
+    class="overflow-y-auto h-full focus:outline-none"
+    onscroll={handleScroll}
+    onkeydown={handleKeyDown}
+    tabindex="0"
+    role="listbox"
+    aria-label="Notes list"
+  >
     {#each sortedNotes as note (note.id)}
       {@const isSelected = note.id === selectedId}
       <button
+        data-note-id={note.id}
         onclick={() => onselect(note.id)}
         draggable={!!onmoveNote}
         ondragstart={(e) => handleDragStart(e, note.id)}
+        role="option"
+        aria-selected={isSelected}
         class="w-full text-left px-4 py-3 border-b border-border transition-colors cursor-pointer
           {isSelected
             ? 'bg-accent/10 border-l-2 border-l-accent'
@@ -99,5 +148,10 @@
         <span class="text-[11px] text-muted/70">{formatDate(note.updated_at)}</span>
       </button>
     {/each}
+    {#if loading}
+      <div class="flex justify-center py-4">
+        <Loader2 class="w-5 h-5 text-muted animate-spin" />
+      </div>
+    {/if}
   </div>
 {/if}

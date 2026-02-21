@@ -10,7 +10,7 @@
     depth: number;
     selectedFolderId: string | null;
     noteCounts?: NoteCounts | null;
-    onselect: (id: string) => void;
+    onselect: (id: string, name?: string) => void;
     onrename: (id: string, name: string) => Promise<Folder>;
     ondelete: (id: string) => Promise<void>;
     oncreate: (name: string, parentId: string) => Promise<Folder>;
@@ -128,13 +128,13 @@
     class="group flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors cursor-pointer
       {isSelected ? 'bg-zinc-700/60 text-white' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}
       {isDragOver ? 'ring-2 ring-yellow-500 bg-zinc-800' : ''}"
-    onclick={() => onselect(folder.id)}
+    onclick={() => onselect(folder.id, folder.name)}
     ondragover={handleDragOver}
     ondragleave={handleDragLeave}
     ondrop={handleDrop}
     role="button"
     tabindex="0"
-    onkeydown={(e) => e.key === 'Enter' && onselect(folder.id)}
+    onkeydown={(e) => e.key === 'Enter' && onselect(folder.id, folder.name)}
   >
     {#if hasChildren}
       <button

@@ -36,7 +36,7 @@ NotesApp is a three-tier full-stack application with multi-frontend support:
 │  MinIO (S3-compatible object storage)                       │
 │  Bucket: notesapp-images                                    │
 │  Objects: users/{user_id}/images/{uuid}.{ext}              │
-│  Allowed types: jpeg, png, gif, webp, svg+xml              │
+│  Allowed types: png, jpeg, gif, webp, svg, heic, heif, tiff│
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -124,10 +124,10 @@ FastAPI App (main.py)
    │  ├─ update_note
    │  └─ delete_note
    ├─ /images → images.py
-   │  ├─ upload_image (multipart, 10MB max)
-   │  ├─ get_image (serve via proxy with auth)
-   │  ├─ delete_image
-   │  └─ list_images (user's images)
+   │  ├─ POST /upload/ (multipart, 10MB max, 8 MIME types)
+   │  ├─ GET /{id}/ (serve via proxy with auth)
+   │  ├─ DELETE /{id}/
+   │  └─ GET / (list user's images)
    ├─ /folders → folders.py
    │  ├─ CRUD endpoints
    │  └─ Nested folder support

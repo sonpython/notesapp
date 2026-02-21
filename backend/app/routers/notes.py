@@ -173,6 +173,9 @@ async def create_note(
         folder_id=body.folder_id,
         is_pinned=body.is_pinned,
     )
+    # For imports: preserve original created_at if provided
+    if body.created_at:
+        note.created_at = body.created_at
     session.add(note)
     await session.commit()
 

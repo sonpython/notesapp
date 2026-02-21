@@ -17,6 +17,7 @@
 
 	// Get current folder from URL
 	const currentFolder = $derived($page.url.searchParams.get('folder'));
+	const folderName = $derived($page.url.searchParams.get('fn'));
 	const isNotesPage = $derived($page.url.pathname === '/notes');
 
 	let sidebarOpen = $state(false);
@@ -94,9 +95,9 @@
 		<!-- Center: current context -->
 		<div class="flex items-center gap-1.5 text-sm">
 			{#if isNotesPage}
-				{#if currentFolder}
+				{#if currentFolder && folderName}
 					<FolderOpen class="h-4 w-4 text-accent" />
-					<span class="text-foreground font-medium">Folder</span>
+					<span class="text-foreground font-medium truncate max-w-[140px]">{decodeURIComponent(folderName)}</span>
 				{:else}
 					<span class="text-foreground font-medium">All Notes</span>
 				{/if}

@@ -34,6 +34,23 @@
 - **DO NOT** commit and push any confidential information (such as dotenv files, API keys, database credentials, etc.) to git repository!
 - Create clean, professional commit messages without AI references. Use conventional commit format.
 
+## Docker Auto-Rebuild Rule
+When making changes that affect:
+- Environment variables (`.env*`, `config.py`, build args)
+- Service worker, caching logic
+- Dockerfile, docker-compose files
+- Rate limiting, CORS, or auth configuration
+
+**MUST automatically run:**
+```bash
+# Local development
+docker compose down && docker compose up -d --build
+
+# Production (if user requests deploy)
+docker compose -f docker-compose.production.yml --env-file .env.production down
+docker compose -f docker-compose.production.yml --env-file .env.production up -d --build
+```
+
 ## Code Implementation
 - Write clean, readable, and maintainable code
 - Follow established architectural patterns

@@ -107,9 +107,9 @@ export async function fullRefresh(): Promise<void> {
   try {
     // Fetch all entities from server
     const [notesRes, todosRes, foldersRes] = await Promise.all([
-      api.get<{ items: Note[]; total: number }>('/api/notes?limit=1000'),
-      api.get<{ items: Todo[]; total: number }>('/api/todos?limit=1000'),
-      api.get<{ items: Folder[]; total: number }>('/api/folders?limit=1000'),
+      api.get<{ items: Note[]; total: number }>('/api/notes/?limit=1000'),
+      api.get<{ items: Todo[]; total: number }>('/api/todos/?limit=1000'),
+      api.get<{ items: Folder[]; total: number }>('/api/folders/?limit=1000'),
     ])
 
     // Replace local stores with fresh data

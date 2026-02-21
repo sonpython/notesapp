@@ -14,6 +14,7 @@ class NoteCreate(BaseModel):
     folder_id: UUID | None = None
     is_pinned: bool = False
     tag_ids: list[UUID] | None = None
+    created_at: datetime | None = None  # For import: preserve original timestamp
 
 
 class NoteUpdate(BaseModel):

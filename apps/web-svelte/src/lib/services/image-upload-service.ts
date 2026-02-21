@@ -23,7 +23,9 @@ export const ALLOWED_IMAGE_TYPES = new Set([
 	'image/png',
 	'image/gif',
 	'image/webp',
-	'image/svg+xml'
+	'image/svg+xml',
+	'image/heic',
+	'image/heif'
 ]);
 
 export const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB

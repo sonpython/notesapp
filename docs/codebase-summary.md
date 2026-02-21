@@ -187,9 +187,9 @@ notesapp/
 - Automatic OpenAPI doc generation via FastAPI
 
 ### Routers (API Endpoints)
-- **auth.py** (80 LOC): POST /register (WebAuthn), POST /authenticate (WebAuthn), GET /me
+- **auth.py** (80 LOC): POST /register/, POST /authenticate/, GET /me
 - **notes.py** (100 LOC): CRUD endpoints, filter by folder/archive/pinned/search
-- **images.py** (136 LOC): POST upload, GET serve, DELETE, GET list (AZD-63)
+- **images.py** (136 LOC): POST /upload/ (multipart), GET serve, DELETE, GET list (AZD-63)
 - **folders.py** (80 LOC): CRUD endpoints
 - **todos.py** (120 LOC): CRUD, toggle completion, filter by status/priority
 - **telegram.py** (180 LOC): Link, unlink, status, webhook + command handlers
@@ -202,7 +202,7 @@ notesapp/
 - **tag_service.py** (100 LOC): Tag CRUD, bulk assign/remove, validation
 - **note_export_service.py** (160 LOC): Export to Markdown, PDF, ZIP (WeasyPrint with lazy import)
 - **recurrence_service.py** (120 LOC): Generate todo instances from recurrence rules
-- **minio_storage_service.py** (157 LOC): Upload/download/delete images to MinIO (AZD-63)
+- **minio_storage_service.py** (157 LOC): Upload/download/delete to MinIO (supports: png, jpeg, gif, webp, svg, heic, heif, tiff)
 
 ### Background Tasks
 - **reminders.py** (60 LOC): APScheduler job to check & send reminders every 60s
@@ -373,11 +373,12 @@ notesapp/
 
 ## Testing & Quality
 
-- **Backend**: pytest with 22+ tests, GitHub Actions CI
+- **Backend**: pytest with 37+ tests (including 15 image upload tests), GitHub Actions CI
 - **Frontend**: vitest setup with test files for hooks, components
 - **Linting**: ESLint (frontend), black (backend)
 - **Type checking**: TypeScript strict mode, mypy (backend)
 - **Coverage**: Aiming for 80%+ (in progress)
+- **Image Upload Tests**: Parameterized tests for all 8 supported MIME types
 
 ## Performance Characteristics
 
