@@ -8,6 +8,7 @@
 	let error = $state<string | null>(null);
 	let loading = $state(false);
 	let allowRegistration = $state(true);
+	let rememberMe = $state(false);
 
 	$effect(() => {
 		fetch(`${API_URL}/api/config/public`, { credentials: 'include' })
@@ -31,7 +32,7 @@
 
 		loading = true;
 		try {
-			await loginPasskey();
+			await loginPasskey(rememberMe);
 			goto('/notes');
 		} catch (err) {
 			if (err instanceof Error) {
@@ -67,6 +68,15 @@
 				{error}
 			</div>
 		{/if}
+
+		<label class="mb-4 flex cursor-pointer items-center gap-2 text-sm text-muted">
+			<input
+				type="checkbox"
+				bind:checked={rememberMe}
+				class="h-4 w-4 rounded border-border bg-background accent-accent"
+			/>
+			<span>Keep me signed in for 30 days</span>
+		</label>
 
 		<button
 			onclick={handleLogin}

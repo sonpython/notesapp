@@ -23,6 +23,7 @@ class LoginVerifyRequest(BaseModel):
 
     credential: dict  # AuthenticationResponseJSON from @simplewebauthn/browser
     challenge_id: str
+    remember_me: bool = False  # If true, session lasts 30 days
 
 
 class AuthResponse(BaseModel):

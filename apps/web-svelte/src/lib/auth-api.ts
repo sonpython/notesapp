@@ -100,8 +100,9 @@ export async function registerPasskey(displayName: string): Promise<AuthUser> {
 
 /**
  * Login with an existing passkey.
+ * @param rememberMe If true, session lasts 30 days instead of default 7 days.
  */
-export async function loginPasskey(): Promise<AuthUser> {
+export async function loginPasskey(rememberMe = false): Promise<AuthUser> {
 	const optionsRes = await fetch(`${API_URL}/api/auth/login/options`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -118,7 +119,7 @@ export async function loginPasskey(): Promise<AuthUser> {
 	const verifyRes = await fetch(`${API_URL}/api/auth/login/verify`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ credential, challenge_id }),
+		body: JSON.stringify({ credential, challenge_id, remember_me: rememberMe }),
 		credentials: 'include'
 	});
 	if (!verifyRes.ok) {

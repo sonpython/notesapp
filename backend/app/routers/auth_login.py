@@ -26,6 +26,9 @@ async def login_options(
     return AuthOptionsResponse(options=options, challenge_id=challenge_id)
 
 
+REMEMBER_ME_DAYS = 30
+
+
 @router.post("/verify", response_model=AuthResponse)
 async def login_verify(
     request: LoginVerifyRequest,
@@ -35,14 +38,16 @@ async def login_verify(
     """Verify WebAuthn authentication and issue session.
 
     Validates the passkey assertion and issues a session JWT cookie.
+    If remember_me is true, session lasts 30 days instead of default.
     """
     try:
         user = await verify_authentication(db, request.credential, request.challenge_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    # Issue JWT and set cookie
-    token = create_jwt(str(user.id))
-    set_session_cookie(response, token)
+    # Issue JWT and set cookie (30 days if remember_me)
+    expiry = REMEMBER_ME_DAYS if request.remember_me else None
+    token = create_jwt(str(user.id), expiry_days=expiry)
+    set_session_cookie(response, token, expiry_days=expiry)
 
     return AuthResponse(user_id=str(user.id), display_name=user.display_name)
