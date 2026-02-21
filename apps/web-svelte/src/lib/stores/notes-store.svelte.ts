@@ -66,6 +66,9 @@ export class NotesStore {
 
 			// Write-through to IndexedDB
 			await notesDB.putManyNotes(data.items).catch(console.error);
+
+			// Notify sidebar to refresh counts (backend may have cleaned up empty notes)
+			emitNotesChanged();
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Failed to fetch notes';
 			this.error = message;
