@@ -14,7 +14,71 @@ All notable changes to NotesApp are documented here. Format follows [Keep a Chan
 - Mobile apps (React Native, native iOS/Android)
 - Web clipper browser extension
 - Analytics dashboard
-- Phase 4 completion (final features)
+
+---
+
+## [0.6.2] - 2026-02-22
+
+### Infrastructure: CI/CD with Cloudflare Tunnel
+
+#### Deployment Pipeline
+- **Cloudflare Tunnel SSH**: Replaced direct SSH with cloudflared ProxyCommand
+- **Deploy Keys**: Server uses GitHub deploy key for secure repo access
+- **Zero Trust**: No exposed ports, all traffic through Cloudflare Tunnel
+
+#### CI/CD Workflow
+- **CI**: Lint (ruff), tests (pytest), build (bun) on push/PR
+- **CD**: Auto-deploy on CI success via SSH through Cloudflare Tunnel
+- **Migration**: Auto-run alembic migrations after deploy
+
+#### Security
+- SSH key-only auth (password disabled)
+- Deploy key scoped to single repo (read-only)
+- No static IP or open ports required
+
+---
+
+## [0.6.1] - 2026-02-21
+
+### Fixed: API URL Handling & Image Upload Tests
+
+#### API URL Improvements
+- **Trailing Slash Convention**: All API endpoints now use trailing slashes (`/api/auth/register/`, `/api/notes/`, `/api/images/upload/`)
+  - Prevents FastAPI 307 redirect responses
+  - Standardized across all routers (auth, notes, images, todos, folders, telegram)
+  - Frontend API client updated to use trailing slashes
+- **Frontend API Changes**: Updated `api.ts` to include trailing slashes in all fetch calls
+- **Relative URLs**: Configured frontend to use relative API paths, preventing mixed content in Docker
+- **Vite HMR Configuration**: Added HMR settings for Docker development environment
+
+#### Image Upload Testing (15 new tests)
+- **Test Coverage**: Parameterized tests for all 8 supported MIME types
+  - `image/png`, `image/jpeg`, `image/gif`, `image/webp`, `image/svg+xml`, `image/heic`, `image/heif`, `image/tiff`
+- **Test Categories**:
+  - Individual format tests (PNG, JPEG, HEIC, TIFF)
+  - Allowed content type validation (8 formats)
+  - Invalid content type rejection (text/plain, application/octet-stream)
+  - Authentication requirement verification
+  - File size limit validation
+- **Test File**: `backend/tests/test_images_router.py` (168 LOC)
+- **Backend Tests**: Total now 37+ tests (22 → 37)
+
+#### Image Format Support
+- **Added MIME Types**: `image/heic`, `image/heif`, `image/tiff` to allowed uploads
+- **MinIO Service**: Updated `ALLOWED_CONTENT_TYPES` and `CONTENT_TYPE_TO_EXT` mappings
+- **Support Summary**: 8 formats (png, jpeg, gif, webp, svg, heic, heif, tiff)
+
+#### Frontend UI Enhancements
+- **Image Icon Indicator**: Added image icon badge to note list items containing images
+- **Real-time Updates**: Fixed note count updates in sidebar via custom events
+- **Service Worker**: Updated cache versioning for proper invalidation on updates
+
+### Technical Details
+- **API Compliance**: FastAPI route decorators now include trailing slashes
+- **Content-Type Header**: Explicit content-type in multipart form uploads
+- **Test Architecture**: Mock-based testing with AsyncMock for MinIO service
+- **Files Modified**: 9 files (api.ts, note-list.svelte, stores, service-worker, config, minio_storage_service, vite.config.ts, test_images_router.py)
+- **Tests Added**: 15 parameterized image upload tests
 
 ---
 
