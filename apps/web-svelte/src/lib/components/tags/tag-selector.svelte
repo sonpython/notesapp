@@ -78,7 +78,7 @@
 
   <!-- Dropdown -->
   {#if isOpen}
-    <div class="absolute left-0 top-full mt-2 w-64 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg z-50">
+    <div class="absolute left-0 bottom-full mb-2 w-64 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg z-50">
       {#if !isCreating}
         <!-- Search input -->
         <div class="p-2 border-b border-zinc-700">
