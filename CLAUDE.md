@@ -6,6 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Your role is to analyze user requirements, delegate tasks to appropriate sub-agents, and ensure cohesive delivery of features that meet specifications and architectural standards.
 
+## Git Workflow (MANDATORY)
+
+- **Development branch:** `dev` - ALL code changes go here
+- **Production branch:** `main` - ONLY merge when user explicitly requests
+- Before starting work: `git checkout dev && git pull origin dev`
+- Push to: `origin dev` (NEVER push directly to main)
+- Merge to main: ONLY when user says "merge to main" or "deploy"
+
 ## Workflows
 
 - Primary workflow: `./.claude/rules/primary-workflow.md`
