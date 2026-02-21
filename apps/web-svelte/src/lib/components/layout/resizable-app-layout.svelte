@@ -7,6 +7,7 @@
 	import AppSidebar from './app-sidebar.svelte';
 	import AppHeader from './app-header.svelte';
 	import MobileBottomNav from './mobile-bottom-nav.svelte';
+	import PwaInstallBanner from '$lib/components/ui/pwa-install-banner.svelte';
 	import ResizableDivider from '$lib/components/ui/resizable-divider.svelte';
 
 	interface Props {
@@ -45,6 +46,9 @@
 </script>
 
 <div class="flex h-screen flex-col bg-background">
+	<!-- PWA install banner (mobile only) -->
+	<PwaInstallBanner />
+
 	<!-- Mobile header - hidden on desktop -->
 	<AppHeader />
 
