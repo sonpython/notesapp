@@ -1,8 +1,9 @@
 <script lang="ts">
   import { Image, Pin, Share2, Loader2 } from 'lucide-svelte';
   import { formatDistanceToNow } from 'date-fns';
-  import type { Note } from '$lib/types';
+  import type { Note, Tag } from '$lib/types';
   import TagPill from '$lib/components/tags/tag-pill.svelte';
+  import { tagsStore } from '$lib/stores/tags-store.svelte';
 
   interface Props {
     notes: Note[];
@@ -47,6 +48,11 @@
     } catch {
       return '';
     }
+  }
+
+  /** Get latest tag data from store (syncs with tag updates). */
+  function getTagInfo(tagId: string): Tag | undefined {
+    return tagsStore.tags.find((t) => t.id === tagId);
   }
 
   const sortedNotes = $derived(
@@ -137,8 +143,11 @@
         <p class="text-xs text-muted truncate mb-1">{getContentPreview(note.content)}</p>
         {#if note.tags && note.tags.length > 0}
           <div class="flex flex-wrap gap-1 mb-1">
-            {#each note.tags.slice(0, 3) as tag (tag.id)}
-              <TagPill name={tag.name} color={tag.color} size="sm" />
+            {#each note.tags.slice(0, 3) as noteTag (noteTag.id)}
+              {@const tag = getTagInfo(noteTag.id)}
+              {#if tag}
+                <TagPill name={tag.name} color={tag.color} size="sm" />
+              {/if}
             {/each}
             {#if note.tags.length > 3}
               <span class="text-[10px] text-muted/70">+{note.tags.length - 3} more</span>
