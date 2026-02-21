@@ -248,14 +248,19 @@ async def view_shared_note_raw(
 
     # Password protected notes cannot be viewed as raw without auth
     if shared.password_hash:
-        raise HTTPException(status_code=401, detail="Password protected notes cannot be viewed as raw")
+        raise HTTPException(
+            status_code=401, detail="Password protected notes cannot be viewed as raw"
+        )
 
     # Strip HTML tags
     content = shared.note.content or ""
     clean = re.sub(r"<[^>]+>", "", content)
-    clean = clean.replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+    clean = (
+        clean.replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+    )
 
     from fastapi.responses import PlainTextResponse
+
     return PlainTextResponse(content=clean, media_type="text/plain; charset=utf-8")
 
 
