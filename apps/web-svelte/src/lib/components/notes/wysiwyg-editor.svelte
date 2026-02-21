@@ -21,7 +21,41 @@
   let { content, onchange, onuploadstart, onuploadend, onuploaderror }: Props = $props();
 
   let element: HTMLDivElement;
+  let editorContainer: HTMLDivElement;
   let editor = $state<Editor | null>(null);
+
+  // Pinch-to-zoom state
+  let scale = $state(1);
+  let initialDistance = 0;
+  let isZooming = false;
+
+  function getDistance(touches: TouchList): number {
+    const [t1, t2] = [touches[0], touches[1]];
+    return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+  }
+
+  function handleTouchStart(e: TouchEvent) {
+    if (e.touches.length === 2) {
+      isZooming = true;
+      initialDistance = getDistance(e.touches);
+    }
+  }
+
+  function handleTouchMove(e: TouchEvent) {
+    if (e.touches.length === 2 && isZooming) {
+      const currentDistance = getDistance(e.touches);
+      const newScale = Math.min(3, Math.max(0.5, currentDistance / initialDistance));
+      scale = newScale;
+    }
+  }
+
+  function handleTouchEnd() {
+    if (isZooming) {
+      isZooming = false;
+      // Animate back to scale 1
+      scale = 1;
+    }
+  }
 
   onMount(() => {
     editor = new Editor({
@@ -147,8 +181,17 @@
     </button>
   </div>
 
-  <!-- Editor -->
-  <div bind:this={element} class="editor-container"></div>
+  <!-- Editor with pinch-to-zoom -->
+  <div
+    bind:this={editorContainer}
+    class="editor-container"
+    ontouchstart={handleTouchStart}
+    ontouchmove={handleTouchMove}
+    ontouchend={handleTouchEnd}
+    style="transform: scale({scale}); transform-origin: center; transition: {isZooming ? 'none' : 'transform 0.2s ease-out'};"
+  >
+    <div bind:this={element}></div>
+  </div>
 </div>
 
 <style>
