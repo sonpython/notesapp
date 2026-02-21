@@ -4,7 +4,7 @@
 
 import { browser } from '$app/environment';
 import { api } from '$lib/api';
-import type { Note, PaginatedResponse } from '$lib/types';
+import type { Note, PaginatedResponse, Tag } from '$lib/types';
 import * as notesDB from '$lib/offline/indexed-db-notes';
 import * as syncQueue from '$lib/offline/indexed-db-sync-queue';
 
