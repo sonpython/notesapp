@@ -198,6 +198,11 @@ export class NotesStore {
 		}
 	}
 
+	/** Update note tags in local state (no API call - already done by editor). */
+	updateNoteTags(noteId: string, tags: Tag[]): void {
+		this.notes = this.notes.map((n) => (n.id === noteId ? { ...n, tags } : n));
+	}
+
 	async deleteNote(id: string): Promise<void> {
 		// Offline: queue + local optimistic update
 		if (browser && !navigator.onLine) {

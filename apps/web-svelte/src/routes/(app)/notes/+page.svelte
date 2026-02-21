@@ -13,7 +13,7 @@
 	import NoteList from '$lib/components/notes/note-list.svelte';
 	import NoteEditor from '$lib/components/notes/note-editor.svelte';
 	import { Plus, Search, ChevronLeft } from 'lucide-svelte';
-	import type { Note } from '$lib/types';
+	import type { Note, Tag } from '$lib/types';
 
 	const notesStore = new NotesStore();
 	
@@ -93,6 +93,10 @@
 		}
 	}
 
+	function handleTagsChange(noteId: string, tags: Tag[]) {
+		notesStore.updateNoteTags(noteId, tags);
+	}
+
 	async function handleMoveNote(noteId: string, targetFolderId: string | null) {
 		await notesStore.moveNoteToFolder(noteId, targetFolderId);
 	}
@@ -122,6 +126,7 @@
 					note={selectedNote}
 					onsave={handleSaveNote}
 					ondelete={handleDeleteNote}
+					ontagschange={handleTagsChange}
 				/>
 			</div>
 		</div>
@@ -194,6 +199,7 @@
 			note={selectedNote}
 			onsave={handleSaveNote}
 			ondelete={handleDeleteNote}
+			ontagschange={handleTagsChange}
 		/>
 	</div>
 </div>

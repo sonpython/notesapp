@@ -30,9 +30,10 @@
     onsave: (id: string, data: { title?: string; content?: string; is_pinned?: boolean; is_archived?: boolean }) => void;
     ondelete?: (id: string) => void;
     onexportAll?: () => Promise<void>;
+    ontagschange?: (noteId: string, tags: Tag[]) => void;
   }
 
-  let { note, onsave, ondelete, onexportAll }: Props = $props();
+  let { note, onsave, ondelete, onexportAll, ontagschange }: Props = $props();
 
   
 
@@ -113,6 +114,7 @@
     }
     try {
       await api.post(`/api/notes/${note.id}/tags`, { tag_ids: [tagId] });
+      ontagschange?.(note.id, noteTags);
     } catch (err) {
       // Rollback on error
       noteTags = noteTags.filter((t) => t.id !== tagId);
@@ -127,6 +129,7 @@
     noteTags = noteTags.filter((t) => t.id !== tagId);
     try {
       await api.delete(`/api/notes/${note.id}/tags/${tagId}`);
+      ontagschange?.(note.id, noteTags);
     } catch (err) {
       // Rollback on error
       if (removedTag) noteTags = [...noteTags, removedTag];
