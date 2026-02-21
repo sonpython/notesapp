@@ -43,6 +43,7 @@
   let isUploading = $state(false);
   let uploadError = $state<string | null>(null);
   let showShareModal = $state(false);
+  let showDeleteConfirm = $state(false);
 
   // Debounce timers
   let titleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -93,7 +94,14 @@
   }
 
   function handleDelete() {
-    if (note && ondelete) ondelete(note.id);
+    showDeleteConfirm = true;
+  }
+
+  function confirmDelete() {
+    if (note && ondelete) {
+      ondelete(note.id);
+      showDeleteConfirm = false;
+    }
   }
 
   async function handleAddTag(tagId: string) {
@@ -288,6 +296,30 @@
     <!-- Share modal -->
     {#if showShareModal}
       <ShareNoteModal noteId={note.id} onclose={() => { showShareModal = false; }} />
+    {/if}
+
+    <!-- Delete confirmation modal -->
+    {#if showDeleteConfirm}
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onclick={() => { showDeleteConfirm = false; }}>
+        <div class="w-full max-w-sm rounded-xl bg-background p-5 text-foreground shadow-xl" onclick={(e) => e.stopPropagation()}>
+          <h3 class="text-lg font-semibold mb-2">Delete note?</h3>
+          <p class="text-sm text-muted mb-4">This action cannot be undone. The note will be permanently deleted.</p>
+          <div class="flex gap-2 justify-end">
+            <button
+              onclick={() => { showDeleteConfirm = false; }}
+              class="px-4 py-2 text-sm font-medium rounded-lg bg-sidebar hover:bg-sidebar/80 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onclick={confirmDelete}
+              class="px-4 py-2 text-sm font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
     {/if}
   </div>
 {/if}
