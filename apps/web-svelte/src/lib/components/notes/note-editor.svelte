@@ -9,7 +9,7 @@
   import CodeMirror from 'svelte-codemirror-editor';
   import { markdown } from '@codemirror/lang-markdown';
   import type { Note, Tag } from '$lib/types';
-  import { TagsStore } from '$lib/stores/tags-store.svelte';
+  import { tagsStore } from '$lib/stores/tags-store.svelte';
   import WysiwygEditor from './wysiwyg-editor.svelte';
   import NoteExportMenu from './note-export-menu.svelte';
   import ShareNoteModal from './share-note-modal.svelte';
@@ -34,7 +34,7 @@
 
   let { note, onsave, ondelete, onexportAll }: Props = $props();
 
-  const tagsStore = new TagsStore();
+  
 
   let title = $state('');
   let content = $state('');

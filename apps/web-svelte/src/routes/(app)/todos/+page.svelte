@@ -7,7 +7,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { TodosStore, type TodoFilter } from '$lib/stores/todos-store.svelte';
-	import { TagsStore } from '$lib/stores/tags-store.svelte';
+	import { tagsStore } from '$lib/stores/tags-store.svelte';
 	import TodoList from '$lib/components/todos/todo-list.svelte';
 	import TodoCreateForm from '$lib/components/todos/todo-create-form.svelte';
 	import TagFilterSection from '$lib/components/tags/tag-filter-section.svelte';
@@ -16,7 +16,7 @@
 
 	const todosStore = new TodosStore();
 	let showTagFilter = $state(false);
-	const tagsStore = new TagsStore();
+	
 
 	// Derive URL params reactively
 	const tagParam = $derived($page.url.searchParams.get('tags') ?? '');

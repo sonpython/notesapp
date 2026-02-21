@@ -8,7 +8,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { NotesStore } from '$lib/stores/notes-store.svelte';
-	import { TagsStore } from '$lib/stores/tags-store.svelte';
+	import { tagsStore } from '$lib/stores/tags-store.svelte';
 	import { createDebounced } from '$lib/utils/debounce.svelte';
 	import NoteList from '$lib/components/notes/note-list.svelte';
 	import NoteEditor from '$lib/components/notes/note-editor.svelte';
@@ -16,7 +16,7 @@
 	import type { Note } from '$lib/types';
 
 	const notesStore = new NotesStore();
-	const tagsStore = new TagsStore();
+	
 
 	let selectedNoteId = $state<string | null>(null);
 	let mobileShowEditor = $state(false); // Mobile: show editor instead of list

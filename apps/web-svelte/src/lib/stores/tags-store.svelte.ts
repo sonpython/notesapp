@@ -61,3 +61,6 @@ export class TagsStore {
 		}
 	}
 }
+
+// Singleton instance for shared state across components
+export const tagsStore = new TagsStore();

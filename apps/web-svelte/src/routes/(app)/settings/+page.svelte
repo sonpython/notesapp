@@ -7,12 +7,12 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { authStore } from '$lib/stores/auth-store.svelte';
-	import { TagsStore } from '$lib/stores/tags-store.svelte';
+	import { tagsStore } from '$lib/stores/tags-store.svelte';
 	import TagManagementList from '$lib/components/tags/tag-management-list.svelte';
 	import TelegramSettings from '$lib/components/settings/telegram-settings.svelte';
 	import type { Tag } from '$lib/types';
 
-	const tagsStore = new TagsStore();
+	
 
 	type Tab = 'account' | 'tags' | 'telegram' | 'about';
 

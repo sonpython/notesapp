@@ -8,7 +8,7 @@
 	import { authStore } from '$lib/stores/auth-store.svelte';
 	import { FoldersStore } from '$lib/stores/folders-store.svelte';
 	import { NotesStore } from '$lib/stores/notes-store.svelte';
-	import { TagsStore } from '$lib/stores/tags-store.svelte';
+	import { tagsStore } from '$lib/stores/tags-store.svelte';
 	import ThemeToggleButton from '$lib/components/ui/theme-toggle-button.svelte';
 	import ConnectionStatusIndicator from '$lib/components/ui/connection-status-indicator.svelte';
 	import AppSidebarNav from './app-sidebar-nav.svelte';
@@ -23,7 +23,7 @@
 	// Instantiate stores as singletons for this sidebar session
 	const foldersStore = new FoldersStore();
 	const notesStore = new NotesStore();
-	const tagsStore = new TagsStore();
+	
 
 	// Fetch data on mount
 	$effect(() => {
