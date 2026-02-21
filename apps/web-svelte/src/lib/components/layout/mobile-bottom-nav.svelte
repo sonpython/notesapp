@@ -8,6 +8,13 @@
 	import { browser } from '$app/environment';
 	import { FileText, CheckSquare, Settings, Tag } from 'lucide-svelte';
 
+	interface Props {
+		visible?: boolean;
+	}
+
+	// Bindable visibility state - parent can sync with this
+	let { visible = $bindable(true) }: Props = $props();
+
 	const pathname = $derived($page.url.pathname);
 
 	const navItems = [
@@ -25,7 +32,6 @@
 	}
 
 	// Scroll-based visibility using touch events (works with any scroll container)
-	let isVisible = $state(true);
 	let touchStartY = 0;
 	let lastTouchY = 0;
 	const TOUCH_THRESHOLD = 20; // Min touch distance to trigger hide/show
@@ -47,7 +53,7 @@
 
 			// Moving finger up (scrolling down content) → hide
 			// Moving finger down (scrolling up content) → show
-			isVisible = diff > 0;
+			visible = diff > 0;
 			lastTouchY = currentY;
 		}
 
@@ -63,7 +69,7 @@
 
 <nav
 	class="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm lg:hidden safe-area-bottom transition-transform duration-300 ease-out"
-	class:translate-y-full={!isVisible}>
+	class:translate-y-full={!visible}>
 	<div class="flex h-16 items-center justify-around px-2">
 		{#each navItems as item (item.href)}
 			{@const active = isActive(item.href)}

@@ -24,6 +24,7 @@
 
 	let sidebarWidth = $state(DEFAULT_SIDEBAR_WIDTH);
 	let sidebarCollapsed = $state(false);
+	let bottomNavVisible = $state(true);
 
 	// Load persisted state after mount
 	$effect(() => {
@@ -61,12 +62,12 @@
 			<ResizableDivider onresize={handleSidebarResize} class="hidden lg:block" />
 		{/if}
 
-		<!-- Main content - with bottom padding on mobile for nav -->
-		<main class="flex flex-1 overflow-hidden pb-16 lg:pb-0">
+		<!-- Main content - with bottom padding on mobile for nav (dynamic) -->
+		<main class="flex flex-1 overflow-hidden transition-[padding] duration-300 lg:pb-0" class:pb-16={bottomNavVisible}>
 			{@render children()}
 		</main>
 	</div>
 
 	<!-- Mobile bottom navigation -->
-	<MobileBottomNav />
+	<MobileBottomNav bind:visible={bottomNavVisible} />
 </div>
