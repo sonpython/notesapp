@@ -5,6 +5,7 @@
 	 */
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import { Menu, X, Search, ArrowLeft, FolderOpen, FileUp } from 'lucide-svelte';
 	import AppSidebar from './app-sidebar.svelte';
 
@@ -14,6 +15,17 @@
 		onback?: () => void;
 	}
 	let { title = 'NotesApp', showBack = false, onback }: Props = $props();
+
+	// Track if note editor is active (for hiding import icon)
+	let editorActive = $state(false);
+
+	onMount(() => {
+		const handleEditorView = (e: CustomEvent<{ active: boolean }>) => {
+			editorActive = e.detail.active;
+		};
+		window.addEventListener('notesapp:editor-view', handleEditorView as EventListener);
+		return () => window.removeEventListener('notesapp:editor-view', handleEditorView as EventListener);
+	});
 
 	// Get current folder from URL
 	const currentFolder = $derived($page.url.searchParams.get('folder'));
@@ -121,7 +133,7 @@
 		</div>
 
 		<div class="flex items-center gap-1">
-			{#if isNotesPage && !showBack}
+			{#if isNotesPage && !showBack && !editorActive}
 				<button
 					onclick={handleImport}
 					class="p-2 text-muted hover:text-foreground"

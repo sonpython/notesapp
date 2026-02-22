@@ -22,6 +22,11 @@
 	let selectedNoteId = $state<string | null>(null);
 	let mobileShowEditor = $state(false); // Mobile: show editor instead of list
 	const searchInput = createDebounced('', 400);
+
+	// Notify header when editor view changes (for hiding import icon)
+	$effect(() => {
+		window.dispatchEvent(new CustomEvent('notesapp:editor-view', { detail: { active: mobileShowEditor } }));
+	});
 	let importButtonRef: { trigger: () => void } | undefined;
 
 	// Derive URL params reactively
