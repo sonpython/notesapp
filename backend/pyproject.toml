@@ -1,6 +1,6 @@
 [project]
 name = "notesapp-backend"
-version = "0.6.2"
+version = "3.1.11"
 description = "NotesApp FastAPI backend"
 requires-python = ">=3.12"
 dependencies = [
