@@ -13,7 +13,7 @@
 	import NoteList from '$lib/components/notes/note-list.svelte';
 	import NoteEditor from '$lib/components/notes/note-editor.svelte';
 	import NoteImportButton from '$lib/components/notes/note-import-button.svelte';
-	import { Plus, Search, ChevronLeft } from 'lucide-svelte';
+	import { Plus, Search } from 'lucide-svelte';
 	import type { Note, Tag } from '$lib/types';
 
 	const notesStore = new NotesStore();
@@ -135,26 +135,14 @@
 <!-- Mobile: full-screen views -->
 <div class="flex h-full w-full overflow-hidden lg:hidden">
 	{#if mobileShowEditor && selectedNote}
-		<!-- Mobile: Editor view -->
+		<!-- Mobile: Editor view (use bottom nav to go back) -->
 		<div class="flex h-full w-full flex-col">
-			<!-- Mobile editor header -->
-			<div class="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-2">
-				<button
-					onclick={handleBackToList}
-					class="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-accent hover:bg-sidebar"
-				>
-					<ChevronLeft class="h-4 w-4" />
-					<span>Notes</span>
-				</button>
-			</div>
-			<div class="flex-1 overflow-hidden">
-				<NoteEditor
-					note={selectedNote}
-					onsave={handleSaveNote}
-					ondelete={handleDeleteNote}
-					ontagschange={handleTagsChange}
-				/>
-			</div>
+			<NoteEditor
+				note={selectedNote}
+				onsave={handleSaveNote}
+				ondelete={handleDeleteNote}
+				ontagschange={handleTagsChange}
+			/>
 		</div>
 	{:else}
 		<!-- Mobile: List view -->
@@ -169,23 +157,23 @@
 				loading={notesStore.loading}
 			/>
 		</div>
-		<!-- FAB group: Import + Create -->
-		<div class="fixed bottom-20 right-4 z-30 flex flex-col items-center gap-3">
+		<!-- Hidden import button for header trigger -->
+		<div class="hidden">
 			<NoteImportButton
 				bind:this={importButtonRef}
 				existingNotes={notesStore.notes}
 				onimport={handleImportNote}
 				folderId={folderId}
-				variant="fab"
 			/>
-			<button
-				onclick={handleCreateNote}
-				class="flex h-14 w-14 items-center justify-center rounded-full bg-accent text-black shadow-lg transition-transform hover:scale-105 active:scale-95"
-				aria-label="New note"
-			>
-				<Plus class="h-6 w-6" />
-			</button>
 		</div>
+		<!-- FAB: Create note (import via header icon) -->
+		<button
+			onclick={handleCreateNote}
+			class="fixed bottom-20 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-black shadow-lg transition-transform hover:scale-105 active:scale-95"
+			aria-label="New note"
+		>
+			<Plus class="h-6 w-6" />
+		</button>
 	{/if}
 </div>
 
