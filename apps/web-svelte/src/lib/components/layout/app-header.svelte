@@ -121,7 +121,7 @@
 		</div>
 
 		<div class="flex items-center gap-1">
-			{#if isNotesPage}
+			{#if isNotesPage && !showBack}
 				<button
 					onclick={handleImport}
 					class="p-2 text-muted hover:text-foreground"
