@@ -56,7 +56,7 @@ async def create_registration_options(
         user_name=display_name,
         user_display_name=display_name,
         authenticator_selection=AuthenticatorSelectionCriteria(
-            resident_key=ResidentKeyRequirement.REQUIRED,
+            resident_key=ResidentKeyRequirement.PREFERRED,  # PREFERRED for better iOS Safari compatibility
             user_verification=UserVerificationRequirement.PREFERRED,
         ),
     )
