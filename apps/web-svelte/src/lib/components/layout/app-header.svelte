@@ -5,7 +5,7 @@
 	 */
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Menu, X, Search, ArrowLeft, FolderOpen } from 'lucide-svelte';
+	import { Menu, X, Search, ArrowLeft, FolderOpen, FileUp } from 'lucide-svelte';
 	import AppSidebar from './app-sidebar.svelte';
 
 	interface Props {
@@ -64,6 +64,10 @@
 	function closeSidebar() {
 		sidebarOpen = false;
 	}
+
+	function handleImport() {
+		window.dispatchEvent(new CustomEvent('notesapp:import-note'));
+	}
 </script>
 
 <!-- Header bar - visible on mobile/tablet only -->
@@ -117,6 +121,15 @@
 		</div>
 
 		<div class="flex items-center gap-1">
+			{#if isNotesPage}
+				<button
+					onclick={handleImport}
+					class="p-2 text-muted hover:text-foreground"
+					aria-label="Import markdown"
+				>
+					<FileUp class="h-5 w-5" />
+				</button>
+			{/if}
 			<button
 				onclick={() => (searchOpen = true)}
 				class="p-2 text-muted hover:text-foreground"

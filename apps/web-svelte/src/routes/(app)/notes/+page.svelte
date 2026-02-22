@@ -22,6 +22,7 @@
 	let selectedNoteId = $state<string | null>(null);
 	let mobileShowEditor = $state(false); // Mobile: show editor instead of list
 	const searchInput = createDebounced('', 400);
+	let importButtonRef: { trigger: () => void } | undefined;
 
 	// Derive URL params reactively
 	const folderId = $derived($page.url.searchParams.get('folder') ?? undefined);
@@ -46,7 +47,15 @@
 		// Listen for back-to-list event from bottom nav
 		const handleBackToList = () => { mobileShowEditor = false; };
 		window.addEventListener('notesapp:back-to-list', handleBackToList);
-		return () => window.removeEventListener('notesapp:back-to-list', handleBackToList);
+
+		// Listen for import event from mobile header
+		const handleImportEvent = () => { importButtonRef?.trigger(); };
+		window.addEventListener('notesapp:import-note', handleImportEvent);
+
+		return () => {
+			window.removeEventListener('notesapp:back-to-list', handleBackToList);
+			window.removeEventListener('notesapp:import-note', handleImportEvent);
+		};
 	});
 
 	const selectedNote = $derived(
@@ -163,6 +172,7 @@
 		<!-- FAB group: Import + Create -->
 		<div class="fixed bottom-20 right-4 z-30 flex flex-col items-center gap-3">
 			<NoteImportButton
+				bind:this={importButtonRef}
 				existingNotes={notesStore.notes}
 				onimport={handleImportNote}
 				folderId={folderId}

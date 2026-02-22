@@ -80,6 +80,11 @@
   function handleClick() {
     fileInput?.click();
   }
+
+  // Expose trigger method for external use (e.g., from header)
+  export function trigger() {
+    fileInput?.click();
+  }
 </script>
 
 <input
