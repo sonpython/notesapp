@@ -12,6 +12,7 @@
 	import { createDebounced } from '$lib/utils/debounce.svelte';
 	import NoteList from '$lib/components/notes/note-list.svelte';
 	import NoteEditor from '$lib/components/notes/note-editor.svelte';
+	import NoteImportButton from '$lib/components/notes/note-import-button.svelte';
 	import { Plus, Search, ChevronLeft } from 'lucide-svelte';
 	import type { Note, Tag } from '$lib/types';
 
@@ -72,6 +73,17 @@
 		});
 		selectedNoteId = note.id;
 		mobileShowEditor = true;
+	}
+
+	async function handleImportNote(data: { title: string; content: string }) {
+		const note = await notesStore.createNote({
+			title: data.title,
+			content: data.content,
+			folder_id: folderId ?? null
+		});
+		selectedNoteId = note.id;
+		mobileShowEditor = true;
+		return note;
 	}
 
 	function handleSelectNote(id: string) {
@@ -148,14 +160,22 @@
 				loading={notesStore.loading}
 			/>
 		</div>
-		<!-- FAB: Create note -->
-		<button
-			onclick={handleCreateNote}
-			class="fixed bottom-20 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-black shadow-lg transition-transform hover:scale-105 active:scale-95"
-			aria-label="New note"
-		>
-			<Plus class="h-6 w-6" />
-		</button>
+		<!-- FAB group: Import + Create -->
+		<div class="fixed bottom-20 right-4 z-30 flex flex-col items-center gap-3">
+			<NoteImportButton
+				existingNotes={notesStore.notes}
+				onimport={handleImportNote}
+				folderId={folderId}
+				variant="fab"
+			/>
+			<button
+				onclick={handleCreateNote}
+				class="flex h-14 w-14 items-center justify-center rounded-full bg-accent text-black shadow-lg transition-transform hover:scale-105 active:scale-95"
+				aria-label="New note"
+			>
+				<Plus class="h-6 w-6" />
+			</button>
+		</div>
 	{/if}
 </div>
 
@@ -175,6 +195,11 @@
 					class="h-7 w-full rounded-md border border-border bg-background pl-7 pr-2 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent"
 				/>
 			</div>
+			<NoteImportButton
+				existingNotes={notesStore.notes}
+				onimport={handleImportNote}
+				folderId={folderId}
+			/>
 			<button
 				onclick={handleCreateNote}
 				title="New note"
