@@ -155,7 +155,7 @@
         tabindex="0"
         ondblclick={startEdit}
         onkeydown={(e) => e.key === 'Enter' && startEdit()}
-        class="min-w-0 flex-1 cursor-default select-none truncate text-sm
+        class="min-w-0 flex-1 cursor-default select-none break-words text-sm
           {todo.is_completed ? 'text-muted line-through' : 'text-foreground'}"
       >
         {todo.title}
