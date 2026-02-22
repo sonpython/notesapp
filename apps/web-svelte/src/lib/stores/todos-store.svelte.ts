@@ -43,6 +43,7 @@ export class TodosStore {
 	filter = $state<TodoFilter>('all');
 	total = $state(0);
 	fromCache = $state(false);
+	counts = $state<{ total: number; active: number; completed: number }>({ total: 0, active: 0, completed: 0 });
 
 	private offset = 0;
 	private limit = 50;
@@ -50,6 +51,16 @@ export class TodosStore {
 
 	get hasMore() {
 		return this.todos.length < this.total;
+	}
+
+	/** Fetch todo counts for sidebar display */
+	async fetchCounts() {
+		try {
+			const data = await api.get<{ total: number; active: number; completed: number }>('/api/todos/counts');
+			this.counts = data;
+		} catch {
+			// Silently fail - counts are non-critical
+		}
 	}
 
 	async fetchTodos(activeFilter?: TodoFilter, tagIds?: string[]) {

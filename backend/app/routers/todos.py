@@ -75,6 +75,39 @@ async def list_todos(
     )
 
 
+@router.get("/counts")
+async def get_todo_counts(
+    user_id: str = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> dict:
+    """Get todo counts for sidebar display.
+
+    Returns:
+        { total: int, active: int, completed: int }
+    """
+    uid = UUID(user_id)
+
+    # Total count (top-level only)
+    total_result = await session.execute(
+        select(func.count()).where(Todo.user_id == uid, Todo.parent_id.is_(None))
+    )
+    total = total_result.scalar_one()
+
+    # Active count (not completed)
+    active_result = await session.execute(
+        select(func.count()).where(
+            Todo.user_id == uid, Todo.parent_id.is_(None), Todo.is_completed == False
+        )
+    )
+    active = active_result.scalar_one()
+
+    return {
+        "total": total,
+        "active": active,
+        "completed": total - active,
+    }
+
+
 @router.post("/", response_model=TodoResponse, status_code=201)
 async def create_todo(
     body: TodoCreate,

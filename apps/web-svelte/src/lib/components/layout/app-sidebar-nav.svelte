@@ -9,16 +9,18 @@
 	import type { FoldersStore } from '$lib/stores/folders-store.svelte';
 	import type { TagsStore } from '$lib/stores/tags-store.svelte';
 	import type { NotesStore } from '$lib/stores/notes-store.svelte';
+	import type { TodosStore } from '$lib/stores/todos-store.svelte';
 	import FolderTree from '$lib/components/folders/folder-tree.svelte';
 
 	interface Props {
 		foldersStore: FoldersStore;
 		tagsStore: TagsStore;
 		notesStore: NotesStore;
+		todosStore: TodosStore;
 		onnavigate?: () => void;
 	}
 
-	let { foldersStore, tagsStore, notesStore, onnavigate }: Props = $props();
+	let { foldersStore, tagsStore, notesStore, todosStore, onnavigate }: Props = $props();
 
 	let isCreatingFolder = $state(false);
 
@@ -119,6 +121,11 @@
 		>
 			<item.icon class="h-4 w-4 shrink-0" />
 			{item.label}
+			{#if item.label === 'Todos' && todosStore.counts.total > 0}
+				<span class="ml-auto text-xs text-zinc-500">
+					{todosStore.counts.active}/{todosStore.counts.total}
+				</span>
+			{/if}
 		</a>
 	{/each}
 </nav>

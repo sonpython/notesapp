@@ -8,6 +8,7 @@
 	import { authStore } from '$lib/stores/auth-store.svelte';
 	import { FoldersStore } from '$lib/stores/folders-store.svelte';
 	import { NotesStore } from '$lib/stores/notes-store.svelte';
+	import { TodosStore } from '$lib/stores/todos-store.svelte';
 	import { tagsStore } from '$lib/stores/tags-store.svelte';
 	import ThemeToggleButton from '$lib/components/ui/theme-toggle-button.svelte';
 	import ConnectionStatusIndicator from '$lib/components/ui/connection-status-indicator.svelte';
@@ -23,12 +24,13 @@
 	// Instantiate stores as singletons for this sidebar session
 	const foldersStore = new FoldersStore();
 	const notesStore = new NotesStore();
-	
+	const todosStore = new TodosStore();
 
 	// Fetch data on mount
 	$effect(() => {
 		foldersStore.fetchFolders();
 		tagsStore.fetchTags();
+		todosStore.fetchCounts();
 	});
 
 	async function handleSignOut() {
@@ -71,7 +73,7 @@
 				</button>
 			{/if}
 		</div>
-		<AppSidebarNav {foldersStore} {tagsStore} {notesStore} {onnavigate} />
+		<AppSidebarNav {foldersStore} {tagsStore} {notesStore} {todosStore} {onnavigate} />
 		<div class="border-t border-border px-4 py-3">
 			<div class="flex items-center justify-between gap-2">
 				<div class="flex items-center gap-2 min-w-0">
