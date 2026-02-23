@@ -209,21 +209,21 @@
       </span>
     {/if}
 
-    <!-- Add subtask button -->
+    <!-- Add subtask button (visible on mobile, hover-show on desktop) -->
     <button
       onclick={() => (showSubtaskForm = !showSubtaskForm)}
       class="flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted
-        opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+        opacity-100 transition-opacity hover:text-foreground md:opacity-0 md:group-hover:opacity-100"
       aria-label="Add subtask"
     >
       <Plus size={14} />
     </button>
 
-    <!-- Delete button -->
+    <!-- Delete button (visible on mobile, hover-show on desktop) -->
     <button
       onclick={() => (showDeleteConfirm = true)}
       class="flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted
-        opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100"
+        opacity-100 transition-opacity hover:text-red-500 md:opacity-0 md:group-hover:opacity-100"
       aria-label="Delete todo"
     >
       <Trash2 size={14} />
