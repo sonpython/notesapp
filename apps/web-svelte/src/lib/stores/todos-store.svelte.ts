@@ -149,13 +149,23 @@ export class TodosStore {
 				timestamp: Date.now(),
 				retry_count: 0
 			});
-			this.todos = [tempTodo, ...this.todos];
+			// If subtask, add to parent's children; otherwise add to top-level
+			if (data.parent_id) {
+				this.todos = this.addToParentChildren(this.todos, data.parent_id, tempTodo);
+			} else {
+				this.todos = [tempTodo, ...this.todos];
+			}
 			return tempTodo;
 		}
 
 		try {
 			const created = await api.post<Todo>('/api/todos/', data);
-			this.todos = [created, ...this.todos];
+			// If subtask, add to parent's children; otherwise add to top-level
+			if (data.parent_id) {
+				this.todos = this.addToParentChildren(this.todos, data.parent_id, created);
+			} else {
+				this.todos = [created, ...this.todos];
+			}
 			await todosDB.putTodo(created).catch(console.error);
 			return created;
 		} catch (err) {
@@ -163,6 +173,19 @@ export class TodosStore {
 			this.error = message;
 			throw err;
 		}
+	}
+
+	/** Recursively add a todo to its parent's children array */
+	private addToParentChildren(todos: Todo[], parentId: string, newTodo: Todo): Todo[] {
+		return todos.map((t) => {
+			if (t.id === parentId) {
+				return { ...t, children: [...(t.children || []), newTodo] };
+			}
+			if (t.children?.length) {
+				return { ...t, children: this.addToParentChildren(t.children, parentId, newTodo) };
+			}
+			return t;
+		});
 	}
 
 	async updateTodo(id: string, data: UpdateTodoData): Promise<Todo> {
@@ -187,12 +210,23 @@ export class TodosStore {
 	async deleteTodo(id: string): Promise<void> {
 		try {
 			await api.delete(`/api/todos/${id}`);
-			this.todos = this.todos.filter((t) => t.id !== id);
+			// Remove todo from list (handles both top-level and nested children)
+			this.todos = this.removeTodoRecursively(this.todos, id);
 			await todosDB.deleteTodoLocal(id).catch(console.error);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Failed to delete todo';
 			this.error = message;
 			throw err;
 		}
+	}
+
+	/** Recursively remove a todo by ID from nested structure */
+	private removeTodoRecursively(todos: Todo[], id: string): Todo[] {
+		return todos
+			.filter((t) => t.id !== id)
+			.map((t) => ({
+				...t,
+				children: t.children ? this.removeTodoRecursively(t.children, id) : []
+			}));
 	}
 }

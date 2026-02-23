@@ -23,6 +23,7 @@
   let expanded = $state(false);
   let editing = $state(false);
   let showEditModal = $state(false);
+  let showDeleteConfirm = $state(false);
   /** editTitle syncs to todo.title when editing starts; use $derived to track prop changes */
   let editTitle = $state('');
   let showSubtaskForm = $state(false);
@@ -94,6 +95,7 @@
   function handleSubtaskCreated(data: Todo) {
     onupdate('__create__', { ...(data as unknown as Record<string, unknown>), parent_id: todo.id });
     showSubtaskForm = false;
+    expanded = true; // Auto-expand to show the new subtask
   }
 </script>
 
@@ -219,7 +221,7 @@
 
     <!-- Delete button -->
     <button
-      onclick={() => ondelete(todo.id)}
+      onclick={() => (showDeleteConfirm = true)}
       class="flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted
         opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100"
       aria-label="Delete todo"
@@ -256,4 +258,42 @@
     onsave={handleModalSave}
     onclose={() => (showEditModal = false)}
   />
+{/if}
+
+<!-- Delete Confirmation Modal -->
+{#if showDeleteConfirm}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+    onclick={(e) => e.target === e.currentTarget && (showDeleteConfirm = false)}
+  >
+    <div class="w-full max-w-sm rounded-xl bg-background shadow-2xl">
+      <div class="p-4">
+        <h3 class="text-lg font-semibold text-foreground">Delete Todo?</h3>
+        <p class="mt-2 text-sm text-muted">
+          Are you sure you want to delete "{todo.title}"?
+          {#if hasChildren}
+            <span class="text-red-500">This will also delete all subtasks.</span>
+          {/if}
+        </p>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-border px-4 py-3">
+        <button
+          onclick={() => (showDeleteConfirm = false)}
+          class="rounded-lg px-4 py-2 text-sm font-medium text-muted hover:bg-sidebar hover:text-foreground"
+        >
+          Cancel
+        </button>
+        <button
+          onclick={() => {
+            ondelete(todo.id);
+            showDeleteConfirm = false;
+          }}
+          class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
 {/if}
