@@ -310,7 +310,8 @@ describe('useTodos', () => {
       await result.current.fetchTodos()
     })
 
-    vi.mocked(api.put).mockResolvedValueOnce(completedTodo)
+    // toggleTodo now uses POST /api/todos/{id}/toggle endpoint
+    vi.mocked(api.post).mockResolvedValueOnce(completedTodo)
     vi.mocked(api.get).mockResolvedValueOnce({ items: [completedTodo], total: 1, limit: 50, offset: 0 })
 
     let toggledTodo: Todo | null = null
@@ -322,8 +323,11 @@ describe('useTodos', () => {
     expect(toggledTodo!.is_completed).toBe(true)
   })
 
-  it('should return null when toggling non-existent todo', async () => {
+  it('should return null when toggling non-existent todo (API error)', async () => {
     const { result } = renderHook(() => useTodos())
+
+    // Mock API error (e.g., 404 not found)
+    vi.mocked(api.post).mockRejectedValueOnce(new Error('Todo not found'))
 
     let toggledTodo: Todo | null = null
     await act(async () => {
@@ -331,6 +335,7 @@ describe('useTodos', () => {
     })
 
     expect(toggledTodo).toBeNull()
+    expect(result.current.error).toBe('Todo not found')
   })
 
   it('should clear error on successful fetch', async () => {

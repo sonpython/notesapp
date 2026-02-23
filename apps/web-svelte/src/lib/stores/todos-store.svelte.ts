@@ -191,7 +191,8 @@ export class TodosStore {
 	async updateTodo(id: string, data: UpdateTodoData): Promise<Todo> {
 		try {
 			const updated = await api.put<Todo>(`/api/todos/${id}`, data);
-			this.todos = this.todos.map((t) => (t.id === id ? updated : t));
+			// Update state recursively to handle nested children
+			this.todos = this.updateTodoRecursively(this.todos, id, updated);
 			await todosDB.putTodo(updated).catch(console.error);
 			return updated;
 		} catch (err) {
@@ -202,9 +203,70 @@ export class TodosStore {
 	}
 
 	async toggleTodo(id: string): Promise<Todo> {
-		const todo = this.todos.find((t) => t.id === id);
-		if (!todo) throw new Error('Todo not found');
-		return this.updateTodo(id, { is_completed: !todo.is_completed });
+		this.error = null;
+
+		// Offline: queue + local optimistic update
+		if (browser && !navigator.onLine) {
+			const target = this.findTodoById(this.todos, id);
+			if (!target) {
+				this.error = 'Todo not found in local cache';
+				throw new Error('Todo not found');
+			}
+			const updated: Todo = {
+				...target,
+				is_completed: !target.is_completed,
+				completed_at: !target.is_completed ? new Date().toISOString() : null,
+				updated_at: new Date().toISOString()
+			};
+			await todosDB.putTodo(updated);
+			await syncQueue.enqueue({
+				entity_type: 'todo',
+				operation: 'update',
+				entity_id: id,
+				payload: { is_completed: updated.is_completed },
+				timestamp: Date.now(),
+				retry_count: 0
+			});
+			// Update state recursively
+			this.todos = this.updateTodoRecursively(this.todos, id, updated);
+			return updated;
+		}
+
+		// Online: use dedicated toggle endpoint (handles nested children correctly)
+		try {
+			const todo = await api.post<Todo>(`/api/todos/${id}/toggle`);
+			// Update state recursively
+			this.todos = this.updateTodoRecursively(this.todos, id, todo);
+			await todosDB.putTodo(todo).catch(console.error);
+			return todo;
+		} catch (err) {
+			const message = err instanceof Error ? err.message : 'Failed to toggle todo';
+			this.error = message;
+			throw err;
+		}
+	}
+
+	/** Recursively find a todo by ID in nested structure */
+	private findTodoById(todos: Todo[], id: string): Todo | undefined {
+		for (const todo of todos) {
+			if (todo.id === id) return todo;
+			if (todo.children?.length) {
+				const found = this.findTodoById(todo.children, id);
+				if (found) return found;
+			}
+		}
+		return undefined;
+	}
+
+	/** Recursively update a todo by ID in nested structure */
+	private updateTodoRecursively(todos: Todo[], id: string, updated: Todo): Todo[] {
+		return todos.map((t) => {
+			if (t.id === id) return updated;
+			if (t.children?.length) {
+				return { ...t, children: this.updateTodoRecursively(t.children, id, updated) };
+			}
+			return t;
+		});
 	}
 
 	async deleteTodo(id: string): Promise<void> {

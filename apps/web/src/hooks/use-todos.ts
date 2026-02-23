@@ -242,10 +242,66 @@ export function useTodos() {
   }, [fetchTodos])
 
   const toggleTodo = useCallback(async (id: string): Promise<Todo | null> => {
-    const target = findTodoById(todos, id)
-    if (!target) return null
-    return updateTodo(id, { is_completed: !target.is_completed })
-  }, [todos, updateTodo])
+    setError(null)
+
+    // Offline: queue + local optimistic update
+    if (!navigator.onLine) {
+      const existing = await todosDB.getTodoById(id)
+      if (!existing) {
+        // Try to find in nested children for offline
+        const target = findTodoById(todos, id)
+        if (!target) {
+          setError('Todo not found in local cache')
+          return null
+        }
+        const updated: Todo = {
+          ...target,
+          is_completed: !target.is_completed,
+          completed_at: !target.is_completed ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        }
+        await todosDB.putTodo(updated)
+        await syncQueue.enqueue({
+          entity_type: 'todo',
+          operation: 'update',
+          entity_id: id,
+          payload: { is_completed: updated.is_completed },
+          timestamp: Date.now(),
+          retry_count: 0,
+        })
+        await fetchTodos()
+        return updated
+      }
+      const updated: Todo = {
+        ...existing,
+        is_completed: !existing.is_completed,
+        completed_at: !existing.is_completed ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString(),
+      }
+      await todosDB.putTodo(updated)
+      await syncQueue.enqueue({
+        entity_type: 'todo',
+        operation: 'update',
+        entity_id: id,
+        payload: { is_completed: updated.is_completed },
+        timestamp: Date.now(),
+        retry_count: 0,
+      })
+      await fetchTodos()
+      return updated
+    }
+
+    // Online: use dedicated toggle endpoint (handles nested children correctly)
+    try {
+      const todo = await api.post<Todo>(`/api/todos/${id}/toggle`)
+      await fetchTodos()
+      return todo
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to toggle todo'
+      setError(message)
+      return null
+    }
+  }, [todos, fetchTodos])
 
   return {
     todos, loading, error, filter, total, hasMore, fromCache,
