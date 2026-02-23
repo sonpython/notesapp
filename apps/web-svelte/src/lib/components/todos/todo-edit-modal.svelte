@@ -20,6 +20,13 @@
   let deadline = $state(todo.deadline ? todo.deadline.slice(0, 10) : '');
   let reminderAt = $state(todo.reminder_at ? todo.reminder_at.slice(0, 16) : '');
 
+  // Auto-set reminder to 9:30 AM when deadline changes
+  $effect(() => {
+    if (deadline && !reminderAt) {
+      reminderAt = `${deadline}T09:30`;
+    }
+  });
+
   function handleSave() {
     onsave({
       title: title.trim(),

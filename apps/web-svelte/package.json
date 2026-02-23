@@ -1,6 +1,6 @@
 {
   "name": "@notesapp/web-svelte",
-  "version": "3.1.17",
+  "version": "3.1.18",
   "private": true,
   "scripts": {
     "dev": "vite dev",
