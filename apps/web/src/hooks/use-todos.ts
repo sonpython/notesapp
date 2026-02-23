@@ -303,10 +303,34 @@ export function useTodos() {
     }
   }, [todos, fetchTodos])
 
+  const reorderTodos = useCallback(async (orderedIds: string[]): Promise<boolean> => {
+    setError(null)
+
+    // Build reorder request
+    const items = orderedIds.map((id, index) => ({ id, sort_order: index }))
+
+    // Optimistic update
+    const reordered = orderedIds
+      .map(id => todos.find(t => t.id === id))
+      .filter((t): t is Todo => t !== undefined)
+    setTodos(reordered)
+
+    try {
+      await api.put('/api/todos/reorder', { items })
+      return true
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to reorder todos'
+      setError(message)
+      // Revert on error
+      await fetchTodos()
+      return false
+    }
+  }, [todos, fetchTodos])
+
   return {
     todos, loading, error, filter, total, hasMore, fromCache,
     setFilter, fetchTodos, loadMore, createTodo,
-    updateTodo, deleteTodo, toggleTodo,
+    updateTodo, deleteTodo, toggleTodo, reorderTodos,
   }
 }
 

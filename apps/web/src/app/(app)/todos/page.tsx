@@ -23,7 +23,7 @@ export default function TodosPage() {
   const {
     todos, loading, error, filter,
     setFilter, fetchTodos, createTodo,
-    updateTodo, deleteTodo, toggleTodo,
+    updateTodo, deleteTodo, toggleTodo, reorderTodos,
   } = useTodos()
 
   const [search, setSearch] = useState('')
@@ -123,6 +123,7 @@ export default function TodosPage() {
             onToggle={toggleTodo}
             onUpdate={handleUpdate}
             onDelete={deleteTodo}
+            onReorder={reorderTodos}
           />
         </div>
       )}

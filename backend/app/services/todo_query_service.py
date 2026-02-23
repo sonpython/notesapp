@@ -78,7 +78,8 @@ def build_todos_list_query(
         ),
     )
 
-    stmt = stmt.order_by(Todo.sort_order.asc(), Todo.created_at.asc())
+    # Sort: incomplete first, then by sort_order, then by created_at
+    stmt = stmt.order_by(Todo.is_completed.asc(), Todo.sort_order.asc(), Todo.created_at.asc())
 
     return stmt
 

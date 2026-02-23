@@ -14,7 +14,13 @@ from app.deps import get_current_user
 from app.models.todo import Todo
 from app.schemas.pagination import PaginatedResponse
 from app.schemas.tag import TagAttachRequest
-from app.schemas.todo import TodoCreate, TodoResponse, TodoUpdate, TodoWithChildrenResponse
+from app.schemas.todo import (
+    TodoCreate,
+    TodoReorderRequest,
+    TodoResponse,
+    TodoUpdate,
+    TodoWithChildrenResponse,
+)
 from app.services.recurrence_service import create_next_occurrence
 from app.services.tag_service import attach_tags_to_todo, detach_tag_from_todo
 from app.services.todo_query_service import build_todos_list_query, toggle_todo_completion
@@ -242,6 +248,30 @@ async def toggle_todo(
         select(Todo).where(Todo.id == todo_id).options(selectinload(Todo.tags))
     )
     return result.scalar_one()
+
+
+# -- Reorder Endpoint ---------------------------------------------------------
+
+
+@router.put("/reorder", status_code=204)
+async def reorder_todos(
+    body: TodoReorderRequest,
+    user_id: str = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    """Batch update sort_order for multiple todos."""
+    uid = UUID(user_id)
+
+    for item in body.items:
+        result = await session.execute(select(Todo).where(Todo.id == item.id))
+        todo = result.scalar_one_or_none()
+        if todo is None:
+            continue
+        if todo.user_id != uid:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        todo.sort_order = item.sort_order
+
+    await session.commit()
 
 
 # -- Tag Management Endpoints -------------------------------------------------

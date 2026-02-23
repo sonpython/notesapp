@@ -7,7 +7,7 @@ import { build, files, version } from '$service-worker';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 // Force cache invalidation on deploy - change this value to bust cache
-const CACHE_VERSION = '7';
+const CACHE_VERSION = '8';
 const CACHE_NAME = `notesapp-${version}-v${CACHE_VERSION}`;
 
 // Assets to cache on install

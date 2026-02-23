@@ -102,6 +102,10 @@
 	async function handleDelete(id: string) {
 		await todosStore.deleteTodo(id);
 	}
+
+	async function handleReorder(orderedIds: string[]) {
+		await todosStore.reorderTodos(orderedIds);
+	}
 </script>
 
 <svelte:head>
@@ -167,6 +171,7 @@
 			ontoggle={handleToggle}
 			onupdate={handleUpdate}
 			ondelete={handleDelete}
+			onreorder={handleReorder}
 		/>
 	</div>
 </div>

@@ -70,6 +70,17 @@ class TodoWithChildrenResponse(TodoResponse):
     children: list["TodoWithChildrenResponse"] = []
 
 
+class TodoReorderItem(BaseModel):
+    """Single item in reorder request"""
+    id: UUID
+    sort_order: int
+
+
+class TodoReorderRequest(BaseModel):
+    """Batch reorder request"""
+    items: list[TodoReorderItem]
+
+
 # Resolve forward references
 from app.schemas.tag import TagResponse
 

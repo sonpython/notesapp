@@ -294,4 +294,29 @@ export class TodosStore {
 				children: t.children ? this.removeTodoRecursively(t.children, id) : []
 			}));
 	}
+
+	/** Reorder todos by providing new ordered array */
+	async reorderTodos(orderedIds: string[]): Promise<boolean> {
+		this.error = null;
+
+		// Build reorder request
+		const items = orderedIds.map((id, index) => ({ id, sort_order: index }));
+
+		// Optimistic update
+		const reordered = orderedIds
+			.map((id) => this.todos.find((t) => t.id === id))
+			.filter((t): t is Todo => t !== undefined);
+		this.todos = reordered;
+
+		try {
+			await api.put('/api/todos/reorder', { items });
+			return true;
+		} catch (err) {
+			const message = err instanceof Error ? err.message : 'Failed to reorder todos';
+			this.error = message;
+			// Revert on error
+			await this.fetchTodos();
+			return false;
+		}
+	}
 }
