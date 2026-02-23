@@ -114,6 +114,27 @@ async def get_todo_counts(
     }
 
 
+@router.put("/reorder", status_code=204)
+async def reorder_todos(
+    body: TodoReorderRequest,
+    user_id: str = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    """Batch update sort_order for multiple todos."""
+    uid = UUID(user_id)
+
+    for item in body.items:
+        result = await session.execute(select(Todo).where(Todo.id == item.id))
+        todo = result.scalar_one_or_none()
+        if todo is None:
+            continue
+        if todo.user_id != uid:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        todo.sort_order = item.sort_order
+
+    await session.commit()
+
+
 @router.post("/", response_model=TodoResponse, status_code=201)
 async def create_todo(
     body: TodoCreate,
@@ -248,30 +269,6 @@ async def toggle_todo(
         select(Todo).where(Todo.id == todo_id).options(selectinload(Todo.tags))
     )
     return result.scalar_one()
-
-
-# -- Reorder Endpoint ---------------------------------------------------------
-
-
-@router.put("/reorder", status_code=204)
-async def reorder_todos(
-    body: TodoReorderRequest,
-    user_id: str = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
-) -> None:
-    """Batch update sort_order for multiple todos."""
-    uid = UUID(user_id)
-
-    for item in body.items:
-        result = await session.execute(select(Todo).where(Todo.id == item.id))
-        todo = result.scalar_one_or_none()
-        if todo is None:
-            continue
-        if todo.user_id != uid:
-            raise HTTPException(status_code=403, detail="Not authorized")
-        todo.sort_order = item.sort_order
-
-    await session.commit()
 
 
 # -- Tag Management Endpoints -------------------------------------------------
