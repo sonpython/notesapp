@@ -6,7 +6,6 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import Select
 
 from app.models.tag import TodoTag
