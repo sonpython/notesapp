@@ -258,10 +258,13 @@ export class TodosStore {
 		return undefined;
 	}
 
-	/** Recursively update a todo by ID in nested structure */
+	/** Recursively update a todo by ID in nested structure, preserving children */
 	private updateTodoRecursively(todos: Todo[], id: string, updated: Todo): Todo[] {
 		return todos.map((t) => {
-			if (t.id === id) return updated;
+			if (t.id === id) {
+				// Preserve children from original todo (API response doesn't include them)
+				return { ...updated, children: t.children };
+			}
 			if (t.children?.length) {
 				return { ...t, children: this.updateTodoRecursively(t.children, id, updated) };
 			}
