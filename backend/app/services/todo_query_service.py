@@ -68,8 +68,11 @@ def build_todos_list_query(
         # Filter todos that have ANY of the specified tags
         stmt = stmt.where(Todo.id.in_(select(TodoTag.todo_id).where(TodoTag.tag_id.in_(tag_ids))))
 
-    # Eager load tags to avoid N+1 queries
-    stmt = stmt.options(selectinload(Todo.tags))
+    # Eager load tags and children to avoid N+1 queries
+    stmt = stmt.options(
+        selectinload(Todo.tags),
+        selectinload(Todo.children).selectinload(Todo.tags),
+    )
 
     stmt = stmt.order_by(Todo.sort_order.asc(), Todo.created_at.asc())
 
