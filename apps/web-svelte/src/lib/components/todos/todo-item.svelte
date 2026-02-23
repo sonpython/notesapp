@@ -1,13 +1,14 @@
 <script lang="ts">
   import {
     Check, Circle, Trash2, Bell, Repeat,
-    ChevronRight, ChevronDown, Plus, Calendar, AlertCircle,
+    ChevronRight, ChevronDown, Plus, Calendar, AlertCircle, Play,
   } from 'lucide-svelte';
   import { format, isPast } from 'date-fns';
   import type { Todo } from '$lib/types';
   import TagPill from '$lib/components/tags/tag-pill.svelte';
   import TodoCreateForm from './todo-create-form.svelte';
   import TodoItemSelf from './todo-item.svelte';
+  import TodoEditModal from './todo-edit-modal.svelte';
 
   interface Props {
     todo: Todo;
@@ -21,9 +22,13 @@
 
   let expanded = $state(false);
   let editing = $state(false);
+  let showEditModal = $state(false);
   /** editTitle syncs to todo.title when editing starts; use $derived to track prop changes */
   let editTitle = $state('');
   let showSubtaskForm = $state(false);
+
+  // Subtasks collapsed by default
+  const isSubtask = $derived(depth > 0);
 
   /** Color mapping for priority dot: 1=blue, 2=yellow, 3=red */
   const PRIORITY_COLORS: Record<number, string> = {
@@ -64,6 +69,15 @@
     editing = true;
   }
 
+  function openEditModal() {
+    showEditModal = true;
+  }
+
+  function handleModalSave(data: Record<string, unknown>) {
+    onupdate(todo.id, data);
+    showEditModal = false;
+  }
+
   function commitEdit() {
     const trimmed = editTitle.trim();
     if (trimmed && trimmed !== todo.title) {
@@ -83,9 +97,10 @@
   }
 </script>
 
-<div style="padding-left: {depth * 24}px">
-  <!-- Main row -->
-  <div class="group flex items-center gap-2 px-2 py-2 transition-colors hover:bg-sidebar">
+<div style="padding-left: {depth * 16}px">
+  <!-- Main row - subtasks are smaller -->
+  <div class="group flex items-center gap-2 px-2 transition-colors hover:bg-sidebar
+    {isSubtask ? 'py-1 opacity-80' : 'py-2'}">
     <!-- Expand/collapse toggle -->
     <button
       onclick={() => (expanded = !expanded)}
@@ -139,23 +154,24 @@
       </div>
     {/if}
 
-    <!-- Title (editable on double-click) -->
+    <!-- Title (double-click opens edit modal) -->
     {#if editing}
       <input
         bind:value={editTitle}
         onblur={commitEdit}
         onkeydown={handleEditKeydown}
         class="min-w-0 flex-1 rounded border border-accent bg-background px-2 py-0.5
-          text-sm text-foreground outline-none"
+          {isSubtask ? 'text-xs' : 'text-sm'} text-foreground outline-none"
       />
     {:else}
       <!-- role="button" satisfies a11y requirement for interactive non-button element -->
       <span
         role="button"
         tabindex="0"
-        ondblclick={startEdit}
-        onkeydown={(e) => e.key === 'Enter' && startEdit()}
-        class="min-w-0 flex-1 cursor-default select-none break-words text-sm
+        ondblclick={openEditModal}
+        onkeydown={(e) => e.key === 'Enter' && openEditModal()}
+        class="min-w-0 flex-1 cursor-default select-none break-words
+          {isSubtask ? 'text-xs' : 'text-sm'}
           {todo.is_completed ? 'text-muted line-through' : 'text-foreground'}"
       >
         {todo.title}
@@ -232,3 +248,12 @@
     {/each}
   {/if}
 </div>
+
+<!-- Edit Modal -->
+{#if showEditModal}
+  <TodoEditModal
+    {todo}
+    onsave={handleModalSave}
+    onclose={() => (showEditModal = false)}
+  />
+{/if}
