@@ -93,7 +93,7 @@
 	async function handleUpdate(id: string, data: Record<string, unknown>) {
 		// Handle subtask creation (special '__create__' id from todo-item)
 		if (id === '__create__') {
-			await todosStore.createTodo(data as Parameters<typeof todosStore.createTodo>[0]);
+			await todosStore.createTodo(data as unknown as Parameters<typeof todosStore.createTodo>[0]);
 			return;
 		}
 		await todosStore.updateTodo(id, data);
