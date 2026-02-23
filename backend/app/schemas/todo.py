@@ -72,12 +72,14 @@ class TodoWithChildrenResponse(TodoResponse):
 
 class TodoReorderItem(BaseModel):
     """Single item in reorder request"""
+
     id: UUID
     sort_order: int
 
 
 class TodoReorderRequest(BaseModel):
     """Batch reorder request"""
+
     items: list[TodoReorderItem]
 
 
