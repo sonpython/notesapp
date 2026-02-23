@@ -69,6 +69,7 @@ def build_todos_list_query(
 
     # Eager load tags and children recursively to avoid N+1 and MissingGreenlet errors
     from sqlalchemy.orm import selectinload as si
+
     stmt = stmt.options(
         si(Todo.tags),
         si(Todo.children).options(
