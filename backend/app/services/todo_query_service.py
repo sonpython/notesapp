@@ -68,10 +68,14 @@ def build_todos_list_query(
         # Filter todos that have ANY of the specified tags
         stmt = stmt.where(Todo.id.in_(select(TodoTag.todo_id).where(TodoTag.tag_id.in_(tag_ids))))
 
-    # Eager load tags and children to avoid N+1 queries
+    # Eager load tags and children recursively to avoid N+1 and MissingGreenlet errors
+    from sqlalchemy.orm import selectinload as si
     stmt = stmt.options(
-        selectinload(Todo.tags),
-        selectinload(Todo.children).selectinload(Todo.tags),
+        si(Todo.tags),
+        si(Todo.children).options(
+            si(Todo.tags),
+            si(Todo.children).options(si(Todo.tags)),  # Grandchildren level
+        ),
     )
 
     stmt = stmt.order_by(Todo.sort_order.asc(), Todo.created_at.asc())
