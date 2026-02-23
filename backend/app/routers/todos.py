@@ -14,7 +14,7 @@ from app.deps import get_current_user
 from app.models.todo import Todo
 from app.schemas.pagination import PaginatedResponse
 from app.schemas.tag import TagAttachRequest
-from app.schemas.todo import TodoCreate, TodoResponse, TodoUpdate, TodoWithChildrenResponse as TodoWithChildren
+from app.schemas.todo import TodoCreate, TodoResponse, TodoUpdate, TodoWithChildrenResponse
 from app.services.recurrence_service import create_next_occurrence
 from app.services.tag_service import attach_tags_to_todo, detach_tag_from_todo
 from app.services.todo_query_service import build_todos_list_query, toggle_todo_completion
@@ -22,7 +22,7 @@ from app.services.todo_query_service import build_todos_list_query, toggle_todo_
 router = APIRouter(prefix="/api/todos", tags=["todos"])
 
 
-@router.get("/", response_model=PaginatedResponse[TodoWithChildren])
+@router.get("/", response_model=PaginatedResponse[TodoWithChildrenResponse])
 async def list_todos(
     is_completed: bool | None = Query(None),
     priority: int | None = Query(None),
@@ -35,7 +35,7 @@ async def list_todos(
     offset: int = Query(0, ge=0, description="Items to skip"),
     user_id: str = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> PaginatedResponse[TodoWithChildren]:
+) -> PaginatedResponse[TodoWithChildrenResponse]:
     """List top-level todos for the current user with optional filters and pagination."""
     # Parse tag_ids from comma-separated string
     parsed_tag_ids = None
