@@ -14,6 +14,7 @@ from app.deps import get_current_user
 from app.models.note import Note
 from app.models.telegram import TelegramSettings
 from app.models.todo import Todo
+from app.models.user import User
 from app.rate_limiter import WEBHOOK_RATE_LIMIT, limiter
 from app.schemas.telegram import (
     TelegramLinkResponse,
@@ -202,6 +203,15 @@ async def _get_user_ids(session: AsyncSession, chat_id: str) -> list[str]:
     return [str(row) for row in result.scalars().all()]
 
 
+async def _get_user_names(session: AsyncSession, user_ids: list[str]) -> dict[str, str]:
+    """Get display_name for each user_id. Returns {user_id: display_name}."""
+    if len(user_ids) <= 1:
+        return {}
+    stmt = select(User.id, User.display_name).where(User.id.in_(user_ids))
+    result = await session.execute(stmt)
+    return {str(uid): name for uid, name in result.all()}
+
+
 async def _handle_start(session: AsyncSession, chat_id: str, code: str) -> None:
     """Link account via code."""
     stmt = select(TelegramSettings).where(TelegramSettings.link_code == code)
@@ -232,7 +242,7 @@ async def _handle_todo(session: AsyncSession, chat_id: str, user_id: str, title:
 
 
 async def _handle_list(session: AsyncSession, chat_id: str, user_ids: list[str]) -> None:
-    """List active todos from all linked accounts."""
+    """List active todos from all linked accounts, grouped by user."""
     stmt = (
         select(Todo)
         .where(
@@ -250,10 +260,32 @@ async def _handle_list(session: AsyncSession, chat_id: str, user_ids: list[str])
         await send_telegram_message(chat_id, "📝 No active todos. Create one with `/todo Buy milk`")
         return
 
+    names = await _get_user_names(session, user_ids)
+    multi = len(names) > 1
+
     lines = ["📝 *Active Todos:*"]
-    for i, t in enumerate(todos, 1):
-        pri = ["", "🔵", "🟡", "🔴"][t.priority] if t.priority else ""
-        lines.append(f"{i}. {pri}{t.title}")
+    counter = 1
+    if multi:
+        # Group by user
+        from collections import defaultdict
+
+        by_user: dict[str, list[Todo]] = defaultdict(list)
+        for t in todos:
+            by_user[str(t.user_id)].append(t)
+        for uid in user_ids:
+            user_todos = by_user.get(uid, [])
+            if not user_todos:
+                continue
+            lines.append(f"\n👤 *{names.get(uid, 'Unknown')}:*")
+            for t in user_todos:
+                pri = ["", "🔵", "🟡", "🔴"][t.priority] if t.priority else ""
+                lines.append(f"{counter}. {pri}{t.title}")
+                counter += 1
+    else:
+        for t in todos:
+            pri = ["", "🔵", "🟡", "🔴"][t.priority] if t.priority else ""
+            lines.append(f"{counter}. {pri}{t.title}")
+            counter += 1
     lines.append("\n_Use /done <n> to complete_")
     await send_telegram_message(chat_id, "\n".join(lines))
 
@@ -334,21 +366,34 @@ async def _handle_search(
         await send_telegram_message(chat_id, f"🔍 Không tìm thấy note nào với từ khóa: *{query}*")
         return
 
-    # Build inline keyboard with note titles
+    names = await _get_user_names(session, user_ids)
+    multi = len(names) > 1
+
+    # Build inline keyboard with note titles, grouped by user if multi-account
     keyboard = []
-    for note in notes:
-        title = note.title or "Untitled"
-        # Truncate long titles
-        if len(title) > 40:
-            title = title[:37] + "..."
-        keyboard.append(
-            [
-                {
-                    "text": f"📝 {title}",
-                    "callback_data": f"view_note:{note.id}",
-                }
-            ]
-        )
+    if multi:
+        from collections import defaultdict
+
+        by_user: dict[str, list] = defaultdict(list)
+        for note in notes:
+            by_user[str(note.user_id)].append(note)
+        for uid in user_ids:
+            user_notes = by_user.get(uid, [])
+            if not user_notes:
+                continue
+            # Section header as a non-clickable button
+            keyboard.append([{"text": f"👤 {names.get(uid, 'Unknown')}", "callback_data": "noop"}])
+            for note in user_notes:
+                title = note.title or "Untitled"
+                if len(title) > 35:
+                    title = title[:32] + "..."
+                keyboard.append([{"text": f"📝 {title}", "callback_data": f"view_note:{note.id}"}])
+    else:
+        for note in notes:
+            title = note.title or "Untitled"
+            if len(title) > 40:
+                title = title[:37] + "..."
+            keyboard.append([{"text": f"📝 {title}", "callback_data": f"view_note:{note.id}"}])
 
     reply_markup = {"inline_keyboard": keyboard}
     await send_telegram_message(

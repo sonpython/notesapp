@@ -66,6 +66,16 @@ async def two_linked_accounts(db_session: AsyncSession):
     tg_id_a = str(uuid.uuid4())
     tg_id_b = str(uuid.uuid4())
 
+    # Create user rows so display_name is available for grouped output
+    await db_session.execute(
+        text("INSERT INTO users (id, display_name) VALUES (:id, :name)"),
+        {"id": user_a, "name": "Alice"},
+    )
+    await db_session.execute(
+        text("INSERT INTO users (id, display_name) VALUES (:id, :name)"),
+        {"id": user_b, "name": "Bob"},
+    )
+
     # User B linked first (older bot_linked_at)
     await db_session.execute(
         text("""
@@ -90,6 +100,7 @@ async def two_linked_accounts(db_session: AsyncSession):
     await db_session.execute(text("DELETE FROM todos WHERE user_id IN (:a, :b)"), {"a": user_a, "b": user_b})
     await db_session.execute(text("DELETE FROM notes WHERE user_id IN (:a, :b)"), {"a": user_a, "b": user_b})
     await db_session.execute(text("DELETE FROM telegram_settings WHERE user_id IN (:a, :b)"), {"a": user_a, "b": user_b})
+    await db_session.execute(text("DELETE FROM users WHERE id IN (:a, :b)"), {"a": user_a, "b": user_b})
     await db_session.commit()
 
 
@@ -179,8 +190,10 @@ async def test_list_shows_todos_from_all_accounts(
     resp = await webhook_client.post(WEBHOOK_URL, json=_webhook_payload(2, "/list"))
     assert resp.status_code == 200
 
-    # Check the message sent to Telegram contains both todos
+    # Check grouped output contains user names and both todos
     sent_text = mock_send.call_args_list[-1][0][1]
+    assert "Alice" in sent_text, "Should show Alice's account name"
+    assert "Bob" in sent_text, "Should show Bob's account name"
     assert "Todo from Account A" in sent_text
     assert "Todo from Account B" in sent_text
 
