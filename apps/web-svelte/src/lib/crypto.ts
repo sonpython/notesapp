@@ -236,7 +236,13 @@ export async function deriveKeyFromPassword(password: string): Promise<CryptoKey
 // --- Utility functions ---
 
 function bufferToBase64(buffer: Uint8Array): string {
-	return btoa(String.fromCharCode(...buffer));
+	// Process in chunks to avoid "Maximum call stack size exceeded" with large buffers
+	let binary = '';
+	const chunkSize = 8192;
+	for (let i = 0; i < buffer.length; i += chunkSize) {
+		binary += String.fromCharCode(...buffer.subarray(i, i + chunkSize));
+	}
+	return btoa(binary);
 }
 
 function base64ToBuffer(base64: string): Uint8Array {
