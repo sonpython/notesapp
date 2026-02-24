@@ -286,7 +286,9 @@ async def _handle_done(session: AsyncSession, chat_id: str, user_ids: list[str],
     await send_telegram_message(chat_id, f"✅ Completed: *{title}*")
 
 
-async def _handle_search(session: AsyncSession, chat_id: str, user_ids: list[str], query: str) -> None:
+async def _handle_search(
+    session: AsyncSession, chat_id: str, user_ids: list[str], query: str
+) -> None:
     """Search notes across all linked accounts with Vietnamese diacritics support."""
     search_pattern = f"%{query}%"
 
