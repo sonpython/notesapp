@@ -148,42 +148,42 @@ async def telegram_webhook(
             await _handle_start(session, chat_id, code)
         return {"ok": True}
 
-    # Get user_id from chat_id for other commands
-    user_id = await _get_user_id(session, chat_id)
-    if user_id is None:
+    # Get all user_ids linked to this chat_id (multi-account)
+    user_ids = await _get_user_ids(session, chat_id)
+    if not user_ids:
         await send_telegram_message(
             chat_id, "⚠️ Please link your account first via the app settings."
         )
         return {"ok": True}
 
-    # /todo <title> - Create todo
+    # /todo <title> - Create todo (uses most recently linked account)
     if text.startswith("/todo "):
         title = text[6:].strip()
         if title:
-            await _handle_todo(session, chat_id, user_id, title)
+            await _handle_todo(session, chat_id, user_ids[0], title)
         else:
             await send_telegram_message(chat_id, "Usage: `/todo Buy groceries`")
         return {"ok": True}
 
-    # /list - List active todos
+    # /list - List active todos (from all linked accounts)
     if text == "/list":
-        await _handle_list(session, chat_id, user_id)
+        await _handle_list(session, chat_id, user_ids)
         return {"ok": True}
 
     # /done <number> - Mark complete
     if text.startswith("/done "):
         num = text[6:].strip()
         if num.isdigit():
-            await _handle_done(session, chat_id, user_id, int(num))
+            await _handle_done(session, chat_id, user_ids, int(num))
         else:
             await send_telegram_message(chat_id, "Usage: `/done 1`")
         return {"ok": True}
 
-    # /search <query> - Search notes
+    # /search <query> - Search notes (across all linked accounts)
     if text.startswith("/search "):
         query = text[8:].strip()
         if query:
-            await _handle_search(session, chat_id, user_id, query)
+            await _handle_search(session, chat_id, user_ids, query)
         else:
             await send_telegram_message(chat_id, "Usage: `/search keyword`")
         return {"ok": True}
@@ -191,12 +191,15 @@ async def telegram_webhook(
     return {"ok": True}
 
 
-async def _get_user_id(session: AsyncSession, chat_id: str) -> str | None:
-    """Get user_id from chat_id (handles duplicate rows gracefully)."""
-    stmt = select(TelegramSettings.user_id).where(TelegramSettings.chat_id == chat_id).limit(1)
+async def _get_user_ids(session: AsyncSession, chat_id: str) -> list[str]:
+    """Get all user_ids linked to a chat_id (multi-account support)."""
+    stmt = (
+        select(TelegramSettings.user_id)
+        .where(TelegramSettings.chat_id == chat_id)
+        .order_by(TelegramSettings.bot_linked_at.desc())
+    )
     result = await session.execute(stmt)
-    row = result.scalar()
-    return str(row) if row else None
+    return [str(row) for row in result.scalars().all()]
 
 
 async def _handle_start(session: AsyncSession, chat_id: str, code: str) -> None:
@@ -205,16 +208,6 @@ async def _handle_start(session: AsyncSession, chat_id: str, code: str) -> None:
     result = await session.execute(stmt)
     record = result.scalar_one_or_none()
     if record:
-        # Clear chat_id from any OTHER accounts that had this Telegram linked
-        clear_stmt = select(TelegramSettings).where(
-            TelegramSettings.chat_id == chat_id,
-            TelegramSettings.user_id != record.user_id,
-        )
-        old_links = await session.execute(clear_stmt)
-        for old in old_links.scalars().all():
-            old.chat_id = None
-            old.bot_linked_at = None
-
         record.chat_id = chat_id
         record.link_code = None
         record.bot_linked_at = datetime.now(UTC)
@@ -238,12 +231,12 @@ async def _handle_todo(session: AsyncSession, chat_id: str, user_id: str, title:
     await send_telegram_message(chat_id, f"✅ Created: *{title}*")
 
 
-async def _handle_list(session: AsyncSession, chat_id: str, user_id: str) -> None:
-    """List active todos."""
+async def _handle_list(session: AsyncSession, chat_id: str, user_ids: list[str]) -> None:
+    """List active todos from all linked accounts."""
     stmt = (
         select(Todo)
         .where(
-            Todo.user_id == user_id,
+            Todo.user_id.in_(user_ids),
             Todo.is_completed == False,  # noqa: E712
             Todo.parent_id == None,  # noqa: E711
         )
@@ -265,12 +258,12 @@ async def _handle_list(session: AsyncSession, chat_id: str, user_id: str) -> Non
     await send_telegram_message(chat_id, "\n".join(lines))
 
 
-async def _handle_done(session: AsyncSession, chat_id: str, user_id: str, num: int) -> None:
-    """Mark todo complete by list number."""
+async def _handle_done(session: AsyncSession, chat_id: str, user_ids: list[str], num: int) -> None:
+    """Mark todo complete by list number (across all linked accounts)."""
     stmt = (
         select(Todo)
         .where(
-            Todo.user_id == user_id,
+            Todo.user_id.in_(user_ids),
             Todo.is_completed == False,  # noqa: E712
             Todo.parent_id == None,  # noqa: E711
         )
@@ -293,8 +286,8 @@ async def _handle_done(session: AsyncSession, chat_id: str, user_id: str, num: i
     await send_telegram_message(chat_id, f"✅ Completed: *{title}*")
 
 
-async def _handle_search(session: AsyncSession, chat_id: str, user_id: str, query: str) -> None:
-    """Search notes by title or content with Vietnamese diacritics support."""
+async def _handle_search(session: AsyncSession, chat_id: str, user_ids: list[str], query: str) -> None:
+    """Search notes across all linked accounts with Vietnamese diacritics support."""
     search_pattern = f"%{query}%"
 
     # Check for exact match (query in double quotes)
@@ -303,7 +296,7 @@ async def _handle_search(session: AsyncSession, chat_id: str, user_id: str, quer
         stmt = (
             select(Note)
             .where(
-                Note.user_id == user_id,
+                Note.user_id.in_(user_ids),
                 Note.is_archived == False,  # noqa: E712
                 or_(
                     Note.title.contains(exact_term),
@@ -318,7 +311,7 @@ async def _handle_search(session: AsyncSession, chat_id: str, user_id: str, quer
         stmt = (
             select(Note)
             .where(
-                Note.user_id == user_id,
+                Note.user_id.in_(user_ids),
                 Note.is_archived == False,  # noqa: E712
                 or_(
                     func.unaccent(func.lower(Note.title)).ilike(
@@ -375,16 +368,16 @@ async def _handle_callback_query(session: AsyncSession, callback_query: dict) ->
     # Acknowledge the callback
     await answer_callback_query(callback_id)
 
-    # Get user_id from chat_id
-    user_id = await _get_user_id(session, chat_id)
-    if user_id is None:
+    # Get all user_ids linked to this chat_id
+    user_ids = await _get_user_ids(session, chat_id)
+    if not user_ids:
         await send_telegram_message(chat_id, "⚠️ Vui lòng liên kết tài khoản trước.")
         return
 
     # Handle view_note callback
     if data.startswith("view_note:"):
         note_id = data[10:]  # Remove "view_note:" prefix
-        await _handle_view_note(session, chat_id, user_id, note_id)
+        await _handle_view_note(session, chat_id, user_ids, note_id)
 
 
 def _html_to_text(html: str) -> str:
@@ -416,10 +409,10 @@ def _html_to_text(html: str) -> str:
 
 
 async def _handle_view_note(
-    session: AsyncSession, chat_id: str, user_id: str, note_id: str
+    session: AsyncSession, chat_id: str, user_ids: list[str], note_id: str
 ) -> None:
-    """Display note content."""
-    stmt = select(Note).where(Note.id == note_id, Note.user_id == user_id)
+    """Display note content from any linked account."""
+    stmt = select(Note).where(Note.id == note_id, Note.user_id.in_(user_ids))
     result = await session.execute(stmt)
     note = result.scalar_one_or_none()
 
