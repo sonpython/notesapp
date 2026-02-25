@@ -170,9 +170,9 @@
       <span
         role="button"
         tabindex="0"
-        ondblclick={openEditModal}
+        onclick={openEditModal}
         onkeydown={(e) => e.key === 'Enter' && openEditModal()}
-        class="min-w-0 flex-1 cursor-default select-none break-words
+        class="min-w-0 flex-1 cursor-pointer select-none break-words
           {isSubtask ? 'text-xs' : 'text-sm'}
           {todo.is_completed ? 'text-muted line-through' : 'text-foreground'}"
       >

@@ -46,22 +46,13 @@
   {#if incompleteTodos.length > 0}
     <div
       class="flex flex-col divide-y divide-border"
-      use:dndzone={{ items: dndItems, flipDurationMs, dropTargetStyle: {} }}
+      use:dndzone={{ items: dndItems, flipDurationMs, dropTargetStyle: {}, dragHandleSelector: '[data-drag-handle]' }}
       onconsider={handleDndConsider}
       onfinalize={handleDndFinalize}
     >
       {#each dndItems as todo (todo.id)}
-        <div class="group relative" animate:flip={{ duration: flipDurationMs }}>
-          <!-- Drag handle -->
-          <button
-            class="absolute left-0 top-1/2 -translate-y-1/2 z-10 flex h-8 w-6 cursor-grab
-              items-center justify-center text-muted opacity-100 transition-opacity
-              hover:text-foreground md:opacity-0 md:group-hover:opacity-100 active:cursor-grabbing"
-            aria-label="Drag to reorder"
-          >
-            <GripVertical size={14} />
-          </button>
-          <div class="pl-6">
+        <div class="group relative flex items-center" animate:flip={{ duration: flipDurationMs }}>
+          <div class="min-w-0 flex-1">
             <TodoItem
               {todo}
               {ontoggle}
@@ -70,6 +61,16 @@
               depth={0}
             />
           </div>
+          <!-- Drag handle (rightmost) -->
+          <button
+            data-drag-handle
+            class="flex h-8 w-6 shrink-0 cursor-grab items-center justify-center text-muted
+              opacity-100 transition-opacity hover:text-foreground
+              md:opacity-0 md:group-hover:opacity-100 active:cursor-grabbing"
+            aria-label="Drag to reorder"
+          >
+            <GripVertical size={14} />
+          </button>
         </div>
       {/each}
     </div>
