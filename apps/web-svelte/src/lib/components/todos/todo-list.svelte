@@ -11,9 +11,10 @@
     onupdate: (id: string, data: Record<string, unknown>) => void;
     ondelete: (id: string) => void;
     onreorder?: (orderedIds: string[]) => void;
+    reorderMode?: boolean;
   }
 
-  let { todos, ontoggle, onupdate, ondelete, onreorder }: Props = $props();
+  let { todos, ontoggle, onupdate, ondelete, onreorder, reorderMode = false }: Props = $props();
 
   // Split todos into incomplete (draggable) and completed (static)
   const incompleteTodos = $derived(todos.filter(t => !t.is_completed));
@@ -51,7 +52,7 @@
     <p class="text-sm">No todos yet. Create one above.</p>
   </div>
 {:else}
-  <!-- Incomplete todos - draggable -->
+  <!-- Incomplete todos - draggable when reorderMode is on -->
   {#if incompleteTodos.length > 0}
     <div
       class="flex flex-col divide-y divide-border"
@@ -61,6 +62,17 @@
     >
       {#each dndItems as todo (todo.id)}
         <div class="group relative flex items-center" animate:flip={{ duration: flipDurationMs }}>
+          <!-- Drag handle (leftmost, visible only in reorder mode) -->
+          {#if reorderMode}
+            <button
+              data-drag-handle
+              class="flex h-8 w-6 shrink-0 cursor-grab items-center justify-center text-muted
+                hover:text-foreground active:cursor-grabbing"
+              aria-label="Drag to reorder"
+            >
+              <GripVertical size={14} />
+            </button>
+          {/if}
           <div class="min-w-0 flex-1">
             <TodoItem
               {todo}
@@ -70,16 +82,6 @@
               depth={0}
             />
           </div>
-          <!-- Drag handle (rightmost) -->
-          <button
-            data-drag-handle
-            class="flex h-8 w-6 shrink-0 cursor-grab items-center justify-center text-muted
-              opacity-100 transition-opacity hover:text-foreground
-              md:opacity-0 md:group-hover:opacity-100 active:cursor-grabbing"
-            aria-label="Drag to reorder"
-          >
-            <GripVertical size={14} />
-          </button>
         </div>
       {/each}
     </div>

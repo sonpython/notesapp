@@ -11,11 +11,12 @@
 	import TodoList from '$lib/components/todos/todo-list.svelte';
 	import TodoCreateForm from '$lib/components/todos/todo-create-form.svelte';
 	import TagFilterSection from '$lib/components/tags/tag-filter-section.svelte';
-	import { Filter } from 'lucide-svelte';
+	import { Filter, ArrowUpDown } from 'lucide-svelte';
 	import type { Todo } from '$lib/types';
 
 	const todosStore = new TodosStore();
 	let showTagFilter = $state(false);
+	let reorderMode = $state(false);
 	
 
 	// Derive URL params reactively
@@ -126,7 +127,7 @@
 			</button>
 		{/each}
 
-		<!-- Tag filter button -->
+		<!-- Tag filter & reorder toggle -->
 		<div class="relative ml-auto flex items-center gap-2">
 			{#if selectedTagIds.length > 0}
 				<button onclick={clearTagFilters} class="text-xs text-muted hover:text-foreground">
@@ -140,6 +141,13 @@
 				<Filter class="h-3.5 w-3.5" />
 				Tags
 			</button>
+			<button
+				onclick={() => (reorderMode = !reorderMode)}
+				class="flex items-center gap-1 rounded-md px-2 py-1 text-sm {reorderMode ? 'bg-accent/15 text-accent' : 'text-muted hover:text-foreground'}"
+				title="Toggle drag to reorder"
+			>
+				<ArrowUpDown class="h-3.5 w-3.5" />
+			</button>
 			{#if showTagFilter}
 				<div class="absolute right-0 top-full mt-1 z-50 w-48 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg p-2">
 					<TagFilterSection
@@ -151,7 +159,7 @@
 				</div>
 			{/if}
 		</div>
-		<span class="text-xs text-muted">{todosStore.total} item{todosStore.total !== 1 ? 's' : ''}</span>
+		<span class="text-xs text-muted">({todosStore.total})</span>
 	</div>
 
 	<!-- Main content -->
@@ -172,6 +180,7 @@
 			onupdate={handleUpdate}
 			ondelete={handleDelete}
 			onreorder={handleReorder}
+			{reorderMode}
 		/>
 	</div>
 </div>
