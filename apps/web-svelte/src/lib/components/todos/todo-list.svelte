@@ -23,18 +23,27 @@
   let dndItems = $state<Todo[]>([]);
   $effect(() => { dndItems = [...incompleteTodos]; });
 
-  function handleDndConsider(e: CustomEvent<{ items: Todo[] }>) {
+  function handleDndConsider(e: CustomEvent<{ items: Todo[] }> | any) {
     dndItems = e.detail.items;
   }
 
-  function handleDndFinalize(e: CustomEvent<{ items: Todo[] }>) {
+  function handleDndFinalize(e: CustomEvent<{ items: Todo[] }> | any) {
     dndItems = e.detail.items;
     if (onreorder) {
-      onreorder(dndItems.map(t => t.id));
+      onreorder(dndItems.map((t: Todo) => t.id));
     }
   }
 
   const flipDurationMs = 200;
+
+  // dragHandleSelector exists at runtime but is missing from the library's type defs
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dndOptions = $derived({
+    items: dndItems,
+    flipDurationMs,
+    dropTargetStyle: {},
+    dragHandleSelector: '[data-drag-handle]',
+  } as any);
 </script>
 
 {#if !todos?.length}
@@ -46,7 +55,7 @@
   {#if incompleteTodos.length > 0}
     <div
       class="flex flex-col divide-y divide-border"
-      use:dndzone={{ items: dndItems, flipDurationMs, dropTargetStyle: {}, dragHandleSelector: '[data-drag-handle]' }}
+      use:dndzone={dndOptions}
       onconsider={handleDndConsider}
       onfinalize={handleDndFinalize}
     >
