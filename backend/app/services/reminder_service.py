@@ -22,6 +22,7 @@ async def check_and_send_reminders():
             .where(
                 Todo.reminder_at <= now,
                 Todo.reminder_sent == False,
+                Todo.is_completed == False,
                 TelegramSettings.chat_id.isnot(None),
                 TelegramSettings.is_enabled == True,
             )
