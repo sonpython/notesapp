@@ -7,6 +7,10 @@
   import { Editor } from '@tiptap/core';
   import StarterKit from '@tiptap/starter-kit';
   import Image from '@tiptap/extension-image';
+  import { Table } from '@tiptap/extension-table';
+  import { TableRow } from '@tiptap/extension-table-row';
+  import { TableHeader } from '@tiptap/extension-table-header';
+  import { TableCell } from '@tiptap/extension-table-cell';
   import Placeholder from '@tiptap/extension-placeholder';
   import { uploadNoteImage } from '$lib/services/image-upload-service';
 
@@ -63,6 +67,10 @@
       extensions: [
         StarterKit,
         Image.configure({ inline: true, allowBase64: false }),
+        Table.configure({ resizable: false }),
+        TableRow,
+        TableHeader,
+        TableCell,
         Placeholder.configure({ placeholder: 'Start writing...' }),
       ],
       content,
@@ -228,4 +236,8 @@
   .wysiwyg-editor :global(.ProseMirror blockquote) { border-left: 3px solid var(--border); padding-left: 1em; margin: 0.5em 0; color: var(--muted); }
   .wysiwyg-editor :global(.ProseMirror img) { max-width: 100%; height: auto; border-radius: 0.375rem; }
   .wysiwyg-editor :global(.ProseMirror p) { margin: 0.5em 0; }
+  .wysiwyg-editor :global(.ProseMirror table) { width: 100%; border-collapse: collapse; margin: 0.5em 0; }
+  .wysiwyg-editor :global(.ProseMirror th),
+  .wysiwyg-editor :global(.ProseMirror td) { border: 1px solid var(--border); padding: 0.5em 0.75em; text-align: left; }
+  .wysiwyg-editor :global(.ProseMirror th) { background: var(--sidebar); font-weight: 600; }
 </style>

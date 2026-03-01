@@ -39,6 +39,10 @@
     "@tiptap/core": "^3.20.0",
     "@tiptap/extension-image": "^3.20.0",
     "@tiptap/extension-placeholder": "^3.20.0",
+    "@tiptap/extension-table": "^3.20.0",
+    "@tiptap/extension-table-cell": "^3.20.0",
+    "@tiptap/extension-table-header": "^3.20.0",
+    "@tiptap/extension-table-row": "^3.20.0",
     "@tiptap/pm": "^3.20.0",
     "@tiptap/starter-kit": "^3.20.0",
     "@types/turndown": "^5.0.6",
@@ -53,7 +57,8 @@
     "svelte-dnd-action": "^0.9.69",
     "svelte-markdown": "^0.4.0",
     "svelte-tiptap": "^3.0.1",
-    "turndown": "^7.2.2"
+    "turndown": "^7.2.2",
+    "turndown-plugin-gfm": "^1.0.2"
   },
   "type": "module"
 }

@@ -19,6 +19,7 @@
   import { imageDropExtension } from '$lib/extensions/codemirror-image-drop-extension';
   import { marked } from 'marked';
   import TurndownService from 'turndown';
+  import { gfm } from 'turndown-plugin-gfm';
 
   /** Strip HTML tags from text */
   function stripHtml(text: string): string {
@@ -164,6 +165,7 @@
   }
 
   const turndown = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+  turndown.use(gfm);
 
   function handleToggleMode() {
     if (isMarkdownMode) {
