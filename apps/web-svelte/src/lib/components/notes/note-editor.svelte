@@ -26,6 +26,11 @@
     return text?.replace(/<[^>]*>/g, '').trim() || '';
   }
 
+  /** Check if content looks like HTML (vs raw markdown) */
+  function isHtml(text: string): boolean {
+    return /<[a-z][\s\S]*>/i.test(text.trim());
+  }
+
   interface Props {
     note: Note | null;
     onsave: (id: string, data: { title?: string; content?: string; is_pinned?: boolean; is_archived?: boolean }) => void;
@@ -52,10 +57,16 @@
   let contentTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Sync local state when selected note changes
+  // Auto-convert markdown to HTML for WYSIWYG mode
   $effect(() => {
     if (note) {
       title = stripHtml(note.title);
-      content = note.content;
+      const raw = note.content;
+      if (!isMarkdownMode && raw && !isHtml(raw)) {
+        content = marked.parse(raw, { async: false }) as string;
+      } else {
+        content = raw;
+      }
       noteTags = note.tags ?? [];
     }
   });
