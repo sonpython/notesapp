@@ -52,18 +52,18 @@
     <p class="text-sm">No todos yet. Create one above.</p>
   </div>
 {:else}
-  <!-- Incomplete todos - draggable when reorderMode is on -->
+  <!-- Incomplete todos -->
   {#if incompleteTodos.length > 0}
-    <div
-      class="flex flex-col divide-y divide-border"
-      use:dndzone={dndOptions}
-      onconsider={handleDndConsider}
-      onfinalize={handleDndFinalize}
-    >
-      {#each dndItems as todo (todo.id)}
-        <div class="group relative flex items-center" animate:flip={{ duration: flipDurationMs }}>
-          <!-- Drag handle (leftmost, visible only in reorder mode) -->
-          {#if reorderMode}
+    {#if reorderMode}
+      <!-- Draggable mode -->
+      <div
+        class="flex flex-col divide-y divide-border"
+        use:dndzone={dndOptions}
+        onconsider={handleDndConsider}
+        onfinalize={handleDndFinalize}
+      >
+        {#each dndItems as todo (todo.id)}
+          <div class="group relative flex items-center" animate:flip={{ duration: flipDurationMs }}>
             <button
               data-drag-handle
               class="flex h-8 w-6 shrink-0 cursor-grab items-center justify-center text-muted
@@ -72,19 +72,20 @@
             >
               <GripVertical size={14} />
             </button>
-          {/if}
-          <div class="min-w-0 flex-1">
-            <TodoItem
-              {todo}
-              {ontoggle}
-              {onupdate}
-              {ondelete}
-              depth={0}
-            />
+            <div class="min-w-0 flex-1">
+              <TodoItem {todo} {ontoggle} {onupdate} {ondelete} depth={0} />
+            </div>
           </div>
-        </div>
-      {/each}
-    </div>
+        {/each}
+      </div>
+    {:else}
+      <!-- Static mode - no drag and drop -->
+      <div class="flex flex-col divide-y divide-border">
+        {#each incompleteTodos as todo (todo.id)}
+          <TodoItem {todo} {ontoggle} {onupdate} {ondelete} depth={0} />
+        {/each}
+      </div>
+    {/if}
   {/if}
 
   <!-- Completed todos - not draggable -->
