@@ -5,6 +5,7 @@
    * Auto-saves changes after 500 ms debounce.
    * Supports drag-and-drop and paste image uploads.
    */
+  import { onDestroy } from 'svelte';
   import { Pin, Archive, Code, Trash2, ImageIcon, Share2 } from 'lucide-svelte';
   import CodeMirror from 'svelte-codemirror-editor';
   import { markdown } from '@codemirror/lang-markdown';
@@ -56,18 +57,59 @@
   let titleTimer: ReturnType<typeof setTimeout> | null = null;
   let contentTimer: ReturnType<typeof setTimeout> | null = null;
 
-  // Sync local state when selected note changes
-  // Auto-convert markdown to HTML for WYSIWYG mode
+  // Track previous note ID to detect note switches vs autosave updates
+  let prevNoteId: string | null = null;
+  // Track saved values to prevent autosave on initial load
+  let savedTitle = '';
+  let savedContent = '';
+
+  // Auto-generate title from content when leaving a note with empty title
+  function autoGenerateTitleOnLeave(noteId: string, noteContent: string) {
+    const currentTitle = title.trim();
+    if (currentTitle || !noteContent) return;
+    // Extract first line of text content as title (strip HTML, limit length)
+    const text = stripHtml(noteContent).trim();
+    if (!text) return;
+    const firstLine = text.split('\n')[0].slice(0, 100);
+    if (firstLine) {
+      onsave(noteId, { title: firstLine });
+    }
+  }
+
+  // Sync local state ONLY when selected note changes (different note ID)
+  // This prevents cursor jumping during autosave updates
   $effect(() => {
-    if (note) {
+    const currentId = note?.id ?? null;
+    if (note && currentId !== prevNoteId) {
+      // Auto-generate title for the note we're leaving
+      if (prevNoteId) {
+        autoGenerateTitleOnLeave(prevNoteId, content);
+      }
       title = stripHtml(note.title);
+      savedTitle = title;
       const raw = note.content;
       if (!isMarkdownMode && raw && !isHtml(raw)) {
         content = marked.parse(raw, { async: false }) as string;
       } else {
         content = raw;
       }
+      savedContent = content;
       noteTags = note.tags ?? [];
+      prevNoteId = currentId;
+    }
+  });
+
+  // Keep tags in sync (tags don't cause cursor issues)
+  $effect(() => {
+    if (note) {
+      noteTags = note.tags ?? [];
+    }
+  });
+
+  // Auto-generate title when component unmounts (navigate away)
+  onDestroy(() => {
+    if (note && prevNoteId) {
+      autoGenerateTitleOnLeave(prevNoteId, content);
     }
   });
 
@@ -76,24 +118,30 @@
     tagsStore.fetchTags();
   });
 
-  // Auto-save title with debounce
+  // Auto-save title with debounce (compare against last saved value, not note prop)
   $effect(() => {
     const t = title; // track reactive dependency
-    if (!note || t === note.title) return;
+    if (!note || t === savedTitle) return;
     if (titleTimer) clearTimeout(titleTimer);
     titleTimer = setTimeout(() => {
-      if (note) onsave(note.id, { title: t });
+      if (note) {
+        savedTitle = t;
+        onsave(note.id, { title: t });
+      }
     }, 500);
     return () => { if (titleTimer) clearTimeout(titleTimer); };
   });
 
-  // Auto-save content with debounce
+  // Auto-save content with debounce (compare against last saved value, not note prop)
   $effect(() => {
     const c = content; // track reactive dependency
-    if (!note || c === note.content) return;
+    if (!note || c === savedContent) return;
     if (contentTimer) clearTimeout(contentTimer);
     contentTimer = setTimeout(() => {
-      if (note) onsave(note.id, { content: c });
+      if (note) {
+        savedContent = c;
+        onsave(note.id, { content: c });
+      }
     }, 500);
     return () => { if (contentTimer) clearTimeout(contentTimer); };
   });
