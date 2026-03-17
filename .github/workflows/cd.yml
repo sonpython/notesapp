@@ -17,14 +17,11 @@ jobs:
     runs-on: self-hosted
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
-    env:
-      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/notesapp' }}
-
     steps:
       - name: Deploy
         run: |
           set -e
-          cd "$DEPLOY_PATH"
+          cd /opt/notesapp
 
           echo "Pulling latest code..."
           git fetch origin main
