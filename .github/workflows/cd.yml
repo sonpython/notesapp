@@ -14,53 +14,33 @@ concurrency:
 jobs:
   deploy:
     name: Deploy to Production
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
+    env:
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/notesapp' }}
+
     steps:
-      - name: Install cloudflared
-        run: |
-          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
-          chmod +x cloudflared
-          sudo mv cloudflared /usr/local/bin/
-
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-
-          cat >> ~/.ssh/config << EOF
-          Host ${{ secrets.DEPLOY_HOST }}
-            User ${{ secrets.DEPLOY_USER }}
-            ProxyCommand cloudflared access ssh --hostname %h
-            StrictHostKeyChecking no
-          EOF
-
       - name: Deploy
-        env:
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/notesapp' }}
         run: |
-          ssh ${{ secrets.DEPLOY_HOST }} "DEPLOY_PATH=$DEPLOY_PATH bash -s" << 'DEPLOY_SCRIPT'
-            set -e
-            cd "$DEPLOY_PATH"
+          set -e
+          cd "$DEPLOY_PATH"
 
-            echo "📥 Pulling latest code..."
-            git fetch origin main
-            git reset --hard origin/main
+          echo "Pulling latest code..."
+          git fetch origin main
+          git reset --hard origin/main
 
-            echo "🔧 Loading environment..."
-            set -a && source .env.production && set +a
+          echo "Loading environment..."
+          set -a && source .env.production && set +a
 
-            echo "🐳 Rebuilding containers..."
-            docker compose -f docker-compose.production.yml pull
-            docker compose -f docker-compose.production.yml up -d --build --remove-orphans
+          echo "Rebuilding containers..."
+          docker compose -f docker-compose.production.yml pull
+          docker compose -f docker-compose.production.yml up -d --build --remove-orphans
 
-            echo "🗄️ Running migrations..."
-            docker compose -f docker-compose.production.yml exec -T backend uv run alembic upgrade head || true
+          echo "Running migrations..."
+          docker compose -f docker-compose.production.yml exec -T backend uv run alembic upgrade head || true
 
-            echo "🧹 Cleaning up..."
-            docker image prune -f
+          echo "Cleaning up..."
+          docker image prune -f
 
-            echo "✅ Deployment complete!"
-          DEPLOY_SCRIPT
+          echo "Deployment complete!"
