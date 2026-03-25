@@ -1,6 +1,19 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { Lock, Copy, Check } from 'lucide-svelte';
+	import { marked } from 'marked';
+
+	/** Check if content looks like HTML (vs raw markdown) */
+	function isHtml(text: string): boolean {
+		return /<[a-z][\s\S]*>/i.test(text.trim());
+	}
+
+	/** Convert content to HTML - handles both raw markdown and existing HTML */
+	function toHtml(content: string): string {
+		if (!content) return '';
+		if (isHtml(content)) return content;
+		return marked.parse(content, { async: false, gfm: true, breaks: true }) as string;
+	}
 
 	const API_URL = '';
 
@@ -59,6 +72,8 @@
 			const data = await res.json();
 			// Rewrite image URLs to use public endpoint
 			if (pubId) data.content = rewriteImageUrls(data.content, pubId);
+			// Convert markdown to HTML if needed
+			data.content = toHtml(data.content);
 			note = data;
 		} catch {
 			error = 'Failed to load note';
@@ -145,7 +160,7 @@
 					</button>
 				</div>
 			</header>
-			<div class="prose prose-zinc dark:prose-invert max-w-none">
+			<div class="prose prose-zinc dark:prose-invert prose-table:border-collapse prose-th:border prose-th:border-zinc-300 prose-th:bg-zinc-100 prose-th:px-3 prose-th:py-2 prose-td:border prose-td:border-zinc-300 prose-td:px-3 prose-td:py-2 dark:prose-th:border-zinc-600 dark:prose-th:bg-zinc-800 dark:prose-td:border-zinc-600 prose-img:rounded-lg prose-pre:bg-zinc-900 prose-pre:text-zinc-100 prose-code:before:content-none prose-code:after:content-none max-w-none">
 				{@html note.content}
 			</div>
 		</article>
