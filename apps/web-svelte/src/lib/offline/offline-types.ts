@@ -1,6 +1,6 @@
 // IndexedDB offline storage types
 
-export type EntityType = "note" | "todo" | "folder";
+export type EntityType = "note" | "todo" | "folder" | "todo_folder";
 export type SyncOperation = "create" | "update" | "delete";
 
 export interface SyncQueueEntry {

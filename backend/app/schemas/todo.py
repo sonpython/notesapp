@@ -22,6 +22,7 @@ class TodoCreate(BaseModel):
     recurrence_days: str | None = None
     recurrence_end_date: datetime | None = None
     tag_ids: list[UUID] | None = None
+    folder_id: UUID | None = None
 
 
 class TodoUpdate(BaseModel):
@@ -39,6 +40,7 @@ class TodoUpdate(BaseModel):
     recurrence_days: str | None = None
     recurrence_end_date: datetime | None = None
     tag_ids: list[UUID] | None = None
+    folder_id: UUID | None = None
 
 
 class TodoResponse(BaseModel):
@@ -51,6 +53,7 @@ class TodoResponse(BaseModel):
     deadline: datetime | None
     parent_id: UUID | None
     note_id: UUID | None
+    folder_id: UUID | None
     priority: int
     sort_order: int
     reminder_at: datetime | None

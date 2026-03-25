@@ -36,6 +36,7 @@ async def list_todos(
     overdue: bool | None = Query(None, description="Filter overdue todos"),
     note_id: UUID | None = Query(None),
     is_recurring: bool | None = Query(None),
+    folder_id: UUID | None = Query(None, description="Filter by todo folder"),
     tag_ids: str | None = Query(None, description="Comma-separated tag UUIDs"),
     limit: int = Query(50, ge=1, le=100, description="Max items per page"),
     offset: int = Query(0, ge=0, description="Items to skip"),
@@ -61,6 +62,7 @@ async def list_todos(
         note_id=note_id,
         is_recurring=is_recurring,
         tag_ids=parsed_tag_ids,
+        folder_id=folder_id,
     )
 
     # Get total count
@@ -83,6 +85,7 @@ async def list_todos(
 
 @router.get("/counts")
 async def get_todo_counts(
+    folder_id: UUID | None = Query(None, description="Filter counts by folder"),
     user_id: str = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> dict:
@@ -92,18 +95,15 @@ async def get_todo_counts(
         { total: int, active: int, completed: int }
     """
     uid = UUID(user_id)
+    filters = [Todo.user_id == uid, Todo.parent_id.is_(None)]
+    if folder_id is not None:
+        filters.append(Todo.folder_id == folder_id)
 
-    # Total count (top-level only)
-    total_result = await session.execute(
-        select(func.count()).where(Todo.user_id == uid, Todo.parent_id.is_(None))
-    )
+    total_result = await session.execute(select(func.count()).where(*filters))
     total = total_result.scalar_one()
 
-    # Active count (not completed)
     active_result = await session.execute(
-        select(func.count()).where(
-            Todo.user_id == uid, Todo.parent_id.is_(None), Todo.is_completed == False
-        )
+        select(func.count()).where(*filters, Todo.is_completed == False)
     )
     active = active_result.scalar_one()
 
@@ -149,6 +149,7 @@ async def create_todo(
         deadline=body.deadline,
         parent_id=body.parent_id,
         note_id=body.note_id,
+        folder_id=body.folder_id,
         priority=body.priority,
         sort_order=body.sort_order,
         reminder_at=body.reminder_at,

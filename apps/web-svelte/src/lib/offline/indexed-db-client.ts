@@ -3,7 +3,7 @@ import { openDB, type IDBPDatabase } from "idb";
 import type { MetaEntry } from "./offline-types";
 
 const DB_NAME = "notesapp-offline";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -34,6 +34,13 @@ export function getDB(): Promise<IDBPDatabase> {
           foldersStore.createIndex("parent_id", "parent_id");
         }
 
+        // Todo folders store
+        if (!db.objectStoreNames.contains("todo_folders")) {
+          const todoFoldersStore = db.createObjectStore("todo_folders", { keyPath: "id" });
+          todoFoldersStore.createIndex("updated_at", "updated_at");
+          todoFoldersStore.createIndex("parent_id", "parent_id");
+        }
+
         // Sync queue
         if (!db.objectStoreNames.contains("sync-queue")) {
           const queueStore = db.createObjectStore("sync-queue", {
@@ -57,13 +64,14 @@ export function getDB(): Promise<IDBPDatabase> {
 export async function clearAllStores(): Promise<void> {
   const db = await getDB();
   const tx = db.transaction(
-    ["notes", "todos", "folders", "sync-queue", "meta"],
+    ["notes", "todos", "folders", "todo_folders", "sync-queue", "meta"],
     "readwrite"
   );
   await Promise.all([
     tx.objectStore("notes").clear(),
     tx.objectStore("todos").clear(),
     tx.objectStore("folders").clear(),
+    tx.objectStore("todo_folders").clear(),
     tx.objectStore("sync-queue").clear(),
     tx.objectStore("meta").clear(),
     tx.done,

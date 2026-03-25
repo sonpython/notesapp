@@ -9,6 +9,7 @@
 	import { FoldersStore } from '$lib/stores/folders-store.svelte';
 	import { NotesStore } from '$lib/stores/notes-store.svelte';
 	import { TodosStore } from '$lib/stores/todos-store.svelte';
+	import { TodoFoldersStore } from '$lib/stores/todo-folders-store.svelte';
 	import { tagsStore } from '$lib/stores/tags-store.svelte';
 	import ThemeToggleButton from '$lib/components/ui/theme-toggle-button.svelte';
 	import ConnectionStatusIndicator from '$lib/components/ui/connection-status-indicator.svelte';
@@ -25,10 +26,12 @@
 	const foldersStore = new FoldersStore();
 	const notesStore = new NotesStore();
 	const todosStore = new TodosStore();
+	const todoFoldersStore = new TodoFoldersStore();
 
 	// Fetch data on mount
 	$effect(() => {
 		foldersStore.fetchFolders();
+		todoFoldersStore.fetchFolders();
 		tagsStore.fetchTags();
 		todosStore.fetchCounts();
 	});
@@ -73,7 +76,7 @@
 				</button>
 			{/if}
 		</div>
-		<AppSidebarNav {foldersStore} {tagsStore} {notesStore} {todosStore} {onnavigate} />
+		<AppSidebarNav {foldersStore} {tagsStore} {notesStore} {todosStore} {todoFoldersStore} {onnavigate} />
 		<div class="border-t border-border px-4 py-3">
 			<div class="flex items-center justify-between gap-2">
 				<div class="flex items-center gap-2 min-w-0">

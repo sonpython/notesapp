@@ -22,13 +22,18 @@
 	// Derive URL params reactively
 	const tagParam = $derived($page.url.searchParams.get('tags') ?? '');
 	const selectedTagIds = $derived(tagParam ? tagParam.split(',').filter(Boolean) : []);
+	const folderId = $derived($page.url.searchParams.get('folder') ?? undefined);
 	const activeFilter = $derived<TodoFilter>(
 		($page.url.searchParams.get('filter') as TodoFilter) ?? 'all'
 	);
 
 	// Fetch todos when URL params change
 	$effect(() => {
-		todosStore.fetchTodos(activeFilter, selectedTagIds.length ? selectedTagIds : undefined);
+		todosStore.fetchTodos(
+			activeFilter,
+			selectedTagIds.length ? selectedTagIds : undefined,
+			folderId
+		);
 	});
 
 	onMount(() => {
@@ -79,6 +84,7 @@
 			priority: todo.priority,
 			deadline: todo.deadline ?? undefined,
 			parent_id: todo.parent_id ?? undefined,
+			folder_id: folderId,
 			reminder_at: todo.reminder_at ?? undefined,
 			recurrence_type: todo.recurrence_type ?? undefined,
 			recurrence_interval: todo.recurrence_interval ?? undefined,
