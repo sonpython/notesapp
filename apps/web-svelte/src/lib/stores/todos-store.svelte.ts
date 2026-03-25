@@ -16,6 +16,7 @@ interface CreateTodoData {
 	priority?: number;
 	deadline?: string;
 	parent_id?: string;
+	folder_id?: string;
 	reminder_at?: string;
 	recurrence_type?: string;
 	recurrence_interval?: number;
@@ -48,26 +49,29 @@ export class TodosStore {
 	private offset = 0;
 	private limit = 50;
 	private currentTagIds?: string[];
+	private currentFolderId?: string;
 
 	get hasMore() {
 		return this.todos.length < this.total;
 	}
 
 	/** Fetch todo counts for sidebar display */
-	async fetchCounts() {
+	async fetchCounts(folderId?: string) {
 		try {
-			const data = await api.get<{ total: number; active: number; completed: number }>('/api/todos/counts');
+			const params = folderId ? `?folder_id=${folderId}` : '';
+			const data = await api.get<{ total: number; active: number; completed: number }>(`/api/todos/counts${params}`);
 			this.counts = data;
 		} catch {
 			// Silently fail - counts are non-critical
 		}
 	}
 
-	async fetchTodos(activeFilter?: TodoFilter, tagIds?: string[]) {
+	async fetchTodos(activeFilter?: TodoFilter, tagIds?: string[], folderId?: string) {
 		this.loading = true;
 		this.error = null;
 		this.offset = 0;
 		this.currentTagIds = tagIds;
+		this.currentFolderId = folderId;
 
 		try {
 			const filterParam = activeFilter || this.filter;
@@ -83,6 +87,7 @@ export class TodosStore {
 				params.set('overdue', 'true');
 			}
 			// 'all' sends no filter params
+			if (folderId) params.set('folder_id', folderId);
 			if (tagIds && tagIds.length > 0) params.set('tag_ids', tagIds.join(','));
 			params.set('limit', this.limit.toString());
 			params.set('offset', '0');
@@ -127,6 +132,7 @@ export class TodosStore {
 				completed_at: null,
 				parent_id: data.parent_id || null,
 				note_id: null,
+				folder_id: data.folder_id || null,
 				children: [],
 				sort_order: 0,
 				reminder_at: data.reminder_at || null,

@@ -50,6 +50,7 @@ export interface Todo {
   deadline: string | null
   parent_id: string | null
   note_id: string | null
+  folder_id: string | null
   priority: number
   sort_order: number
   reminder_at: string | null
@@ -63,6 +64,24 @@ export interface Todo {
   updated_at: string
   children?: Todo[]
   tags: Tag[]
+}
+
+export interface TodoFolder {
+  id: string
+  user_id: string
+  name: string
+  parent_id: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+  children?: TodoFolder[]
+}
+
+export interface TodoFolderStats {
+  folder_id: string
+  total: number
+  completed: number
+  completion_pct: number
 }
 
 export interface TelegramStatus {

@@ -59,6 +59,13 @@ class Todo(Base):
         index=True,
     )
 
+    folder_id: Mapped[uuid.UUID | None] = mapped_column(
+        sa.Uuid,
+        sa.ForeignKey("todo_folders.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     # 0=none, 1=low, 2=medium, 3=high
     priority: Mapped[int] = mapped_column(
         sa.Integer,
@@ -152,6 +159,11 @@ class Todo(Base):
 
     note: Mapped[Note | None] = relationship(  # noqa: F821
         "Note",
+        back_populates="todos",
+    )
+
+    folder: Mapped[TodoFolder | None] = relationship(  # noqa: F821
+        "TodoFolder",
         back_populates="todos",
     )
 

@@ -109,6 +109,7 @@ def _register_routers() -> None:
         shared_notes,
         tags,
         telegram,
+        todo_folders,
         todos,
     )
 
@@ -119,6 +120,7 @@ def _register_routers() -> None:
     app.include_router(auth_login.router)
     app.include_router(notes.router)
     app.include_router(folders.router)
+    app.include_router(todo_folders.router)
     app.include_router(todos.router)
     app.include_router(tags.router)
     app.include_router(telegram.router)

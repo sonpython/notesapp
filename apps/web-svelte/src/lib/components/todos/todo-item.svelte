@@ -39,6 +39,12 @@
   };
 
   const hasChildren = $derived(todo.children && todo.children.length > 0);
+  const completionPct = $derived(() => {
+    if (!todo.children?.length) return null;
+    const total = todo.children.length;
+    const done = todo.children.filter((c) => c.is_completed).length;
+    return Math.round((done / total) * 100);
+  });
   const isOverdue = $derived(
     !!todo.deadline && !todo.is_completed && isPast(new Date(todo.deadline))
   );
@@ -177,6 +183,9 @@
           {todo.is_completed ? 'text-muted line-through' : 'text-foreground'}"
       >
         {todo.title}
+        {#if completionPct() !== null}
+          <span class="ml-1.5 text-xs text-muted/50 font-normal">{completionPct()}%</span>
+        {/if}
       </span>
     {/if}
 

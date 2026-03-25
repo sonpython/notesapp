@@ -22,6 +22,7 @@ def build_todos_list_query(
     note_id: UUID | None = None,
     is_recurring: bool | None = None,
     tag_ids: list[UUID] | None = None,
+    folder_id: UUID | None = None,
 ) -> Select:
     """Build a SELECT for listing top-level todos with optional filters.
 
@@ -62,6 +63,9 @@ def build_todos_list_query(
             stmt = stmt.where(Todo.recurrence_type.isnot(None))
         else:
             stmt = stmt.where(Todo.recurrence_type.is_(None))
+
+    if folder_id is not None:
+        stmt = stmt.where(Todo.folder_id == folder_id)
 
     if tag_ids:
         # Filter todos that have ANY of the specified tags
