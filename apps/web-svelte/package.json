@@ -36,6 +36,7 @@
     "@codemirror/state": "^6.5.4",
     "@codemirror/view": "^6.39.14",
     "@simplewebauthn/browser": "^13.2.2",
+    "@tailwindcss/typography": "^0.5.19",
     "@tiptap/core": "^3.20.0",
     "@tiptap/extension-image": "^3.20.0",
     "@tiptap/extension-placeholder": "^3.20.0",
