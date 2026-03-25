@@ -217,6 +217,7 @@
     outline: none;
     min-height: 100%;
     padding: 1rem;
+    line-height: 1.7;
   }
   .wysiwyg-editor :global(.ProseMirror p.is-editor-empty:first-child::before) {
     content: attr(data-placeholder);
@@ -225,19 +226,66 @@
     float: left;
     height: 0;
   }
-  .wysiwyg-editor :global(.ProseMirror h1) { font-size: 2em; font-weight: bold; margin: 0.5em 0; }
-  .wysiwyg-editor :global(.ProseMirror h2) { font-size: 1.5em; font-weight: bold; margin: 0.5em 0; }
-  .wysiwyg-editor :global(.ProseMirror h3) { font-size: 1.25em; font-weight: bold; margin: 0.5em 0; }
+  /* Headings */
+  .wysiwyg-editor :global(.ProseMirror h1) { font-size: 2em; font-weight: bold; margin: 0.67em 0; line-height: 1.3; }
+  .wysiwyg-editor :global(.ProseMirror h2) { font-size: 1.5em; font-weight: bold; margin: 0.75em 0; line-height: 1.3; }
+  .wysiwyg-editor :global(.ProseMirror h3) { font-size: 1.25em; font-weight: bold; margin: 0.75em 0; line-height: 1.4; }
+  .wysiwyg-editor :global(.ProseMirror h4) { font-size: 1.1em; font-weight: 600; margin: 0.75em 0; }
+  /* Lists */
   .wysiwyg-editor :global(.ProseMirror ul) { list-style: disc; padding-left: 1.5em; margin: 0.5em 0; }
   .wysiwyg-editor :global(.ProseMirror ol) { list-style: decimal; padding-left: 1.5em; margin: 0.5em 0; }
   .wysiwyg-editor :global(.ProseMirror li) { margin: 0.25em 0; }
-  .wysiwyg-editor :global(.ProseMirror code) { background: var(--sidebar); padding: 0.2em 0.4em; border-radius: 0.25rem; font-family: monospace; }
-  .wysiwyg-editor :global(.ProseMirror pre) { background: var(--sidebar); padding: 1em; border-radius: 0.5rem; overflow-x: auto; margin: 0.5em 0; }
-  .wysiwyg-editor :global(.ProseMirror blockquote) { border-left: 3px solid var(--border); padding-left: 1em; margin: 0.5em 0; color: var(--muted); }
-  .wysiwyg-editor :global(.ProseMirror img) { max-width: 100%; height: auto; border-radius: 0.375rem; }
+  .wysiwyg-editor :global(.ProseMirror li > ul),
+  .wysiwyg-editor :global(.ProseMirror li > ol) { margin: 0.25em 0; }
+  /* Inline code */
+  .wysiwyg-editor :global(.ProseMirror code) {
+    background: var(--sidebar);
+    padding: 0.2em 0.4em;
+    border-radius: 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+  }
+  /* Code blocks */
+  .wysiwyg-editor :global(.ProseMirror pre) {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin: 0.75em 0;
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    line-height: 1.6;
+  }
+  .wysiwyg-editor :global(.ProseMirror pre code) {
+    background: transparent;
+    padding: 0;
+    font-size: inherit;
+    color: inherit;
+  }
+  /* Blockquote */
+  .wysiwyg-editor :global(.ProseMirror blockquote) {
+    border-left: 3px solid var(--accent);
+    padding-left: 1em;
+    margin: 0.75em 0;
+    color: var(--muted);
+    font-style: italic;
+  }
+  /* Images */
+  .wysiwyg-editor :global(.ProseMirror img) { max-width: 100%; height: auto; border-radius: 0.5rem; margin: 0.5em 0; }
+  /* Paragraphs */
   .wysiwyg-editor :global(.ProseMirror p) { margin: 0.5em 0; }
-  .wysiwyg-editor :global(.ProseMirror table) { width: 100%; border-collapse: collapse; margin: 0.5em 0; }
+  /* Horizontal rule */
+  .wysiwyg-editor :global(.ProseMirror hr) { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
+  /* Tables */
+  .wysiwyg-editor :global(.ProseMirror table) { width: 100%; border-collapse: collapse; margin: 0.75em 0; }
   .wysiwyg-editor :global(.ProseMirror th),
   .wysiwyg-editor :global(.ProseMirror td) { border: 1px solid var(--border); padding: 0.5em 0.75em; text-align: left; }
   .wysiwyg-editor :global(.ProseMirror th) { background: var(--sidebar); font-weight: 600; }
+  /* Links */
+  .wysiwyg-editor :global(.ProseMirror a) { color: var(--accent); text-decoration: underline; }
+  /* Strong / emphasis */
+  .wysiwyg-editor :global(.ProseMirror strong) { font-weight: 700; }
+  .wysiwyg-editor :global(.ProseMirror em) { font-style: italic; }
+  .wysiwyg-editor :global(.ProseMirror s) { text-decoration: line-through; }
 </style>
