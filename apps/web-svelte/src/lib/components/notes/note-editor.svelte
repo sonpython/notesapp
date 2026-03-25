@@ -106,6 +106,23 @@
     }
   });
 
+  // Flush pending saves immediately (triggered by Ctrl+S / Cmd+S)
+  function flushSave() {
+    if (!note) return;
+    if (titleTimer) { clearTimeout(titleTimer); titleTimer = null; }
+    if (contentTimer) { clearTimeout(contentTimer); contentTimer = null; }
+    const data: { title?: string; content?: string } = {};
+    if (title !== savedTitle) { savedTitle = title; data.title = title; }
+    if (content !== savedContent) { savedContent = content; data.content = content; }
+    if (Object.keys(data).length > 0) onsave(note.id, data);
+  }
+
+  // Listen for app:save event (Ctrl+S / Cmd+S)
+  $effect(() => {
+    window.addEventListener('app:save', flushSave);
+    return () => window.removeEventListener('app:save', flushSave);
+  });
+
   // Auto-generate title when component unmounts (navigate away)
   onDestroy(() => {
     if (note && prevNoteId) {
