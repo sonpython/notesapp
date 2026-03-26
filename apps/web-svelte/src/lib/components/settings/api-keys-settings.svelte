@@ -30,6 +30,8 @@
   let createdKey = $state<ApiKeyCreated | null>(null);
   let copied = $state(false);
   let showKey = $state(false);
+  let selectedKeyForConfig = $state<string | null>(null);
+  let configCopied = $state(false);
 
   onMount(fetchKeys);
 
@@ -89,6 +91,28 @@
   function formatDate(dateStr: string | null): string {
     if (!dateStr) return 'Never';
     return new Date(dateStr).toLocaleDateString();
+  }
+
+  function getConfigJson(keyValue?: string): string {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com';
+    const token = keyValue || '<your-api-key>';
+    return JSON.stringify({
+      mcpServers: {
+        "notesapp-todos": {
+          url: `${origin}/mcp`,
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      }
+    }, null, 2);
+  }
+
+  async function copyConfig() {
+    const keyVal = selectedKeyForConfig
+      ? (createdKey?.key || keys.find(k => k.id === selectedKeyForConfig)?.key_prefix || '<your-api-key>')
+      : '<your-api-key>';
+    await navigator.clipboard.writeText(getConfigJson(keyVal));
+    configCopied = true;
+    setTimeout(() => (configCopied = false), 2000);
   }
 </script>
 
@@ -191,8 +215,12 @@
   {:else}
     <div class="space-y-2">
       {#each keys as key (key.id)}
-        <div class="flex items-center gap-3 rounded-lg border border-border bg-sidebar px-4 py-3">
-          <Key class="h-4 w-4 shrink-0 text-muted" />
+        <div
+          onclick={() => { selectedKeyForConfig = key.id; }}
+          class="flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors
+            {selectedKeyForConfig === key.id ? 'border-accent bg-accent/5' : 'border-border bg-sidebar hover:border-muted'}"
+        >
+          <Key class="h-4 w-4 shrink-0 {selectedKeyForConfig === key.id ? 'text-accent' : 'text-muted'}" />
           <div class="min-w-0 flex-1">
             <p class="text-sm font-medium text-foreground truncate">{key.name}</p>
             <p class="text-xs text-muted">
@@ -220,18 +248,36 @@
     </div>
   {/if}
 
-  <!-- MCP config hint -->
-  <details class="text-xs text-muted">
-    <summary class="cursor-pointer hover:text-foreground">Claude Desktop configuration</summary>
-    <pre class="mt-2 rounded bg-zinc-800 p-3 text-zinc-300 overflow-x-auto">{`{
-  "mcpServers": {
-    "notesapp-todos": {
-      "url": "https://your-domain.com/mcp",
-      "headers": {
-        "Authorization": "Bearer <your-api-key>"
-      }
-    }
-  }
-}`}</pre>
+  <!-- MCP config -->
+  <details class="text-xs text-muted" open={!!selectedKeyForConfig}>
+    <summary class="cursor-pointer hover:text-foreground">Claude Desktop / Claude Code configuration</summary>
+    <p class="mt-1 mb-2 text-xs text-muted">
+      {#if selectedKeyForConfig}
+        Config for key: <strong class="text-accent">{keys.find(k => k.id === selectedKeyForConfig)?.name}</strong>
+        {#if !createdKey || createdKey.id !== selectedKeyForConfig}
+          <span class="text-amber-500"> (prefix only — use the full key you copied at creation)</span>
+        {/if}
+      {:else}
+        Click a key above to auto-fill the config.
+      {/if}
+    </p>
+    <div class="relative">
+      <pre class="rounded bg-zinc-800 p-3 text-zinc-300 overflow-x-auto pr-10">{getConfigJson(
+        selectedKeyForConfig
+          ? (createdKey?.id === selectedKeyForConfig ? createdKey.key : keys.find(k => k.id === selectedKeyForConfig)?.key_prefix)
+          : undefined
+      )}</pre>
+      <button
+        onclick={copyConfig}
+        class="absolute top-2 right-2 rounded p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
+        title="Copy config"
+      >
+        {#if configCopied}
+          <Check class="h-3.5 w-3.5 text-green-500" />
+        {:else}
+          <Copy class="h-3.5 w-3.5" />
+        {/if}
+      </button>
+    </div>
   </details>
 </div>
