@@ -189,7 +189,12 @@ def _todo_to_dict(t: Todo) -> dict:
         "parent_id": str(t.parent_id) if t.parent_id else None,
         "created_at": t.created_at.isoformat(),
     }
-    if t.children:
-        d["children_count"] = len(t.children)
-        d["children_completed"] = sum(1 for c in t.children if c.is_completed)
+    # Only include children stats if already eagerly loaded (avoid lazy load)
+    from sqlalchemy import inspect as sa_inspect
+
+    if "children" in sa_inspect(t).dict:
+        children = t.children
+        if children:
+            d["children_count"] = len(children)
+            d["children_completed"] = sum(1 for c in children if c.is_completed)
     return d
