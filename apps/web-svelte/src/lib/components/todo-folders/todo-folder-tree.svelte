@@ -9,7 +9,7 @@
     onselectFolder: (id: string | null) => void;
     oncreateFolder: (name: string, parentId?: string) => Promise<TodoFolder>;
     onrenameFolder: (id: string, name: string) => Promise<TodoFolder>;
-    ondeleteFolder: (id: string) => Promise<void>;
+    ondeleteFolder: (id: string, cascade: boolean) => Promise<void>;
   }
 
   let {

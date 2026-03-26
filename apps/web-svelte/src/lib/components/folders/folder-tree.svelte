@@ -11,7 +11,7 @@
     onselectFolder: (id: string | null, name?: string) => void;
     oncreateFolder: (name: string, parentId?: string) => Promise<Folder>;
     onrenameFolder: (id: string, name: string) => Promise<Folder>;
-    ondeleteFolder: (id: string) => Promise<void>;
+    ondeleteFolder: (id: string, cascade: boolean) => Promise<void>;
     onmoveNote?: (noteId: string, folderId: string | null) => Promise<void>;
   }
 

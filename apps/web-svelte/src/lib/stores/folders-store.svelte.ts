@@ -137,9 +137,9 @@ export class FoldersStore {
 		}
 	}
 
-	async deleteFolder(id: string): Promise<void> {
+	async deleteFolder(id: string, cascade: boolean = false): Promise<void> {
 		try {
-			await api.delete(`/api/folders/${id}`);
+			await api.delete(`/api/folders/${id}${cascade ? '?cascade=true' : ''}`);
 			this.folders = this.folders.filter((f) => f.id !== id);
 			await foldersDB.deleteFolderLocal(id).catch(console.error);
 		} catch (err) {

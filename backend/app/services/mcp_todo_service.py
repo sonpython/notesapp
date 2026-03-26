@@ -47,10 +47,20 @@ async def update_folder(
     return _folder_to_dict(folder)
 
 
-async def delete_folder(session: AsyncSession, user_id: str, folder_id: str) -> bool:
+async def delete_folder(
+    session: AsyncSession, user_id: str, folder_id: str, cascade: bool = False
+) -> bool:
     folder = await session.get(TodoFolder, UUID(folder_id))
     if not folder or str(folder.user_id) != user_id:
         raise ValueError(f"Folder {folder_id} not found")
+    if cascade:
+        from sqlalchemy import delete as sa_delete
+
+        from app.models.todo import Todo
+
+        await session.execute(
+            sa_delete(Todo).where(Todo.folder_id == UUID(folder_id), Todo.user_id == user_id)
+        )
     await session.delete(folder)
     await session.commit()
     return True

@@ -12,7 +12,7 @@
     noteCounts?: NoteCounts | null;
     onselect: (id: string, name?: string) => void;
     onrename: (id: string, name: string) => Promise<Folder>;
-    ondelete: (id: string) => Promise<void>;
+    ondelete: (id: string, cascade: boolean) => Promise<void>;
     oncreate: (name: string, parentId: string) => Promise<Folder>;
     onmoveNote?: (noteId: string, folderId: string | null) => Promise<void>;
   }
@@ -90,10 +90,17 @@
     else if (e.key === 'Escape') { createName = ''; isCreating = false; }
   }
 
+  let showDeleteDialog = $state(false);
+  let cascadeDelete = $state(false);
+
   async function handleDelete() {
-    if (window.confirm(`Delete "${folder.name}" and all its subfolders and notes?`)) {
-      await ondelete(folder.id);
-    }
+    showDeleteDialog = true;
+    cascadeDelete = false;
+  }
+
+  async function confirmDelete() {
+    showDeleteDialog = false;
+    await ondelete(folder.id, cascadeDelete);
   }
 
   function handleDragOver(e: DragEvent) {
@@ -208,6 +215,23 @@
           onmoveNote={onmoveNote}
         />
       {/each}
+    </div>
+  {/if}
+
+  <!-- Delete confirmation dialog -->
+  {#if showDeleteDialog}
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onclick={() => (showDeleteDialog = false)} role="dialog">
+      <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-5 w-80 shadow-xl" onclick={(e) => e.stopPropagation()} role="document">
+        <h3 class="text-sm font-semibold text-white mb-3">Delete "{folder.name}"?</h3>
+        <label class="flex items-center gap-2 text-sm text-zinc-300 mb-4 cursor-pointer">
+          <input type="checkbox" bind:checked={cascadeDelete} class="rounded border-zinc-600 bg-zinc-800 text-red-500 focus:ring-red-500" />
+          Also delete all notes in this folder
+        </label>
+        <div class="flex justify-end gap-2">
+          <button type="button" onclick={() => (showDeleteDialog = false)} class="px-3 py-1.5 text-sm text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800">Cancel</button>
+          <button type="button" onclick={confirmDelete} class="px-3 py-1.5 text-sm text-white bg-red-600 hover:bg-red-500 rounded-lg">Delete</button>
+        </div>
+      </div>
     </div>
   {/if}
 
