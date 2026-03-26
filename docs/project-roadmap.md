@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase**: Core + Enhancements + Advanced (3/4 started, Phase 4: 60% complete)
-**Last Updated**: 2026-02-15
-**Overall Progress**: ~85%
+**Phase**: Core + Enhancements + Advanced (3/4 started, Phase 4: 75% complete)
+**Last Updated**: 2026-03-26
+**Overall Progress**: ~88%
 
 ## Phase 1: Core Features (100% Complete)
 
@@ -153,7 +153,7 @@
 - [ ] XSS prevention check
 - **Status**: Not started
 
-## Phase 4: Advanced Features (65% Complete)
+## Phase 4: Advanced Features (75% Complete)
 
 ### User Experience
 - [x] Full-text search on notes (PostgreSQL tsvector)
@@ -165,11 +165,15 @@
 
 ### Features
 - [x] Image upload in notes (AZD-63) - MinIO backend, drag/drop, 10MB limit
-- [ ] Todo time tracking
+- [x] Todo folders with nesting (NEW) - separate from note folders, completion %
+- [x] Sidebar accordion UI (NEW) - Notes/Todos sections, one expanded at a time
+- [x] Completion percentage badges (NEW) - for parent todos with children
+- [x] MCP Server for AI agents (NEW) - 10 tools for Claude Desktop
 - [x] Todo recurring (daily, weekly, monthly) (AZD-18)
 - [x] Note export (Markdown, PDF, ZIP) (AZD-17)
-- [ ] Data backup & restore
 - [x] Tags/labels system for notes & todos (AZD-19)
+- [ ] Todo time tracking
+- [ ] Data backup & restore
 - [ ] Analytics dashboard
 
 ### Performance & Quality

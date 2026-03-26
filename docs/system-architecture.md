@@ -2,7 +2,7 @@
 
 ## High-Level Overview
 
-NotesApp is a three-tier full-stack application with multi-frontend support:
+NotesApp is a three-tier full-stack application with multi-frontend support, including an MCP (Model Context Protocol) server for AI agent integration:
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
@@ -30,7 +30,7 @@ NotesApp is a three-tier full-stack application with multi-frontend support:
 │                   DATA TIER                                 │
 │  PostgreSQL 16 (Local/Managed)                              │
 │  Tables: notes, todos, folders, tags, note_tags, todo_tags │
-│          telegram_settings                                   │
+│          telegram_settings, todo_folders                      │
 │  Indexes: user_id, created_at, tag searches, reminders      │
 │                                                              │
 │  MinIO (S3-compatible object storage)                       │
@@ -129,11 +129,18 @@ FastAPI App (main.py)
    │  ├─ DELETE /{id}/
    │  └─ GET / (list user's images)
    ├─ /folders → folders.py
-   │  ├─ CRUD endpoints
+   │  ├─ CRUD endpoints (note folders)
    │  └─ Nested folder support
+   ├─ /todo-folders → todo_folders.py (NEW)
+   │  ├─ GET / (list folders, paginated)
+   │  ├─ POST / (create folder)
+   │  ├─ PUT /{id} (update folder)
+   │  ├─ DELETE /{id} (delete folder)
+   │  └─ GET /{id}/stats (completion stats)
    ├─ /todos → todos.py
-   │  ├─ CRUD endpoints
-   │  └─ toggle_todo (completion)
+   │  ├─ CRUD endpoints (with folder_id support)
+   │  ├─ toggle_todo (completion)
+   │  └─ Filter by folder
    └─ /telegram → telegram.py
       ├─ link/unlink endpoints
       ├─ status endpoint
@@ -239,11 +246,102 @@ Background Tasks:
 ├─ recurrence_days    │           │
 ├─ recurrence_end_date│           │
 ├─ recurrence_parent_id (FK) ─────┘
+├─ folder_id (FK, nullable)  ────┐
 ├─ reminder_at                    │
 ├─ reminder_sent                  │
 ├─ created_at                     │
 └─ updated_at                     │
+        │
+        ▼
+┌──────────────────────────────┐
+│     todo_folders             │  (NEW)
+├─ id (UUID, PK)               │
+├─ user_id (FK)                │
+├─ name                         │
+├─ parent_id (FK) ────────┐     │
+├─ sort_order              │     │
+├─ created_at              │     │
+└─ updated_at              │     │
+    (Self-reference) ──────┘
 ```
+
+## MCP Server (AI Integration)
+
+NotesApp includes a **FastMCP server** for Claude Desktop and AI agents to manage todos and folders programmatically.
+
+### Architecture
+
+```
+Claude Desktop / AI Agent
+        │
+        ▼
+┌───────────────────────┐
+│   MCP Server (stdio)  │  (backend/mcp_server.py, 161 LOC)
+│   - 10 tools         │
+│   - Async support    │
+└───────────┬───────────┘
+            │
+            ▼
+┌───────────────────────────────┐
+│  MCP Services (mcp_todo_service) │
+│  - list_todo_folders()         │
+│  - create_todo_folder()        │
+│  - update_todo_folder()        │
+│  - delete_todo_folder()        │
+│  - list_todos()                │
+│  - create_todo()               │
+│  - update_todo()               │
+│  - delete_todo()               │
+│  - toggle_todo()               │
+│  - get_folder_stats()          │
+└───────────┬───────────────────┘
+            │
+            ▼
+    [Database Access]
+    Same SQLAlchemy models + PostgreSQL
+```
+
+### Environment Variables
+
+```env
+NOTESAPP_USER_ID=<uuid>                    # User for MCP context
+DATABASE_URL=postgresql+asyncpg://...      # PostgreSQL connection
+```
+
+### Claude Desktop Configuration
+
+```json
+{
+  "mcpServers": {
+    "notesapp-todos": {
+      "command": "uv",
+      "args": ["run", "python", "mcp_server.py"],
+      "cwd": "/path/to/backend",
+      "env": {
+        "NOTESAPP_USER_ID": "<user-uuid>",
+        "DATABASE_URL": "postgresql+asyncpg://..."
+      }
+    }
+  }
+}
+```
+
+### Supported Tools (10 total)
+
+| Tool | Purpose | MCP Type |
+|------|---------|----------|
+| `list_todo_folders()` | Get all user todo folders | `call` |
+| `create_todo_folder(name, parent_id?)` | Create new folder | `call` |
+| `update_todo_folder(id, name, parent_id?)` | Update folder | `call` |
+| `delete_todo_folder(id)` | Delete folder | `call` |
+| `list_todos(folder_id?, is_completed?, limit)` | List todos with filters | `call` |
+| `create_todo(title, folder_id?, priority, description?, deadline?, parent_id?)` | Create todo | `call` |
+| `update_todo(id, title?, description?, priority?, folder_id?)` | Update todo | `call` |
+| `delete_todo(id)` | Delete todo | `call` |
+| `toggle_todo(id)` | Toggle completion | `call` |
+| `get_folder_stats(folder_id)` | Get completion % | `call` |
+
+---
 
 ## API Contract
 
@@ -397,6 +495,26 @@ CREATE TABLE telegram_settings (
 
   INDEX idx_telegram_settings_user_id (user_id)
 );
+```
+
+### todo_folders table (NEW)
+```sql
+CREATE TABLE todo_folders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  name VARCHAR NOT NULL,
+  parent_id UUID REFERENCES todo_folders(id) ON DELETE CASCADE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+  INDEX idx_todo_folders_user_id (user_id),
+  INDEX idx_todo_folders_parent_id (parent_id)
+);
+
+-- Todos table includes:
+ALTER TABLE todos ADD COLUMN folder_id UUID REFERENCES todo_folders(id) ON DELETE SET NULL;
+CREATE INDEX idx_todos_folder_id ON todos(folder_id);
 ```
 
 ## Authentication Architecture
