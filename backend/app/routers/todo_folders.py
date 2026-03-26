@@ -6,6 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, func, select
+from sqlalchemy import delete as sa_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -92,15 +93,21 @@ async def update_todo_folder(
 @router.delete("/{folder_id}", status_code=204)
 async def delete_todo_folder(
     folder_id: UUID,
+    cascade: bool = Query(False, description="Also delete all todos in this folder"),
     user_id: str = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> None:
-    """Delete a todo folder (cascades to children, SET NULL on todos)."""
+    """Delete a todo folder. With cascade=true, also deletes all todos in the folder."""
     folder = await session.get(TodoFolder, folder_id)
     if folder is None:
         raise HTTPException(status_code=404, detail="Todo folder not found")
     if str(folder.user_id) != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
+
+    if cascade:
+        await session.execute(
+            sa_delete(Todo).where(Todo.folder_id == folder_id, Todo.user_id == user_id)
+        )
 
     await session.delete(folder)
     await session.commit()

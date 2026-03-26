@@ -145,9 +145,9 @@ export class TodoFoldersStore {
 		}
 	}
 
-	async deleteFolder(id: string): Promise<void> {
+	async deleteFolder(id: string, cascade: boolean = false): Promise<void> {
 		try {
-			await api.delete(`/api/todo-folders/${id}`);
+			await api.delete(`/api/todo-folders/${id}${cascade ? '?cascade=true' : ''}`);
 			this.folders = this.folders.filter((f) => f.id !== id);
 			await todoFoldersDB.deleteTodoFolderLocal(id).catch(console.error);
 		} catch (err) {

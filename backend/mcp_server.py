@@ -124,11 +124,11 @@ async def update_todo_folder(
 
 
 @mcp.tool()
-async def delete_todo_folder(folder_id: str) -> bool:
-    """Delete a todo folder. Todos in this folder will have their folder_id set to null."""
+async def delete_todo_folder(folder_id: str, cascade: bool = False) -> bool:
+    """Delete a todo folder. With cascade=true, also deletes all todos in the folder."""
     uid = await _get_user_id()
     async with async_session_factory() as session:
-        return await svc.delete_folder(session, uid, folder_id)
+        return await svc.delete_folder(session, uid, folder_id, cascade=cascade)
 
 
 # -- Todo tools --

@@ -70,8 +70,8 @@
 	async function renameNoteFolder(id: string, name: string) {
 		return await foldersStore.updateFolder(id, { name });
 	}
-	async function deleteNoteFolder(id: string) {
-		await foldersStore.deleteFolder(id);
+	async function deleteNoteFolder(id: string, cascade: boolean) {
+		await foldersStore.deleteFolder(id, cascade);
 		if (selectedNoteFolderId === id) goto('/notes');
 	}
 	async function moveNote(noteId: string, folderId: string | null) {
@@ -91,8 +91,8 @@
 	async function renameTodoFolder(id: string, name: string) {
 		return await todoFoldersStore.updateFolder(id, { name });
 	}
-	async function deleteTodoFolder(id: string) {
-		await todoFoldersStore.deleteFolder(id);
+	async function deleteTodoFolder(id: string, cascade: boolean) {
+		await todoFoldersStore.deleteFolder(id, cascade);
 		if (selectedTodoFolderId === id) goto('/todos?filter=active');
 	}
 
