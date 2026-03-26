@@ -30,10 +30,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         logger.warning(f"MinIO initialization failed (may be unavailable): {e}")
 
-    # Start MCP server lifespan (required for StreamableHTTP task group)
+    # Start MCP server lifespan (required for SSE transport)
     mcp_app = app.state.mcp_app
     async with mcp_app.router.lifespan_context(mcp_app):
-        logger.info("Application startup complete (MCP ready)")
+        logger.info("Application startup complete (MCP SSE ready)")
         yield
 
     stop_scheduler()

@@ -65,15 +65,20 @@ _stdio_user_id: str | None = None
 
 
 async def _get_user_id() -> str:
-    """Get user_id — from HTTP Authorization header or env var (stdio mode)."""
-    # HTTP mode: extract API key from Authorization header
+    """Get user_id — from HTTP query param, Authorization header, or env var (stdio)."""
+    # HTTP mode: extract API key from query param or Authorization header
     try:
         from fastmcp.server.dependencies import get_http_request
 
         request = get_http_request()
-        auth_header = request.headers.get("authorization", "")
-        if auth_header.startswith("Bearer "):
-            api_key = auth_header[7:]
+        # Check query param first (SSE transport: ?api_key=xxx)
+        api_key = request.query_params.get("api_key", "")
+        if not api_key:
+            # Fallback to Authorization header
+            auth_header = request.headers.get("authorization", "")
+            if auth_header.startswith("Bearer "):
+                api_key = auth_header[7:]
+        if api_key:
             return await resolve_user_id_from_key(api_key)
     except Exception:
         pass  # Not in HTTP context, fall through to stdio mode
@@ -210,8 +215,8 @@ async def get_folder_stats(folder_id: str) -> dict:
 
 
 def get_mcp_http_app():
-    """Create the MCP HTTP ASGI app for mounting in FastAPI."""
-    return mcp.http_app(path="/", transport="streamable-http", stateless_http=True)
+    """Create the MCP HTTP ASGI app for mounting in FastAPI (SSE transport)."""
+    return mcp.http_app(path="/", transport="sse")
 
 
 if __name__ == "__main__":
