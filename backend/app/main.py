@@ -131,3 +131,12 @@ def _register_routers() -> None:
 
 
 _register_routers()
+
+# --- MCP Server (Streamable HTTP at /mcp) ---
+from app.middleware.mcp_auth_middleware import McpAuthMiddleware  # noqa: E402
+
+app.add_middleware(McpAuthMiddleware)
+
+from mcp_server import get_mcp_http_app  # noqa: E402
+
+app.mount("/mcp", get_mcp_http_app())

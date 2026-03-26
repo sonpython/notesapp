@@ -1,18 +1,16 @@
 """MCP server for NotesApp Todos — exposes todo/folder CRUD as MCP tools.
 
-Authentication: API key via NOTESAPP_API_KEY env var.
-Generate keys in NotesApp Settings > API Keys.
+Supports two transport modes:
+1. HTTP (production): Mounted at /mcp in the FastAPI app, auth via API key header
+2. Stdio (local dev): Run directly as subprocess with NOTESAPP_API_KEY env var
 
-Claude Desktop config:
+Claude Desktop config (remote via HTTP):
   {
     "mcpServers": {
       "notesapp-todos": {
-        "command": "uv",
-        "args": ["run", "python", "mcp_server.py"],
-        "cwd": "/path/to/backend",
-        "env": {
-          "NOTESAPP_API_KEY": "na_xxxxxxxx...",
-          "DATABASE_URL": "postgresql+asyncpg://..."
+        "url": "https://your-domain.com/mcp",
+        "headers": {
+          "Authorization": "Bearer na_xxxxxxxx..."
         }
       }
     }
@@ -35,45 +33,52 @@ from app.services import mcp_todo_service as svc  # noqa: E402
 
 mcp = FastMCP("NotesApp Todos")
 
-NOTESAPP_API_KEY = os.environ.get("NOTESAPP_API_KEY", "")
 
-# Cache resolved user_id to avoid DB lookup on every tool call
-_cached_user_id: str | None = None
-
-
-async def _resolve_user_id() -> str:
+async def resolve_user_id_from_key(api_key: str) -> str:
     """Validate API key and return the associated user_id."""
-    global _cached_user_id
-    if _cached_user_id:
-        return _cached_user_id
+    if not api_key:
+        raise ValueError("API key is required.")
 
-    if not NOTESAPP_API_KEY:
-        raise ValueError(
-            "NOTESAPP_API_KEY env var is required. Generate one in NotesApp Settings > API Keys."
-        )
-
-    key_hash = hashlib.sha256(NOTESAPP_API_KEY.encode()).hexdigest()
+    key_hash = hashlib.sha256(api_key.encode()).hexdigest()
 
     from sqlalchemy import select
 
     async with async_session_factory() as session:
         stmt = select(ApiKey).where(ApiKey.key_hash == key_hash)
         result = await session.execute(stmt)
-        api_key = result.scalar_one_or_none()
+        api_key_row = result.scalar_one_or_none()
 
-        if api_key is None:
-            raise ValueError("Invalid API key. Check NOTESAPP_API_KEY value.")
+        if api_key_row is None:
+            raise ValueError("Invalid API key.")
 
-        # Check expiry
-        if api_key.expires_at and api_key.expires_at < datetime.now(UTC):
-            raise ValueError("API key has expired. Generate a new one in Settings.")
+        if api_key_row.expires_at and api_key_row.expires_at < datetime.now(UTC):
+            raise ValueError("API key has expired.")
 
-        # Update last_used_at
-        api_key.last_used_at = datetime.now(UTC)
+        api_key_row.last_used_at = datetime.now(UTC)
         await session.commit()
 
-        _cached_user_id = str(api_key.user_id)
-        return _cached_user_id
+        return str(api_key_row.user_id)
+
+
+# Stdio mode: resolve user_id from env var once
+_stdio_user_id: str | None = None
+
+
+async def _get_user_id() -> str:
+    """Get user_id — from env var API key (stdio mode)."""
+    global _stdio_user_id
+    if _stdio_user_id:
+        return _stdio_user_id
+
+    env_key = os.environ.get("NOTESAPP_API_KEY", "")
+    if env_key:
+        _stdio_user_id = await resolve_user_id_from_key(env_key)
+        return _stdio_user_id
+
+    raise ValueError(
+        "No authentication. Set NOTESAPP_API_KEY env var "
+        "or connect via HTTP with Authorization header."
+    )
 
 
 # -- Folder tools --
@@ -82,7 +87,7 @@ async def _resolve_user_id() -> str:
 @mcp.tool()
 async def list_todo_folders() -> list[dict]:
     """List all todo folders for the current user."""
-    uid = await _resolve_user_id()
+    uid = await _get_user_id()
     async with async_session_factory() as session:
         return await svc.list_folders(session, uid)
 
@@ -90,7 +95,7 @@ async def list_todo_folders() -> list[dict]:
 @mcp.tool()
 async def create_todo_folder(name: str, parent_id: str | None = None) -> dict:
     """Create a new todo folder. Use parent_id to nest under another folder."""
-    uid = await _resolve_user_id()
+    uid = await _get_user_id()
     async with async_session_factory() as session:
         return await svc.create_folder(session, uid, name, parent_id)
 
@@ -100,7 +105,7 @@ async def update_todo_folder(
     folder_id: str, name: str | None = None, parent_id: str | None = None
 ) -> dict:
     """Update a todo folder's name or parent."""
-    uid = await _resolve_user_id()
+    uid = await _get_user_id()
     async with async_session_factory() as session:
         return await svc.update_folder(session, uid, folder_id, name=name, parent_id=parent_id)
 
@@ -108,7 +113,7 @@ async def update_todo_folder(
 @mcp.tool()
 async def delete_todo_folder(folder_id: str) -> bool:
     """Delete a todo folder. Todos in this folder will have their folder_id set to null."""
-    uid = await _resolve_user_id()
+    uid = await _get_user_id()
     async with async_session_factory() as session:
         return await svc.delete_folder(session, uid, folder_id)
 
@@ -123,7 +128,7 @@ async def list_todos(
     limit: int = 50,
 ) -> list[dict]:
     """List todos. Optionally filter by folder_id and completion status."""
-    uid = await _resolve_user_id()
+    uid = await _get_user_id()
     async with async_session_factory() as session:
         return await svc.list_todos(session, uid, folder_id, is_completed, limit)
 
@@ -138,7 +143,7 @@ async def create_todo(
     parent_id: str | None = None,
 ) -> dict:
     """Create a new todo. Priority: 0=none, 1=low, 2=medium, 3=high. Deadline: ISO 8601."""
-    uid = await _resolve_user_id()
+    uid = await _get_user_id()
     async with async_session_factory() as session:
         return await svc.create_todo(
             session, uid, title, folder_id, priority, description, deadline, parent_id
@@ -154,7 +159,7 @@ async def update_todo(
     folder_id: str | None = None,
 ) -> dict:
     """Update a todo's fields. Only provided fields are changed."""
-    uid = await _resolve_user_id()
+    uid = await _get_user_id()
     async with async_session_factory() as session:
         return await svc.update_todo(
             session,
@@ -170,7 +175,7 @@ async def update_todo(
 @mcp.tool()
 async def delete_todo(todo_id: str) -> bool:
     """Delete a todo and all its subtasks."""
-    uid = await _resolve_user_id()
+    uid = await _get_user_id()
     async with async_session_factory() as session:
         return await svc.delete_todo(session, uid, todo_id)
 
@@ -178,7 +183,7 @@ async def delete_todo(todo_id: str) -> bool:
 @mcp.tool()
 async def toggle_todo(todo_id: str) -> dict:
     """Toggle a todo's completion status."""
-    uid = await _resolve_user_id()
+    uid = await _get_user_id()
     async with async_session_factory() as session:
         return await svc.toggle_todo(session, uid, todo_id)
 
@@ -186,9 +191,14 @@ async def toggle_todo(todo_id: str) -> dict:
 @mcp.tool()
 async def get_folder_stats(folder_id: str) -> dict:
     """Get completion statistics for a todo folder."""
-    uid = await _resolve_user_id()
+    uid = await _get_user_id()
     async with async_session_factory() as session:
         return await svc.get_folder_stats(session, uid, folder_id)
+
+
+def get_mcp_http_app():
+    """Create the MCP HTTP ASGI app for mounting in FastAPI."""
+    return mcp.http_app(path="/", transport="streamable-http", stateless_http=True)
 
 
 if __name__ == "__main__":
