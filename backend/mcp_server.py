@@ -65,7 +65,20 @@ _stdio_user_id: str | None = None
 
 
 async def _get_user_id() -> str:
-    """Get user_id — from env var API key (stdio mode)."""
+    """Get user_id — from HTTP Authorization header or env var (stdio mode)."""
+    # HTTP mode: extract API key from Authorization header
+    try:
+        from fastmcp.server.dependencies import get_http_request
+
+        request = get_http_request()
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            api_key = auth_header[7:]
+            return await resolve_user_id_from_key(api_key)
+    except Exception:
+        pass  # Not in HTTP context, fall through to stdio mode
+
+    # Stdio mode: resolve from env var
     global _stdio_user_id
     if _stdio_user_id:
         return _stdio_user_id
