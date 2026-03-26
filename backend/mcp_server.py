@@ -65,21 +65,16 @@ _stdio_user_id: str | None = None
 
 
 async def _get_user_id() -> str:
-    """Get user_id — from HTTP query param, Authorization header, or env var (stdio)."""
-    # HTTP mode: extract API key from query param or Authorization header
+    """Get user_id — from middleware request state, HTTP header, or env var (stdio)."""
+    # HTTP mode: read user_id already resolved by McpAuthMiddleware
     try:
         from fastmcp.server.dependencies import get_http_request
 
         request = get_http_request()
-        # Check query param first (SSE transport: ?api_key=xxx)
-        api_key = request.query_params.get("api_key", "")
-        if not api_key:
-            # Fallback to Authorization header
-            auth_header = request.headers.get("authorization", "")
-            if auth_header.startswith("Bearer "):
-                api_key = auth_header[7:]
-        if api_key:
-            return await resolve_user_id_from_key(api_key)
+        # Middleware already validated API key and stored user_id
+        uid = getattr(request.state, "mcp_user_id", None)
+        if uid:
+            return uid
     except Exception:
         pass  # Not in HTTP context, fall through to stdio mode
 
