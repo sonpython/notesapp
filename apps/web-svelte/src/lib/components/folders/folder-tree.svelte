@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FolderIcon, Plus, FileText } from 'lucide-svelte';
+  import { FolderIcon, Plus } from 'lucide-svelte';
   import type { Folder } from '$lib/types';
   import type { NoteCounts } from '$lib/stores/notes-store.svelte';
   import FolderTreeItem from './folder-tree-item.svelte';
@@ -55,22 +55,6 @@
 </script>
 
 <div class="space-y-0.5">
-  <!-- "All Notes" item -->
-  <button
-    type="button"
-    onclick={() => onselectFolder(null)}
-    class="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-left
-      {selectedFolderId === null
-        ? 'bg-zinc-700/60 text-white'
-        : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}"
-  >
-    <FileText class="h-4 w-4 shrink-0" />
-    <span class="flex-1">All Notes</span>
-    {#if noteCounts?.total}
-      <span class="text-xs text-zinc-500">{noteCounts.total}</span>
-    {/if}
-  </button>
-
   <!-- Folders header with New Folder button -->
   <div class="flex items-center justify-between px-3 pt-2 pb-1">
     <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Folders</span>

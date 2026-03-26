@@ -179,7 +179,6 @@
 			<TodoFolderTree
 				folders={todoFoldersStore.folderTree}
 				selectedFolderId={pathname.startsWith('/todos') ? selectedTodoFolderId : null}
-				todoCounts={todosStore.counts}
 				onselectFolder={selectTodoFolder}
 				oncreateFolder={createTodoFolder}
 				onrenameFolder={renameTodoFolder}
