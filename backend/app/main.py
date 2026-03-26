@@ -31,10 +31,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.warning(f"MinIO initialization failed (may be unavailable): {e}")
 
     # Start MCP server lifespan (required for StreamableHTTP task group)
-    from mcp_server import get_mcp_http_app  # noqa: E402
-
-    mcp_app = get_mcp_http_app()
-    app.state.mcp_app = mcp_app
+    mcp_app = app.state.mcp_app
     async with mcp_app.router.lifespan_context(mcp_app):
         logger.info("Application startup complete (MCP ready)")
         yield
@@ -147,5 +144,7 @@ app.add_middleware(McpAuthMiddleware)
 
 from mcp_server import get_mcp_http_app  # noqa: E402
 
-# Mount MCP app (lifespan managed in main app lifespan above)
-app.mount("/api/mcp", get_mcp_http_app())
+# Create MCP app once and store for lifespan + mount
+_mcp_http_app = get_mcp_http_app()
+app.state.mcp_app = _mcp_http_app
+app.mount("/api/mcp", _mcp_http_app)
