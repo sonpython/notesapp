@@ -1,56 +1,96 @@
-"""Middleware to authenticate MCP HTTP requests via API key in Authorization header."""
+"""Pure ASGI middleware to authenticate MCP requests via API key.
+
+Uses raw ASGI instead of BaseHTTPMiddleware to avoid breaking
+SQLAlchemy's greenlet async context in downstream handlers.
+"""
 
 from __future__ import annotations
 
 import hashlib
+import json
 from datetime import UTC, datetime
 
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.database import async_session_factory
 from app.models.api_key import ApiKey
 
 
-class McpAuthMiddleware(BaseHTTPMiddleware):
-    """Validates Bearer API key for /mcp/* routes, injects user_id into request state."""
+class McpAuthMiddleware:
+    """Validates API key for /mcp/* routes, injects user_id into ASGI state."""
 
-    async def dispatch(self, request: Request, call_next):
-        # Only apply to /mcp routes
-        if not request.url.path.startswith("/api/mcp"):
-            return await call_next(request)
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
 
-        # Support API key via query param (?api_key=xxx) or Authorization header
-        api_key = request.query_params.get("api_key", "")
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not scope["path"].startswith("/api/mcp"):
+            await self.app(scope, receive, send)
+            return
+
+        # Extract API key from query string or Authorization header
+        api_key = self._get_api_key(scope)
         if not api_key:
-            auth_header = request.headers.get("authorization", "")
-            if not auth_header.startswith("Bearer "):
-                return JSONResponse(
-                    {"error": "Missing auth. Use query param ?api_key=xxx or header Bearer <key>"},
-                    status_code=401,
-                )
-            api_key = auth_header[7:]  # Strip "Bearer "
-        key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+            await self._send_json_error(
+                send, "Missing auth. Use ?api_key=xxx or Bearer header", 401
+            )
+            return
 
+        user_id = await self._resolve_user_id(api_key)
+        if not user_id:
+            await self._send_json_error(send, "Invalid or expired API key.", 401)
+            return
+
+        # Inject user_id into ASGI scope state for downstream access
+        scope.setdefault("state", {})["mcp_user_id"] = user_id
+
+        await self.app(scope, receive, send)
+
+    @staticmethod
+    def _get_api_key(scope: Scope) -> str | None:
+        # Check query params
+        qs = scope.get("query_string", b"").decode()
+        for param in qs.split("&"):
+            if param.startswith("api_key="):
+                return param[8:]
+
+        # Check Authorization header
+        for name, value in scope.get("headers", []):
+            if name == b"authorization":
+                decoded = value.decode()
+                if decoded.startswith("Bearer "):
+                    return decoded[7:]
+        return None
+
+    @staticmethod
+    async def _resolve_user_id(api_key: str) -> str | None:
+        key_hash = hashlib.sha256(api_key.encode()).hexdigest()
         from sqlalchemy import select
 
         async with async_session_factory() as session:
             stmt = select(ApiKey).where(ApiKey.key_hash == key_hash)
             result = await session.execute(stmt)
-            api_key_row = result.scalar_one_or_none()
+            row = result.scalar_one_or_none()
 
-            if api_key_row is None:
-                return JSONResponse({"error": "Invalid API key."}, status_code=401)
+            if row is None:
+                return None
+            if row.expires_at and row.expires_at < datetime.now(UTC):
+                return None
 
-            if api_key_row.expires_at and api_key_row.expires_at < datetime.now(UTC):
-                return JSONResponse({"error": "API key has expired."}, status_code=401)
-
-            # Update last_used_at
-            api_key_row.last_used_at = datetime.now(UTC)
+            row.last_used_at = datetime.now(UTC)
             await session.commit()
+            return str(row.user_id)
 
-            # Store user_id in request state for MCP tools to access
-            request.state.mcp_user_id = str(api_key_row.user_id)
-
-        return await call_next(request)
+    @staticmethod
+    async def _send_json_error(send: Send, message: str, status: int) -> None:
+        body = json.dumps({"error": message}).encode()
+        await send(
+            {
+                "type": "http.response.start",
+                "status": status,
+                "headers": [
+                    [b"content-type", b"application/json"],
+                    [b"content-length", str(len(body)).encode()],
+                ],
+            }
+        )
+        await send({"type": "http.response.body", "body": body})
