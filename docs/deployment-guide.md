@@ -22,6 +22,45 @@
 - Database: PostgreSQL (self-hosted or managed)
 - Storage: MinIO (S3-compatible)
 - Reverse Proxy: Caddy (auto SSL)
+- MCP Server: FastMCP (stdio transport for Claude Desktop)
+
+---
+
+## MCP Server Configuration
+
+### Claude Desktop Integration
+
+Add to `~/.claude/config.json`:
+
+```json
+{
+  "mcpServers": {
+    "notesapp-todos": {
+      "command": "uv",
+      "args": ["run", "python", "mcp_server.py"],
+      "cwd": "/path/to/backend",
+      "env": {
+        "NOTESAPP_USER_ID": "<your-user-uuid>",
+        "DATABASE_URL": "postgresql+asyncpg://user:pass@host:5432/notesapp"
+      }
+    }
+  }
+}
+```
+
+### Environment Variables
+
+| Variable | Value | Notes |
+|----------|-------|-------|
+| `NOTESAPP_USER_ID` | User UUID | Create with `python -c "import uuid; print(uuid.uuid4())"` |
+| `DATABASE_URL` | PostgreSQL URL | Must be accessible from Claude Desktop machine |
+
+### Features
+
+10 tools for AI agents:
+- list_todo_folders(), create_todo_folder(), update_todo_folder(), delete_todo_folder()
+- list_todos(), create_todo(), update_todo(), delete_todo(), toggle_todo()
+- get_folder_stats()
 
 ---
 

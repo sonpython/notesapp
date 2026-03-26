@@ -33,6 +33,8 @@ NotesApp is a lightweight, modern note-taking and task management platform with 
 ### 2. Todo Management
 - Create, update, complete, and delete todos
 - Hierarchical subtasks (parent-child relationships)
+- Separate todo folder organization (independent from notes)
+- Completion percentage tracking for parent todos
 - Priority levels: None (0), Low (1), Medium (2), High (3)
 - Deadlines with optional reminders
 - Auto-scheduled reminder sending via APScheduler
@@ -40,6 +42,7 @@ NotesApp is a lightweight, modern note-taking and task management platform with 
 - Sort by priority, deadline, or custom order
 - Toggle completion status with single click
 - Optional link to parent note
+- Recurring todos with custom intervals
 
 ### 3. Folder Organization
 - Create nested folders for note organization
@@ -48,14 +51,21 @@ NotesApp is a lightweight, modern note-taking and task management platform with 
 - Drag-and-drop reorganization (future)
 - Share folders with users (future)
 
-### 4. Telegram Integration
+### 4. MCP Server for AI Integration
+- Model Context Protocol server for Claude Desktop & AI agents
+- 10 tools for programmatic todo and folder management
+- Supports todo folder CRUD, stats, and batch operations
+- Environment-based user context (NOTESAPP_USER_ID)
+- Async database access via same SQLAlchemy models
+
+### 5. Telegram Integration
 - Per-user link code for Telegram bot pairing
 - Automatic reminder delivery via Telegram
 - Enable/disable reminders without unlinking
 - One-way notifications (no commands in bot)
 - Support for multiple reminders per todo
 
-### 5. Authentication & Authorization
+### 6. Authentication & Authorization
 - Email/password signup & login (Supabase Auth)
 - Session-based security with automatic refresh
 - JWT validation (ES256 JWKS + HS256 fallback)
@@ -123,8 +133,11 @@ NotesApp is a lightweight, modern note-taking and task management platform with 
 - [x] Delete todo & children
 - [x] Set priority level
 - [x] Set reminder time
-- [x] Filter by completion, priority, deadline
+- [x] Filter by completion, priority, deadline, folder
 - [x] Auto-send reminders via Telegram
+- [x] Organize into folders (separate hierarchy)
+- [x] View completion percentage for parent todos
+- [x] Recurring todos (daily, weekly, monthly)
 - [ ] Bulk operations (select multiple)
 - [ ] Drag-drop reordering (future)
 

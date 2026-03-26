@@ -2,7 +2,7 @@
 
 ## Overview
 
-NotesApp is a full-stack monorepo with ~90+ source files totaling ~8,000+ LOC. Built with Bun monorepo + Turborepo, FastAPI backend, SvelteKit primary frontend (in progress), Tauri desktop app (macOS), Next.js legacy frontend (deprecated). Includes PWA/offline support, tagging system, recurring todos, note export, passkey WebAuthn auth, and theme toggle.
+NotesApp is a full-stack monorepo with ~100+ source files totaling ~9,000+ LOC. Built with Bun monorepo + Turborepo, FastAPI backend, SvelteKit primary frontend, Tauri desktop app (macOS), Next.js legacy frontend (deprecated). Includes PWA/offline support, tagging system, recurring todos, note export, passkey WebAuthn auth, theme toggle, MCP server for AI agents, and todo folder organization.
 
 ## Directory Structure
 
@@ -157,58 +157,68 @@ notesapp/
 
 | Category | Count | LOC (est) |
 |----------|-------|----------|
-| Backend Python | 34 | ~2,500 |
-| SvelteKit Frontend (TS/Svelte) | 32 | ~3,000 |
+| Backend Python | 42 | ~3,200 |
+| SvelteKit Frontend (TS/Svelte) | 35 | ~3,500 |
 | Next.js Frontend (TS/TSX, deprecated) | 35 | ~4,000 |
-| Tests (Backend & Frontend) | 12 | ~800 |
-| Config & Docs | 8 | ~200 |
-| **Total** | **121** | **~10,500** |
+| Tests (Backend & Frontend) | 14 | ~1,000 |
+| Config & Docs | 12 | ~300 |
+| **Total** | **138** | **~12,000** |
 
-*Note: Next.js app included for reference during migration. Will be removed in v1.0.*
+*Note: Next.js app included for reference during migration. Will be removed in v1.0. Codebase includes new MCP server and todo folders feature.*
 
 ## Backend Structure (Python)
 
 ### Configuration & Setup
-- **config.py** (50 LOC): Pydantic Settings for DATABASE_URL, JWT_SECRET, WEBAUTHN_*, TELEGRAM_*, CORS_ORIGINS
-- **database.py** (50 LOC): SQLAlchemy async engine, session factory, _ensure_async_url() URL normalization
-- **deps.py** (90 LOC): JWT validation dependency (HS256 passkey-backed), get_current_user, get_db
+- **config.py** (60 LOC): Pydantic Settings for DATABASE_URL, JWT_SECRET, WEBAUTHN_*, TELEGRAM_*, CORS_ORIGINS, NOTESAPP_USER_ID (MCP)
+- **database.py** (55 LOC): SQLAlchemy async engine, session factory, _ensure_async_url() URL normalization
+- **deps.py** (100 LOC): JWT validation dependency (HS256 passkey-backed), get_current_user, get_db
 
 ### Models (SQLAlchemy ORM)
 - **user.py** (60 LOC): User model for local auth
 - **credential.py** (80 LOC): Passkey credential storage (WebAuthn challenges, public keys)
 - **note.py** (80 LOC): Note model, relationships to Folder, Todos, Tags
-- **todo.py** (160 LOC): Todo model with hierarchy, reminders, recurrence fields, tags
-- **folder.py** (75 LOC): Folder model with self-referential hierarchy
+- **todo.py** (170 LOC): Todo model with hierarchy, reminders, recurrence fields, tags, folder_id
+- **folder.py** (85 LOC): Folder model with self-referential hierarchy (notes only)
+- **todo_folder.py** (78 LOC): TodoFolder model for todo organization (NEW)
 - **tag.py** (110 LOC): Tag model with junction tables (NoteTag, TodoTag)
 - **telegram.py** (50 LOC): TelegramSettings per-user config
 
 ### Schemas (Pydantic)
 - Separate schemas for each model: Create, Update, Response variants
+- **todo_folder.py** (35 LOC): TodoFolderCreate, TodoFolderUpdate, TodoFolderResponse schemas (NEW)
 - Automatic OpenAPI doc generation via FastAPI
 
 ### Routers (API Endpoints)
 - **auth.py** (80 LOC): POST /register/, POST /authenticate/, GET /me
 - **notes.py** (100 LOC): CRUD endpoints, filter by folder/archive/pinned/search
 - **images.py** (136 LOC): POST /upload/ (multipart), GET serve, DELETE, GET list (AZD-63)
-- **folders.py** (80 LOC): CRUD endpoints
-- **todos.py** (120 LOC): CRUD, toggle completion, filter by status/priority
+- **folders.py** (80 LOC): CRUD endpoints for note folders
+- **todo_folders.py** (139 LOC): CRUD + stats endpoints for todo folders (NEW)
+- **todos.py** (125 LOC): CRUD, toggle completion, filter by status/priority/folder
 - **telegram.py** (180 LOC): Link, unlink, status, webhook + command handlers
 
 ### Services (Business Logic)
 - **note_query_service.py** (70 LOC): Dynamic query builder + PostgreSQL full-text search
-- **todo_query_service.py** (70 LOC): Query builder + toggle logic + tag filtering
-- **reminder_service.py** (50 LOC): Check pending reminders, mark sent
-- **telegram_service.py** (50 LOC): Send messages, todo commands (/todo, /list, /done)
+- **todo_query_service.py** (75 LOC): Query builder + toggle logic + tag filtering + folder filtering
+- **reminder_service.py** (55 LOC): Check pending reminders, mark sent, skip completed todos
+- **telegram_service.py** (55 LOC): Send messages, todo commands (/todo, /list, /done)
 - **tag_service.py** (100 LOC): Tag CRUD, bulk assign/remove, validation
 - **note_export_service.py** (160 LOC): Export to Markdown, PDF, ZIP (WeasyPrint with lazy import)
 - **recurrence_service.py** (120 LOC): Generate todo instances from recurrence rules
-- **minio_storage_service.py** (157 LOC): Upload/download/delete to MinIO (supports: png, jpeg, gif, webp, svg, heic, heif, tiff)
+- **minio_storage_service.py** (157 LOC): Upload/download/delete to MinIO (8 image types)
+- **mcp_todo_service.py** (186 LOC): MCP tool implementations for AI agents (NEW)
 
 ### Background Tasks
-- **reminders.py** (60 LOC): APScheduler job to check & send reminders every 60s
+- **reminders.py** (65 LOC): APScheduler job to check & send reminders every 60s
+
+### MCP Server (NEW)
+- **mcp_server.py** (161 LOC): FastMCP server with 10 tools for AI agent todo/folder management
+  - Supports stdio transport (Claude Desktop)
+  - Env: NOTESAPP_USER_ID, DATABASE_URL
+  - Tools: list_todo_folders, create_todo_folder, update_todo_folder, delete_todo_folder, list_todos, create_todo, update_todo, delete_todo, toggle_todo, get_folder_stats
 
 ### Entry Point
-- **main.py** (66 LOC): FastAPI app, CORS middleware, lifespan context, router registration
+- **main.py** (75 LOC): FastAPI app, CORS middleware, lifespan context, router registration
 
 ## Frontend Structure - SvelteKit 2 (Primary)
 
@@ -224,29 +234,31 @@ notesapp/
 - **routes/offline/+page.svelte**: PWA fallback offline page
 
 ### Svelte Stores (Reactive State)
-- **auth-store.svelte.ts** (80 LOC): Passkey auth state, user identity
+- **auth-store.svelte.ts** (85 LOC): Passkey auth state, user identity
 - **notes-store.svelte.ts** (150 LOC): CRUD, optimistic updates, caching, tag filtering
-- **todos-store.svelte.ts** (140 LOC): CRUD, filtering by status/priority, recurrence info
-- **folders-store.svelte.ts** (120 LOC): Folder CRUD, tree building, parentage
-- **tags-store.svelte.ts** (100 LOC): Tag CRUD, filtering, color management
+- **todos-store.svelte.ts** (155 LOC): CRUD, filtering by status/priority/folder, recurrence, completion %
+- **folders-store.svelte.ts** (125 LOC): Folder CRUD, tree building (note folders)
+- **todo-folders-store.svelte.ts** (163 LOC): CRUD, tree building, nesting, stats (NEW)
+- **tags-store.svelte.ts** (105 LOC): Tag CRUD, filtering, color management
 - **online-status.svelte.ts** (30 LOC): Connectivity state detection
 
 ### Lib & Utilities
-- **api.ts** (70 LOC): API client (Bearer auth, error handling)
+- **api.ts** (85 LOC): API client (Bearer auth, error handling, todo folders)
 - **auth-api.ts** (80 LOC): WebAuthn/Passkey API calls
-- **services/image-upload-service.ts** (80 LOC): Image validation, upload, error handling (AZD-63)
-- **extensions/codemirror-image-drop-extension.ts** (139 LOC): Drag/drop/paste image integration (AZD-63)
-- **types.ts** (50 LOC): TypeScript interfaces (Note, Todo, Folder, etc.)
+- **services/image-upload-service.ts** (85 LOC): Image validation, upload, error handling (AZD-63)
+- **extensions/codemirror-image-drop-extension.ts** (140 LOC): Drag/drop/paste image integration (AZD-63)
+- **types.ts** (65 LOC): TypeScript interfaces (Note, Todo, Folder, TodoFolder, etc.)
 - **utils/debounce.svelte.ts** (20 LOC): Debounce utility
 
 ### Offline Support
 - **offline/indexed-db-client.ts** (60 LOC): IndexedDB wrapper
 - **offline/indexed-db-notes.ts** (70 LOC): Notes persistence
-- **offline/indexed-db-todos.ts** (70 LOC): Todos persistence
-- **offline/indexed-db-folders.ts** (50 LOC): Folders persistence
-- **offline/indexed-db-sync-queue.ts** (60 LOC): Pending operations queue
-- **offline/offline-sync-engine.ts** (100 LOC): Sync logic (offline→online)
-- **offline/offline-types.ts** (30 LOC): TypeScript interfaces
+- **offline/indexed-db-todos.ts** (75 LOC): Todos persistence with folder_id
+- **offline/indexed-db-folders.ts** (55 LOC): Note folders persistence
+- **offline/indexed-db-todo-folders.ts** (32 LOC): Todo folders persistence (NEW)
+- **offline/indexed-db-sync-queue.ts** (65 LOC): Pending operations queue
+- **offline/offline-sync-engine.ts** (110 LOC): Sync logic (offline→online)
+- **offline/offline-types.ts** (35 LOC): TypeScript interfaces
 
 ### Styling
 - **globals.css** (100 LOC): TailwindCSS v4 @theme inline, dark/light/system modes

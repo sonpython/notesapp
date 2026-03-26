@@ -61,11 +61,13 @@ bun run build:desktop    # Build Tauri desktop app
 - **Infrastructure**: Bun monorepo + Turborepo, Docker Compose
 
 ### Key Features
-- **Notes**: Rich text editing (CodeMirror), auto-save with debounce, pinned/archived states, folder organization
+- **Notes**: Rich text editing (CodeMirror), auto-save with debounce, pinned/archived states, folder organization, image uploads
+- **Todos**: Hierarchical todos with subtasks, priority levels, deadlines, separate folder organization, completion % tracking
+- **Todo Folders**: Nested hierarchy for todo organization, independent from note folders, completion stats
 - **Images**: Drag-drop/paste image uploads in notes, MinIO backend storage, 10MB file size limit
-- **Todos**: Hierarchical todos with subtasks, priority levels, deadlines, reminder scheduling
 - **Folders**: Nested folder hierarchy for note organization
 - **Telegram**: Direct reminder delivery via Telegram bot, per-user link code pairing
+- **MCP Server**: AI agent integration via Model Context Protocol (Claude Desktop, stdio transport)
 - **Auth**: Passkey-only (WebAuthn/FIDO2) with local HS256 JWT sessions
 
 ## Project Structure
@@ -141,6 +143,11 @@ bun run build:desktop    # Build Tauri desktop app
 | PUT | `/api/todos/{id}` | Yes | Update todo |
 | DELETE | `/api/todos/{id}` | Yes | Delete todo |
 | POST | `/api/todos/{id}/toggle` | Yes | Toggle todo completion |
+| GET | `/api/todo-folders` | Yes | List todo folders (paginated) |
+| POST | `/api/todo-folders` | Yes | Create todo folder |
+| PUT | `/api/todo-folders/{id}` | Yes | Update todo folder |
+| DELETE | `/api/todo-folders/{id}` | Yes | Delete todo folder |
+| GET | `/api/todo-folders/{id}/stats` | Yes | Get folder completion stats |
 | POST | `/api/images/upload` | Yes | Upload image (multipart, 10MB max) |
 | GET | `/api/images/{id}` | Yes | Serve image via proxy (cache: 1 day) |
 | DELETE | `/api/images/{id}` | Yes | Delete image |
@@ -175,11 +182,23 @@ is_completed: boolean
 completed_at: datetime (nullable)
 deadline: datetime (nullable)
 parent_id: UUID (FK to todos, nullable)
+folder_id: UUID (FK to todo_folders, nullable)
 note_id: UUID (FK to notes, nullable)
 priority: int (0=none, 1=low, 2=medium, 3=high)
 sort_order: int
 reminder_at: datetime (nullable)
 reminder_sent: boolean
+created_at: datetime
+updated_at: datetime
+```
+
+### TodoFolder
+```
+id: UUID (PK)
+user_id: UUID (from auth.users)
+name: string
+parent_id: UUID (FK to todo_folders, nullable)
+sort_order: int
 created_at: datetime
 updated_at: datetime
 ```

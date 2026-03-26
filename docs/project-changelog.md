@@ -17,6 +17,99 @@ All notable changes to NotesApp are documented here. Format follows [Keep a Chan
 
 ---
 
+## [0.7.0] - 2026-03-26
+
+### Added: Todo Folders, MCP Server, UI Improvements
+
+#### Todo Folder Organization (NEW)
+- **Separate todo_folders table** - distinct from note folders
+- **Nested hierarchy** - parent_id self-referential for folder nesting
+- **Default folder** - "Personal" folder auto-created per user (via migration)
+- **Backend API**: `/api/todo-folders/` with CRUD + stats endpoint
+  - GET / (paginated list)
+  - POST / (create)
+  - PUT /{id} (update)
+  - DELETE /{id} (delete)
+  - GET /{id}/stats (completion percentage)
+- **Todo model update**: folder_id FK (nullable, SET NULL on delete)
+- **IndexedDB offline**: todo folder sync support
+
+#### MCP Server Integration (NEW)
+- **FastMCP Python server** - `backend/mcp_server.py` (161 LOC)
+- **10 tools for AI agents**:
+  - list_todo_folders(), create_todo_folder(), update_todo_folder(), delete_todo_folder()
+  - list_todos(), create_todo(), update_todo(), delete_todo(), toggle_todo()
+  - get_folder_stats()
+- **Environment variables**: NOTESAPP_USER_ID, DATABASE_URL
+- **Transport**: stdio (Claude Desktop native)
+- **Claude Desktop config**: JSON configuration in ~/.claude/config.json
+- **New service**: mcp_todo_service.py (186 LOC) with tool implementations
+
+#### Frontend UI Enhancements
+- **Sidebar Accordion** - Notes and Todos as collapsible sections
+  - Only one section expanded at a time
+  - Each section has independent folder tree
+  - Auto-expands based on current route (/notes or /todos)
+- **Completion % Badges** - parent todos show completion percentage
+  - Format: "X% completed" as muted text after title
+  - Calculated from direct children only
+  - Formula: Math.round((completed / total) * 100)
+- **TodoFolderTree component** (112 LOC) - tree rendering with context menu
+- **TodoFolderTreeItem component** (164 LOC) - individual folder UI
+- **TodoFoldersStore** (163 LOC) - Svelte store for CRUD + caching
+
+#### New Files Created
+Backend:
+- `backend/app/models/todo_folder.py` (78 LOC)
+- `backend/app/schemas/todo_folder.py` (35 LOC)
+- `backend/app/routers/todo_folders.py` (139 LOC)
+- `backend/app/services/mcp_todo_service.py` (186 LOC)
+- `backend/mcp_server.py` (161 LOC)
+- `backend/alembic/versions/20260325_..._add_todo_folders.py`
+
+Frontend:
+- `apps/web-svelte/src/lib/stores/todo-folders-store.svelte.ts` (163 LOC)
+- `apps/web-svelte/src/lib/offline/indexed-db-todo-folders.ts` (32 LOC)
+- `apps/web-svelte/src/lib/components/todo-folders/todo-folder-tree.svelte` (112 LOC)
+- `apps/web-svelte/src/lib/components/todo-folders/todo-folder-tree-item.svelte` (164 LOC)
+
+#### UI/UX Improvements
+- Keyboard shortcuts: Ctrl+S/Cmd+S intercepted to save note (not browser save)
+- Note editor cursor no longer jumps during autosave
+- Title auto-generation deferred to note leave event
+- Todo drag-and-drop only active in reorder mode
+- Reminders skip completed todos
+- Shared note markdown rendering fixed (typography + marked GFM)
+- WYSIWYG editor typography improvements
+- Multi-account Telegram support
+
+#### Infrastructure
+- CD switched to self-hosted GitHub Actions runner
+- Frontend healthcheck uses bun instead of curl
+- Docker healthchecks for all services
+
+### Documentation Updated
+- README.md: MCP section, todo folders, updated API endpoints
+- system-architecture.md: MCP architecture diagram, todo folders data model, new schema
+- codebase-summary.md: New files, updated LOC counts, MCP section
+- code-standards.md: MCP tool naming conventions
+- deployment-guide.md: MCP server setup for Claude Desktop
+- project-roadmap.md: Phase 4 progress (75%), todo folders completed
+
+### Technical Details
+- **Files Added**: 11 new files (backend + frontend + migrations)
+- **LOC Added**: ~1,500 lines (backend + frontend)
+- **Database**: New table (todo_folders), migration includes default folder creation
+- **API Endpoints**: 5 new endpoints for todo folder management
+- **Store Updates**: All offline stores updated for todo folder sync
+
+### Migration
+```bash
+alembic upgrade head  # Auto-creates todo_folders table and "Personal" folder for users
+```
+
+---
+
 ## [0.6.2] - 2026-02-22
 
 ### Infrastructure: CI/CD with Cloudflare Tunnel

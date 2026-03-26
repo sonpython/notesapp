@@ -34,6 +34,11 @@
 - **React Components**: PascalCase (`AppHeader`, `NoteEditor`, `TodoItem`)
 - **Custom Hooks**: camelCase with `use` prefix (`useAuth`, `useNotes`, `useDebounce`)
 
+### MCP Tool Names (AI Integration)
+- **Tool names**: snake_case for CLI compatibility (`list_todo_folders`, `create_todo`, `toggle_todo`)
+- **Parameters**: snake_case in tool definitions (`folder_id`, `is_completed`)
+- **Descriptions**: Clear, concise (one sentence per tool)
+
 ## Casing by Data Type
 
 ### Database & API Fields
