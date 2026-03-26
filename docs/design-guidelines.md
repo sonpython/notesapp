@@ -198,6 +198,34 @@ box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
 - Header: 24px bold heading
 - Body: 16px text, max-width 65 chars per line
 - Footer: Action buttons (primary + secondary)
+
+**Cascade Delete Dialog** (NEW):
+```svelte
+<ConfirmDialog
+  title="Delete Folder"
+  message="Are you sure? This cannot be undone."
+  primaryAction="Delete"
+  secondaryAction="Cancel"
+  onConfirm={() => deleteFolder(folderId, cascadeDelete)}
+>
+  <label className="flex items-center space-x-2 my-4">
+    <input
+      type="checkbox"
+      bind:checked={cascadeDelete}
+      className="w-4 h-4 rounded"
+    />
+    <span className="text-sm text-slate-300">
+      Also delete all notes/todos in this folder
+    </span>
+  </label>
+</ConfirmDialog>
+```
+
+**Cascade Delete UX**:
+- Default checkbox: unchecked (preserve items)
+- Warning icon next to checkbox (optional)
+- Clarify scope: "all notes" vs "all todos" based on context
+- Disable delete button until user confirms (optional safeguard)
 - Spacing: 24px between sections
 
 ### Lists & Tables

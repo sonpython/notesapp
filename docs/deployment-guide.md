@@ -22,38 +22,53 @@
 - Database: PostgreSQL (self-hosted or managed)
 - Storage: MinIO (S3-compatible)
 - Reverse Proxy: Caddy (auto SSL)
-- MCP Server: FastMCP (stdio transport for Claude Desktop)
+- MCP Server: FastMCP (HTTP transport via `/api/mcp`, API key auth)
 
 ---
 
 ## MCP Server Configuration
 
-### Claude Desktop Integration
+### Claude Code HTTP Integration
 
-Add to `~/.claude/config.json`:
+1. **Generate API Key** (on server):
+```bash
+python -c "
+from app.models.api_key import ApiKey
+import secrets, hashlib
+key = secrets.token_hex(16)  # na_<32-char-hex>
+key_hash = hashlib.sha256(key.encode()).hexdigest()
+print(f'API Key: {key}')
+print(f'Hash: {key_hash}')
+"
+```
 
+2. **Store API Key in Database**:
+```sql
+INSERT INTO api_keys (user_id, name, key_hash, key_prefix)
+VALUES ('<user-uuid>', 'Claude Code', '<key-hash>', 'na_');
+```
+
+3. **Configure Claude Code**:
+```bash
+claude mcp add --transport http --scope user notesapp-todos \
+  "https://notes.yourdomain.com/api/mcp/" \
+  --header "Authorization:Bearer na_<your-key>"
+```
+
+Or manually in `~/.claude/config.json`:
 ```json
 {
   "mcpServers": {
     "notesapp-todos": {
-      "command": "uv",
-      "args": ["run", "python", "mcp_server.py"],
-      "cwd": "/path/to/backend",
-      "env": {
-        "NOTESAPP_USER_ID": "<your-user-uuid>",
-        "DATABASE_URL": "postgresql+asyncpg://user:pass@host:5432/notesapp"
+      "transport": "http",
+      "url": "https://notes.yourdomain.com/api/mcp/",
+      "headers": {
+        "Authorization": "Bearer na_<your-key>"
       }
     }
   }
 }
 ```
-
-### Environment Variables
-
-| Variable | Value | Notes |
-|----------|-------|-------|
-| `NOTESAPP_USER_ID` | User UUID | Create with `python -c "import uuid; print(uuid.uuid4())"` |
-| `DATABASE_URL` | PostgreSQL URL | Must be accessible from Claude Desktop machine |
 
 ### Features
 
@@ -61,6 +76,13 @@ Add to `~/.claude/config.json`:
 - list_todo_folders(), create_todo_folder(), update_todo_folder(), delete_todo_folder()
 - list_todos(), create_todo(), update_todo(), delete_todo(), toggle_todo()
 - get_folder_stats()
+
+### API Key Management
+
+- **Store**: api_keys table with SHA256 hashed keys
+- **Lookup**: Query by key_hash (not plain text)
+- **Expiry**: Optional expires_at timestamp
+- **Audit**: Track last_used_at for security monitoring
 
 ---
 

@@ -34,10 +34,13 @@
 - **React Components**: PascalCase (`AppHeader`, `NoteEditor`, `TodoItem`)
 - **Custom Hooks**: camelCase with `use` prefix (`useAuth`, `useNotes`, `useDebounce`)
 
-### MCP Tool Names (AI Integration)
+### MCP Tool Names & HTTP Transport (AI Integration)
 - **Tool names**: snake_case for CLI compatibility (`list_todo_folders`, `create_todo`, `toggle_todo`)
 - **Parameters**: snake_case in tool definitions (`folder_id`, `is_completed`)
 - **Descriptions**: Clear, concise (one sentence per tool)
+- **Transport**: HTTP Streamable-HTTP (not stdio) via `/api/mcp` endpoint
+- **Auth**: API key via query param (`?api_key=na_xxx`) or Bearer header
+- **User Context**: McpAuthMiddleware injects `mcp_user_id` into scope state
 
 ## Casing by Data Type
 
@@ -459,12 +462,94 @@ test: add unit tests for reminder service
 - [ ] Tests pass (once implemented)
 - [ ] No hardcoded secrets or API keys
 
+## Middleware Standards
+
+### ASGI Middleware Pattern (Preferred)
+Pure ASGI middleware avoids SQLAlchemy greenlet/async context issues:
+```python
+# NOT BaseHTTPMiddleware (causes greenlet issues)
+class McpAuthMiddleware:
+    def __init__(self, app, db_dependency):
+        self.app = app
+        self.db_dependency = db_dependency
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        # Extract API key from query param or header
+        api_key = self._get_api_key(scope)
+
+        # Validate and inject user_id into scope
+        if api_key:
+            async with db_dependency() as session:
+                user = await self._validate_api_key(session, api_key)
+                scope["state"]["mcp_user_id"] = user.id
+
+        return await self.app(scope, receive, send)
+```
+
+## Cascade Delete Patterns
+
+### Default: Preserve (SET NULL)
+```python
+# Default behavior: items remain when parent deleted
+folder_id: Mapped[uuid.UUID | None] = mapped_column(
+    sa.Uuid,
+    sa.ForeignKey("folders.id", ondelete="SET NULL"),
+    nullable=True,
+    index=True,
+)
+```
+
+### Optional Cascade: Query Parameter
+```python
+# API Endpoint: DELETE /api/folders/{id}?cascade=true
+@router.delete("/{folder_id}/")
+async def delete_folder(
+    folder_id: UUID,
+    cascade: bool = Query(False),  # Optional cascade flag
+    db: AsyncSession = Depends(get_db),
+    user_id: UUID = Depends(get_current_user),
+):
+    folder = await db.get(Folder, folder_id)
+    if not folder or folder.user_id != user_id:
+        raise HTTPException(404, "Folder not found")
+
+    if cascade:
+        # Delete all items in folder (delete_cascade_items_in_folder)
+        await db.execute(
+            delete(Note).where(Note.folder_id == folder_id)
+        )
+
+    await db.delete(folder)
+    await db.commit()
+```
+
+### Frontend Modal Dialog
+```svelte
+<!-- Show cascade confirmation dialog -->
+<ConfirmDialog
+  title="Delete Folder"
+  message="Are you sure? This cannot be undone."
+>
+  <label>
+    <input type="checkbox" bind:checked={cascadeDelete} />
+    Also delete all notes in this folder
+  </label>
+  <button on:click={() => deleteFolder(folderId, cascadeDelete)}>
+    Delete
+  </button>
+</ConfirmDialog>
+```
+
 ## Security Standards
 
 ### Authentication
 - All endpoints except `/api/health` and `/api/telegram/webhook` require Bearer token
 - JWT validated via JWKS or symmetric key
 - User ID extracted from token sub claim and verified
+- MCP endpoints use API key validation (SHA256 hash lookup)
 
 ### Authorization
 - All database queries filtered by `user_id` from token

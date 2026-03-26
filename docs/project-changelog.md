@@ -110,6 +110,52 @@ alembic upgrade head  # Auto-creates todo_folders table and "Personal" folder fo
 
 ---
 
+## [0.7.1] - 2026-03-26
+
+### Added: MCP HTTP Transport & Cascade Delete
+
+#### MCP HTTP Transport (Breaking: stdio → HTTP)
+- **FastMCP HTTP transport** - Streamable-HTTP at `/api/mcp`
+- **Pure ASGI McpAuthMiddleware** - avoids SQLAlchemy greenlet async context issues
+  - Supports `?api_key=xxx` query parameter
+  - Supports `Authorization: Bearer <key>` header
+  - SHA256 hash validation via api_keys table
+- **ApiKey Model** (NEW) - id, user_id, name, key_hash, key_prefix, expires_at, last_used_at
+- **Claude Code config** - HTTP URL instead of stdio command
+- **Stateless architecture** - no process-based user context
+
+#### Cascade Delete (Optional)
+- **Query parameter support**: `DELETE /api/folders/{id}?cascade=true`
+- **Default behavior unchanged**: items SET NULL on folder_id (preserved)
+- **Cascade option**: delete all items in folder when cascading
+- **Frontend modal**: confirmation dialog with "Also delete items" checkbox
+- **Applies to**: notes folders, todo folders (both support cascade)
+
+#### New Files
+Backend:
+- `backend/app/models/api_key.py` (68 LOC)
+- `backend/app/middleware/mcp_auth.py` (150 LOC)
+- `backend/app/routers/mcp_router.py` (80 LOC)
+
+#### Dependencies
+- Added: fastmcp[sse] for HTTP transport support
+- Removed: stdoutLogger dependency (not needed for HTTP)
+
+#### Documentation Updated
+- system-architecture.md: MCP HTTP architecture, ApiKey table schema, Claude Code config
+- code-standards.md: ASGI middleware pattern, cascade delete patterns, MCP HTTP conventions
+- deployment-guide.md: MCP HTTP setup with API key generation
+
+### Technical Details
+- **Breaking Change**: MCP transport switched from stdio to HTTP
+  - Claude Desktop users must update config to use HTTP URL
+  - API key must be generated and stored in api_keys table
+  - Old stdio-based configs will no longer work
+- **Performance**: HTTP transport enables stateless scaling (no process-per-user)
+- **Security**: API key hash stored in DB, not in plain text
+
+---
+
 ## [0.6.2] - 2026-02-22
 
 ### Infrastructure: CI/CD with Cloudflare Tunnel

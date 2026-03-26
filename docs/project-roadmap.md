@@ -153,7 +153,7 @@
 - [ ] XSS prevention check
 - **Status**: Not started
 
-## Phase 4: Advanced Features (75% Complete)
+## Phase 4: Advanced Features (85% Complete)
 
 ### User Experience
 - [x] Full-text search on notes (PostgreSQL tsvector)
@@ -165,10 +165,11 @@
 
 ### Features
 - [x] Image upload in notes (AZD-63) - MinIO backend, drag/drop, 10MB limit
-- [x] Todo folders with nesting (NEW) - separate from note folders, completion %
-- [x] Sidebar accordion UI (NEW) - Notes/Todos sections, one expanded at a time
-- [x] Completion percentage badges (NEW) - for parent todos with children
-- [x] MCP Server for AI agents (NEW) - 10 tools for Claude Desktop
+- [x] Todo folders with nesting - separate from note folders, completion %
+- [x] Sidebar accordion UI - Notes/Todos sections, one expanded at a time
+- [x] Completion percentage badges - for parent todos with children
+- [x] MCP Server for AI agents - 10 tools, HTTP transport, API key auth
+- [x] Cascade delete for folders - optional `?cascade=true` query param
 - [x] Todo recurring (daily, weekly, monthly) (AZD-18)
 - [x] Note export (Markdown, PDF, ZIP) (AZD-17)
 - [x] Tags/labels system for notes & todos (AZD-19)

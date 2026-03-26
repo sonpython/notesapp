@@ -157,14 +157,14 @@ notesapp/
 
 | Category | Count | LOC (est) |
 |----------|-------|----------|
-| Backend Python | 42 | ~3,200 |
-| SvelteKit Frontend (TS/Svelte) | 35 | ~3,500 |
+| Backend Python | 65 | ~6,000 |
+| SvelteKit Frontend (TS/Svelte) | 40 | ~3,800 |
 | Next.js Frontend (TS/TSX, deprecated) | 35 | ~4,000 |
-| Tests (Backend & Frontend) | 14 | ~1,000 |
+| Tests (Backend & Frontend) | 15 | ~1,200 |
 | Config & Docs | 12 | ~300 |
-| **Total** | **138** | **~12,000** |
+| **Total** | **167** | **~15,300** |
 
-*Note: Next.js app included for reference during migration. Will be removed in v1.0. Codebase includes new MCP server and todo folders feature.*
+*Note: Next.js app included for reference during migration. Will be removed in v1.0. Codebase includes new MCP server (HTTP transport), todo folders, cascade delete, and API key auth.*
 
 ## Backend Structure (Python)
 
@@ -176,10 +176,11 @@ notesapp/
 ### Models (SQLAlchemy ORM)
 - **user.py** (60 LOC): User model for local auth
 - **credential.py** (80 LOC): Passkey credential storage (WebAuthn challenges, public keys)
+- **api_key.py** (68 LOC): ApiKey model for MCP auth (id, user_id, name, key_hash, key_prefix, expires_at, last_used_at) (NEW)
 - **note.py** (80 LOC): Note model, relationships to Folder, Todos, Tags
 - **todo.py** (170 LOC): Todo model with hierarchy, reminders, recurrence fields, tags, folder_id
 - **folder.py** (85 LOC): Folder model with self-referential hierarchy (notes only)
-- **todo_folder.py** (78 LOC): TodoFolder model for todo organization (NEW)
+- **todo_folder.py** (78 LOC): TodoFolder model for todo organization
 - **tag.py** (110 LOC): Tag model with junction tables (NoteTag, TodoTag)
 - **telegram.py** (50 LOC): TelegramSettings per-user config
 
@@ -192,9 +193,10 @@ notesapp/
 - **auth.py** (80 LOC): POST /register/, POST /authenticate/, GET /me
 - **notes.py** (100 LOC): CRUD endpoints, filter by folder/archive/pinned/search
 - **images.py** (136 LOC): POST /upload/ (multipart), GET serve, DELETE, GET list (AZD-63)
-- **folders.py** (80 LOC): CRUD endpoints for note folders
-- **todo_folders.py** (139 LOC): CRUD + stats endpoints for todo folders (NEW)
+- **folders.py** (80 LOC): CRUD endpoints for note folders (supports ?cascade=true)
+- **todo_folders.py** (139 LOC): CRUD + stats endpoints for todo folders (supports ?cascade=true)
 - **todos.py** (125 LOC): CRUD, toggle completion, filter by status/priority/folder
+- **mcp_router.py** (NEW): HTTP MCP endpoint at `/api/mcp` (Streamable-HTTP, auth via McpAuthMiddleware)
 - **telegram.py** (180 LOC): Link, unlink, status, webhook + command handlers
 
 ### Services (Business Logic)
@@ -212,10 +214,16 @@ notesapp/
 - **reminders.py** (65 LOC): APScheduler job to check & send reminders every 60s
 
 ### MCP Server (NEW)
+- **mcp_middleware.py** (McpAuthMiddleware): Pure ASGI auth middleware (not BaseHTTPMiddleware)
+  - Supports `?api_key=xxx` query param OR `Authorization: Bearer <key>` header
+  - Validates API key via SHA256 hash against api_keys table
+  - Injects `mcp_user_id` into ASGI scope state
+  - Avoids SQLAlchemy greenlet async context issues
+- **mcp_router.py**: HTTP endpoint at `/api/mcp` (Streamable-HTTP, stateless)
 - **mcp_server.py** (161 LOC): FastMCP server with 10 tools for AI agent todo/folder management
-  - Supports stdio transport (Claude Desktop)
-  - Env: NOTESAPP_USER_ID, DATABASE_URL
+  - Supports HTTP transport (no stdio)
   - Tools: list_todo_folders, create_todo_folder, update_todo_folder, delete_todo_folder, list_todos, create_todo, update_todo, delete_todo, toggle_todo, get_folder_stats
+  - User context: HTTP header/query auth (not env var)
 
 ### Entry Point
 - **main.py** (75 LOC): FastAPI app, CORS middleware, lifespan context, router registration
