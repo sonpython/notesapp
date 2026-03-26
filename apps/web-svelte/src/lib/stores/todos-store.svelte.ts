@@ -308,11 +308,14 @@ export class TodosStore {
 		// Build reorder request
 		const items = orderedIds.map((id, index) => ({ id, sort_order: index }));
 
-		// Optimistic update
+		// Optimistic update — reorder incomplete, keep completed appended
+		const prev = this.todos;
+		const reorderedSet = new Set(orderedIds);
 		const reordered = orderedIds
-			.map((id) => this.todos.find((t) => t.id === id))
+			.map((id) => prev.find((t) => t.id === id))
 			.filter((t): t is Todo => t !== undefined);
-		this.todos = reordered;
+		const remaining = prev.filter((t) => !reorderedSet.has(t.id));
+		this.todos = [...reordered, ...remaining];
 
 		try {
 			await api.put('/api/todos/reorder', { items });
@@ -320,8 +323,8 @@ export class TodosStore {
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Failed to reorder todos';
 			this.error = message;
-			// Revert on error
-			await this.fetchTodos();
+			// Revert with current filter context (preserve folder/tag filter)
+			await this.fetchTodos(this.filter, this.currentTagIds, this.currentFolderId);
 			return false;
 		}
 	}

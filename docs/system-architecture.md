@@ -265,21 +265,35 @@ Background Tasks:
     (Self-reference) ──────┘
 ```
 
-## MCP Server (AI Integration)
+## MCP Server (AI Integration - HTTP Transport)
 
-NotesApp includes a **FastMCP server** for Claude Desktop and AI agents to manage todos and folders programmatically.
+NotesApp includes a **FastMCP server** with HTTP transport for Claude Code CLI and AI agents to manage todos and folders programmatically.
 
 ### Architecture
 
 ```
-Claude Desktop / AI Agent
+Claude Code CLI / AI Agent
         │
-        ▼
-┌───────────────────────┐
-│   MCP Server (stdio)  │  (backend/mcp_server.py, 161 LOC)
-│   - 10 tools         │
-│   - Async support    │
-└───────────┬───────────┘
+        ▼ HTTP Request
+┌───────────────────────────────┐
+│  FastAPI Endpoint             │
+│  POST /api/mcp                │
+└───────────┬───────────────────┘
+            │
+            ▼
+┌───────────────────────────────┐
+│  McpAuthMiddleware (ASGI)     │
+│  - Validate API key           │
+│  - Inject mcp_user_id         │
+│  - Support Bearer + query     │
+└───────────┬───────────────────┘
+            │
+            ▼
+┌───────────────────────────────┐
+│  MCP Router                   │
+│  - Streamable-HTTP transport  │
+│  - Stateless endpoints        │
+└───────────┬───────────────────┘
             │
             ▼
 ┌───────────────────────────────┐
@@ -301,25 +315,31 @@ Claude Desktop / AI Agent
     Same SQLAlchemy models + PostgreSQL
 ```
 
-### Environment Variables
+### Authentication
 
-```env
-NOTESAPP_USER_ID=<uuid>                    # User for MCP context
-DATABASE_URL=postgresql+asyncpg://...      # PostgreSQL connection
+- **Query Parameter**: `?api_key=<key_prefix>_<secret>`
+- **HTTP Header**: `Authorization: Bearer <key_prefix>_<secret>`
+- **Validation**: SHA256 hash lookup in api_keys table
+- **User Context**: mcp_user_id injected via McpAuthMiddleware (pure ASGI)
+
+### Claude Code Configuration
+
+```bash
+# Add MCP server via CLI
+claude mcp add --transport http --scope user notesapp-todos \
+  "https://your-domain/api/mcp/" \
+  --header "Authorization:Bearer na_xxx"
 ```
 
-### Claude Desktop Configuration
-
+Or manually in `~/.claude/config.json`:
 ```json
 {
   "mcpServers": {
     "notesapp-todos": {
-      "command": "uv",
-      "args": ["run", "python", "mcp_server.py"],
-      "cwd": "/path/to/backend",
-      "env": {
-        "NOTESAPP_USER_ID": "<user-uuid>",
-        "DATABASE_URL": "postgresql+asyncpg://..."
+      "transport": "http",
+      "url": "https://your-domain/api/mcp/",
+      "headers": {
+        "Authorization": "Bearer na_xxx"
       }
     }
   }
@@ -497,7 +517,7 @@ CREATE TABLE telegram_settings (
 );
 ```
 
-### todo_folders table (NEW)
+### todo_folders table
 ```sql
 CREATE TABLE todo_folders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -515,6 +535,23 @@ CREATE TABLE todo_folders (
 -- Todos table includes:
 ALTER TABLE todos ADD COLUMN folder_id UUID REFERENCES todo_folders(id) ON DELETE SET NULL;
 CREATE INDEX idx_todos_folder_id ON todos(folder_id);
+```
+
+### api_keys table (NEW)
+```sql
+CREATE TABLE api_keys (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR NOT NULL,
+  key_hash VARCHAR(64) NOT NULL UNIQUE,
+  key_prefix VARCHAR(10) NOT NULL,
+  expires_at TIMESTAMP WITH TIME ZONE,
+  last_used_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+  INDEX idx_api_keys_user_id (user_id),
+  INDEX idx_api_keys_key_hash (key_hash)
+);
 ```
 
 ## Authentication Architecture

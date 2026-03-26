@@ -46,16 +46,19 @@ NotesApp is a lightweight, modern note-taking and task management platform with 
 
 ### 3. Folder Organization
 - Create nested folders for note organization
-- Auto-delete empty folders (via cascading FK)
+- Delete with optional cascade: `?cascade=true` deletes all items in folder
+- Default: items SET NULL on folder_id (preserved)
 - Icon support for visual identification
 - Drag-and-drop reorganization (future)
 - Share folders with users (future)
 
-### 4. MCP Server for AI Integration
-- Model Context Protocol server for Claude Desktop & AI agents
+### 4. MCP Server for AI Integration (HTTP Transport)
+- Model Context Protocol server for Claude Desktop & AI agents (FastMCP)
+- Transport: Streamable-HTTP at `/api/mcp` (stateless, no stdio)
+- Auth: Pure ASGI McpAuthMiddleware (API key validation via SHA256 hash)
 - 10 tools for programmatic todo and folder management
-- Supports todo folder CRUD, stats, and batch operations
-- Environment-based user context (NOTESAPP_USER_ID)
+- Supports todo folder CRUD, stats, cascade delete
+- Users: Identified via HTTP header/query auth (not environment)
 - Async database access via same SQLAlchemy models
 
 ### 5. Telegram Integration
@@ -188,11 +191,11 @@ NotesApp is a lightweight, modern note-taking and task management platform with 
 - Max concurrent WebSocket connections limited by instance
 
 ### Security Gaps (Future)
-- No rate limiting on API endpoints
+- No rate limiting on API endpoints (SlowAPI in place)
 - No audit logging of data modifications
 - No encryption at rest
 - No 2FA support
-- No API key authentication (user-only auth)
+- API key authentication implemented for MCP (HTTP transport)
 
 ## Success Metrics
 
