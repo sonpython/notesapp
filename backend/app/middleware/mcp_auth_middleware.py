@@ -21,14 +21,16 @@ class McpAuthMiddleware(BaseHTTPMiddleware):
         if not request.url.path.startswith("/api/mcp"):
             return await call_next(request)
 
-        auth_header = request.headers.get("authorization", "")
-        if not auth_header.startswith("Bearer "):
-            return JSONResponse(
-                {"error": "Missing or invalid Authorization header. Use: Bearer <api-key>"},
-                status_code=401,
-            )
-
-        api_key = auth_header[7:]  # Strip "Bearer "
+        # Support API key via query param (?api_key=xxx) or Authorization header
+        api_key = request.query_params.get("api_key", "")
+        if not api_key:
+            auth_header = request.headers.get("authorization", "")
+            if not auth_header.startswith("Bearer "):
+                return JSONResponse(
+                    {"error": "Missing auth. Use query param ?api_key=xxx or header Bearer <key>"},
+                    status_code=401,
+                )
+            api_key = auth_header[7:]  # Strip "Bearer "
         key_hash = hashlib.sha256(api_key.encode()).hexdigest()
 
         from sqlalchemy import select
