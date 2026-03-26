@@ -226,12 +226,9 @@
     <pre class="mt-2 rounded bg-zinc-800 p-3 text-zinc-300 overflow-x-auto">{`{
   "mcpServers": {
     "notesapp-todos": {
-      "command": "uv",
-      "args": ["run", "python", "mcp_server.py"],
-      "cwd": "/path/to/notesapp/backend",
-      "env": {
-        "NOTESAPP_API_KEY": "<your-api-key>",
-        "DATABASE_URL": "postgresql+asyncpg://..."
+      "url": "https://your-domain.com/mcp",
+      "headers": {
+        "Authorization": "Bearer <your-api-key>"
       }
     }
   }
