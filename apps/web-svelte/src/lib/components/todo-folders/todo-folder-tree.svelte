@@ -1,12 +1,11 @@
 <script lang="ts">
-  import { FolderIcon, Plus, CheckSquare } from 'lucide-svelte';
+  import { FolderIcon, Plus } from 'lucide-svelte';
   import type { TodoFolder } from '$lib/types';
   import TodoFolderTreeItem from './todo-folder-tree-item.svelte';
 
   interface Props {
     folders: TodoFolder[];
     selectedFolderId: string | null;
-    todoCounts?: { total: number; active: number } | null;
     onselectFolder: (id: string | null) => void;
     oncreateFolder: (name: string, parentId?: string) => Promise<TodoFolder>;
     onrenameFolder: (id: string, name: string) => Promise<TodoFolder>;
@@ -16,7 +15,6 @@
   let {
     folders,
     selectedFolderId,
-    todoCounts,
     onselectFolder,
     oncreateFolder,
     onrenameFolder,
@@ -49,22 +47,6 @@
 </script>
 
 <div class="space-y-0.5">
-  <!-- "All Todos" item -->
-  <button
-    type="button"
-    onclick={() => onselectFolder(null)}
-    class="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-left
-      {selectedFolderId === null
-        ? 'bg-zinc-700/60 text-white'
-        : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}"
-  >
-    <CheckSquare class="h-4 w-4 shrink-0" />
-    <span class="flex-1">All Todos</span>
-    {#if todoCounts?.total}
-      <span class="text-xs text-zinc-500">{todoCounts.active}/{todoCounts.total}</span>
-    {/if}
-  </button>
-
   <!-- Folders header -->
   <div class="flex items-center justify-between px-3 pt-2 pb-1">
     <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Folders</span>
