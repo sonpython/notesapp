@@ -10,16 +10,18 @@
 	import { tagsStore } from '$lib/stores/tags-store.svelte';
 	import TagManagementList from '$lib/components/tags/tag-management-list.svelte';
 	import TelegramSettings from '$lib/components/settings/telegram-settings.svelte';
+	import ApiKeysSettings from '$lib/components/settings/api-keys-settings.svelte';
 	import type { Tag } from '$lib/types';
 
 	
 
-	type Tab = 'account' | 'tags' | 'telegram' | 'about';
+	type Tab = 'account' | 'tags' | 'telegram' | 'api-keys' | 'about';
 
 	const TABS: { value: Tab; label: string }[] = [
 		{ value: 'account', label: 'Account' },
 		{ value: 'tags', label: 'Tags' },
 		{ value: 'telegram', label: 'Telegram' },
+		{ value: 'api-keys', label: 'API Keys' },
 		{ value: 'about', label: 'About' }
 	];
 
@@ -123,6 +125,11 @@
 		{:else if activeTab === 'telegram'}
 			<div class="max-w-md">
 				<TelegramSettings />
+			</div>
+
+		{:else if activeTab === 'api-keys'}
+			<div class="max-w-lg">
+				<ApiKeysSettings />
 			</div>
 
 		{:else if activeTab === 'about'}

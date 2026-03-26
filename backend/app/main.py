@@ -98,6 +98,7 @@ async def health_check() -> dict[str, str]:
 def _register_routers() -> None:
     """Import and include all API routers."""
     from app.routers import (
+        api_keys,
         auth,
         auth_login,
         auth_register,
@@ -122,6 +123,7 @@ def _register_routers() -> None:
     app.include_router(folders.router)
     app.include_router(todo_folders.router)
     app.include_router(todos.router)
+    app.include_router(api_keys.router)
     app.include_router(tags.router)
     app.include_router(telegram.router)
     app.include_router(backup.router)
