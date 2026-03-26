@@ -5,6 +5,7 @@ Alembic or application startup inspects it.
 """
 
 from app.database import Base
+from app.models.api_key import ApiKey
 from app.models.folder import Folder
 from app.models.note import Note
 from app.models.passkey_credential import PasskeyCredential
@@ -17,6 +18,7 @@ from app.models.user import User
 from app.models.webauthn_challenge import WebAuthnChallenge
 
 __all__ = [
+    "ApiKey",
     "Base",
     "Folder",
     "Note",
