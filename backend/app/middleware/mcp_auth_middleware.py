@@ -17,13 +17,8 @@ class McpAuthMiddleware(BaseHTTPMiddleware):
     """Validates Bearer API key for /mcp/* routes, injects user_id into request state."""
 
     async def dispatch(self, request: Request, call_next):
-        # Only apply to /mcp routes (skip /messages/ — authenticated via SSE session_id)
+        # Only apply to /mcp routes
         if not request.url.path.startswith("/api/mcp"):
-            return await call_next(request)
-        if (
-            "/messages/" in request.url.path
-            or "/messages" == request.url.path.split("/api/mcp")[-1]
-        ):
             return await call_next(request)
 
         # Support API key via query param (?api_key=xxx) or Authorization header

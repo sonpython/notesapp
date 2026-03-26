@@ -215,8 +215,8 @@ async def get_folder_stats(folder_id: str) -> dict:
 
 
 def get_mcp_http_app():
-    """Create the MCP HTTP ASGI app for mounting in FastAPI (SSE transport)."""
-    return mcp.http_app(path="/", transport="sse")
+    """Create the MCP HTTP ASGI app for mounting in FastAPI (streamable-http)."""
+    return mcp.http_app(path="/", transport="streamable-http", stateless_http=True)
 
 
 if __name__ == "__main__":
