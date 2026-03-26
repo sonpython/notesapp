@@ -18,7 +18,7 @@ class McpAuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         # Only apply to /mcp routes
-        if not request.url.path.startswith("/mcp"):
+        if not request.url.path.startswith("/api/mcp"):
             return await call_next(request)
 
         auth_header = request.headers.get("authorization", "")

@@ -99,7 +99,7 @@
     return JSON.stringify({
       mcpServers: {
         "notesapp-todos": {
-          url: `${origin}/mcp`,
+          url: `${origin}/api/mcp`,
           headers: { Authorization: `Bearer ${token}` }
         }
       }
