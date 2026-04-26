@@ -2,6 +2,7 @@
   import { ChevronRight, ChevronDown, FolderIcon, FolderOpen } from 'lucide-svelte';
   import type { TodoFolder } from '$lib/types';
   import FolderContextMenu from '$lib/components/folders/folder-context-menu.svelte';
+  import ShareTodoFolderModal from './share-todo-folder-modal.svelte';
   import TodoFolderTreeItemSelf from './todo-folder-tree-item.svelte';
 
   interface Props {
@@ -63,6 +64,7 @@
 
   let showDeleteDialog = $state(false);
   let cascadeDelete = $state(false);
+  let showShareModal = $state(false);
 
   async function handleDelete() {
     showDeleteDialog = true;
@@ -131,6 +133,7 @@
         onclose={() => (showMenu = false)}
         onrename={() => { renameName = folder.name; isRenaming = true; }}
         onnewsubfolder={() => { isCreating = true; isExpanded = true; }}
+        onshare={() => (showShareModal = true)}
         ondelete={handleDelete}
       />
     </div>
@@ -184,5 +187,13 @@
           text-sm text-white outline-none focus:border-amber-500 placeholder:text-zinc-500"
       />
     </div>
+  {/if}
+
+  {#if showShareModal}
+    <ShareTodoFolderModal
+      folderId={folder.id}
+      folderName={folder.name}
+      onclose={() => (showShareModal = false)}
+    />
   {/if}
 </div>
