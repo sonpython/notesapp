@@ -9,6 +9,8 @@ from app.models.api_key import ApiKey
 from app.models.folder import Folder
 from app.models.note import Note
 from app.models.passkey_credential import PasskeyCredential
+from app.models.shared_note import SharedNote
+from app.models.shared_todo_folder import SharedTodoFolder
 from app.models.tag import NoteTag, Tag, TodoTag
 from app.models.telegram import TelegramSettings
 from app.models.telegram_backup import TelegramBackup
@@ -24,6 +26,8 @@ __all__ = [
     "Note",
     "NoteTag",
     "PasskeyCredential",
+    "SharedNote",
+    "SharedTodoFolder",
     "Tag",
     "Todo",
     "TodoFolder",

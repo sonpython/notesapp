@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { MoreHorizontal, Pencil, FolderPlus, Trash2 } from 'lucide-svelte';
+  import { MoreHorizontal, Pencil, FolderPlus, Trash2, Link as LinkIcon } from 'lucide-svelte';
 
   interface Props {
     show: boolean;
@@ -7,11 +7,13 @@
     onrename: () => void;
     onnewsubfolder: () => void;
     ondelete: () => void;
+    /** Optional share handler -- only rendered when provided */
+    onshare?: () => void;
     /** Trigger button click handler passed from parent */
     ontriggerclick: (e: MouseEvent) => void;
   }
 
-  let { show, onclose, onrename, onnewsubfolder, ondelete, ontriggerclick }: Props = $props();
+  let { show, onclose, onrename, onnewsubfolder, ondelete, onshare, ontriggerclick }: Props = $props();
 
   /** Close menu on outside click */
   function handleOutsideClick(node: HTMLElement) {
@@ -53,6 +55,15 @@
       <FolderPlus class="h-3 w-3" />
       New Subfolder
     </button>
+    {#if onshare}
+      <button
+        onclick={(e) => { e.stopPropagation(); onshare!(); onclose(); }}
+        class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 text-left"
+      >
+        <LinkIcon class="h-3 w-3" />
+        Share
+      </button>
+    {/if}
     <button
       onclick={(e) => { e.stopPropagation(); ondelete(); }}
       class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-zinc-700 text-left"

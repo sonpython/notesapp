@@ -113,6 +113,8 @@ def _register_routers() -> None:
         notes,
         public_config,
         shared_notes,
+        shared_todo_folders_owner,
+        shared_todo_folders_public,
         tags,
         telegram,
         todo_folders,
@@ -121,6 +123,8 @@ def _register_routers() -> None:
 
     app.include_router(public_config.router)
     app.include_router(shared_notes.router)
+    app.include_router(shared_todo_folders_owner.router)
+    app.include_router(shared_todo_folders_public.router)
     app.include_router(auth.router)
     app.include_router(auth_register.router)
     app.include_router(auth_login.router)
