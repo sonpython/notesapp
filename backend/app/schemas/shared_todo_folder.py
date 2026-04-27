@@ -55,6 +55,7 @@ class SharedFolderTodoResponse(BaseModel):
     """Public view of a single todo (subset of TodoResponse, no owner data)."""
 
     id: UUID
+    parent_id: UUID | None
     title: str
     description: str | None
     is_completed: bool
@@ -64,6 +65,7 @@ class SharedFolderTodoResponse(BaseModel):
     sort_order: int
     created_at: datetime
     updated_at: datetime
+    children: list[SharedFolderTodoResponse] = []
     model_config = {"from_attributes": True}
 
 
@@ -76,13 +78,18 @@ class SharedTodoFolderViewResponse(BaseModel):
 
 
 class SharedFolderTodoCreate(BaseModel):
-    """Public create -- only safe fields exposed."""
+    """Public create -- only safe fields exposed.
+
+    parent_id allows creating a subtask under an existing todo in the
+    shared folder. Backend validates the parent belongs to this share.
+    """
 
     title: str
     description: str | None = None
     deadline: datetime | None = None
     priority: int = Field(0, ge=0, le=3)
     sort_order: int = 0
+    parent_id: UUID | None = None
 
 
 class SharedFolderTodoUpdate(BaseModel):

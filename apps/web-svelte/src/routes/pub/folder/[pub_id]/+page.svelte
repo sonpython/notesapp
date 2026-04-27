@@ -1,12 +1,24 @@
 <script lang="ts">
+	/**
+	 * Public shared folder page.
+	 *
+	 * Reuses the main TodoList / TodoCreateForm / TodoEditModal components so
+	 * the recipient experience matches the owner UI exactly. SharedFolderTodo
+	 * payloads are adapted into the full Todo shape with neutral defaults for
+	 * fields the public surface does not expose (tags, recurrence, reminders).
+	 */
 	import { page } from '$app/stores';
-	import { Lock, Plus, RefreshCw } from 'lucide-svelte';
+	import { Lock, RefreshCw, ArrowUpDown } from 'lucide-svelte';
 	import {
 		publicFolderApi,
 		SharedFolderError,
-		type SharedFolderTodo
+		type SharedFolderTodo,
+		type CreateTodoBody,
+		type UpdateTodoBody
 	} from '$lib/api/public-folder-api';
-	import PublicTodoList from '$lib/components/public-folder/public-todo-list.svelte';
+	import TodoList from '$lib/components/todos/todo-list.svelte';
+	import TodoCreateForm from '$lib/components/todos/todo-create-form.svelte';
+	import type { Todo } from '$lib/types';
 
 	const pubId = $derived($page.params.pub_id ?? '');
 
@@ -17,15 +29,10 @@
 	let folderName = $state('Shared Folder');
 	let isEditable = $state(false);
 	let todos = $state<SharedFolderTodo[]>([]);
+	let reorderMode = $state(false);
 
-	// Password form
 	let passwordInput = $state('');
 	let passwordSubmitting = $state(false);
-
-	// Create form
-	let newTitle = $state('');
-	let newPriority = $state(0);
-	let creating = $state(false);
 
 	$effect(() => {
 		void initialise();
@@ -88,41 +95,117 @@
 		setTimeout(() => (toast = null), 4000);
 	}
 
-	async function handleCreate(e: SubmitEvent) {
-		e.preventDefault();
-		const title = newTitle.trim();
-		if (!title || creating || !isEditable) return;
-		creating = true;
-		try {
-			const todo = await publicFolderApi.createTodo(pubId, { title, priority: newPriority });
-			todos = [...todos, todo];
-			newTitle = '';
-			newPriority = 0;
-		} catch (e) {
-			showToast(e instanceof Error ? e.message : 'Failed to create todo');
+	/** Walk the todo tree and return the matching node (used for optimistic-lock token lookup). */
+	function findTodo(list: SharedFolderTodo[], id: string): SharedFolderTodo | null {
+		for (const t of list) {
+			if (t.id === id) return t;
+			const found = findTodo(t.children ?? [], id);
+			if (found) return found;
 		}
-		creating = false;
+		return null;
 	}
 
-	async function handleToggle(todo: SharedFolderTodo) {
+	/** Replace a node in the tree by id, returning a new tree. */
+	function replaceTodo(
+		list: SharedFolderTodo[],
+		updated: SharedFolderTodo
+	): SharedFolderTodo[] {
+		return list.map((t) => {
+			if (t.id === updated.id) return { ...updated, children: t.children };
+			if (t.children?.length) {
+				return { ...t, children: replaceTodo(t.children, updated) };
+			}
+			return t;
+		});
+	}
+
+	/** Remove a node from the tree by id. */
+	function removeTodo(list: SharedFolderTodo[], id: string): SharedFolderTodo[] {
+		return list
+			.filter((t) => t.id !== id)
+			.map((t) =>
+				t.children?.length ? { ...t, children: removeTodo(t.children, id) } : t
+			);
+	}
+
+	/** Insert a new subtask under its parent (top-level if parent_id null). */
+	function insertTodo(
+		list: SharedFolderTodo[],
+		todo: SharedFolderTodo
+	): SharedFolderTodo[] {
+		if (todo.parent_id == null) {
+			return [...list, todo];
+		}
+		return list.map((t) => {
+			if (t.id === todo.parent_id) {
+				return { ...t, children: [...(t.children ?? []), todo] };
+			}
+			if (t.children?.length) {
+				return { ...t, children: insertTodo(t.children, todo) };
+			}
+			return t;
+		});
+	}
+
+	/**
+	 * Adapt a SharedFolderTodo into the full Todo shape consumed by TodoList /
+	 * TodoItem / TodoEditModal. Public surface does not expose tags, recurrence,
+	 * note links, or reminders, so these are filled with neutral defaults.
+	 */
+	function asTodo(t: SharedFolderTodo): Todo {
+		return {
+			id: t.id,
+			user_id: '',
+			title: t.title,
+			description: t.description,
+			is_completed: t.is_completed,
+			completed_at: t.completed_at,
+			deadline: t.deadline,
+			parent_id: t.parent_id,
+			note_id: null,
+			folder_id: null,
+			priority: t.priority,
+			sort_order: t.sort_order,
+			reminder_at: null,
+			reminder_sent: false,
+			recurrence_type: null,
+			recurrence_interval: null,
+			recurrence_days: null,
+			recurrence_end_date: null,
+			recurrence_parent_id: null,
+			created_at: t.created_at,
+			updated_at: t.updated_at,
+			children: (t.children ?? []).map(asTodo),
+			tags: []
+		};
+	}
+
+	const adaptedTodos = $derived(todos.map(asTodo));
+
+	// -- Mutation handlers wired to publicFolderApi -----------------------------
+
+	async function handleToggle(id: string) {
+		const node = findTodo(todos, id);
+		if (!node) return;
 		try {
-			const updated = await publicFolderApi.toggleTodo(pubId, todo.id, todo.updated_at);
-			todos = todos.map((t) => (t.id === updated.id ? updated : t));
+			const updated = await publicFolderApi.toggleTodo(pubId, id, node.updated_at);
+			todos = replaceTodo(todos, updated);
 		} catch (e) {
 			if (e instanceof SharedFolderError && e.status === 409) {
 				showToast('Someone else just updated this. Refreshing...');
 				await refresh();
 			} else {
-				showToast(e instanceof Error ? e.message : 'Failed to toggle todo');
+				showToast(e instanceof Error ? e.message : 'Failed to toggle');
 			}
 		}
 	}
 
-	async function handleDelete(todo: SharedFolderTodo) {
-		if (!confirm(`Delete "${todo.title}"?`)) return;
+	async function handleDelete(id: string) {
+		const node = findTodo(todos, id);
+		if (!node) return;
 		try {
-			await publicFolderApi.deleteTodo(pubId, todo.id, todo.updated_at);
-			todos = todos.filter((t) => t.id !== todo.id);
+			await publicFolderApi.deleteTodo(pubId, id, node.updated_at);
+			todos = removeTodo(todos, id);
 		} catch (e) {
 			if (e instanceof SharedFolderError && e.status === 409) {
 				showToast('This todo just changed. Refreshing...');
@@ -133,13 +216,35 @@
 		}
 	}
 
-	async function handleEditTitle(todo: SharedFolderTodo, title: string) {
-		try {
-			const updated = await publicFolderApi.updateTodo(pubId, todo.id, {
-				expected_updated_at: todo.updated_at,
-				title
+	async function handleUpdate(id: string, data: Record<string, unknown>) {
+		// TodoItem signals subtask creation via the magic '__create__' id.
+		if (id === '__create__') {
+			const payload = data as Partial<Todo> & { parent_id?: string };
+			await createTodo({
+				title: String(payload.title ?? ''),
+				description: (payload.description ?? null) as string | null,
+				priority: typeof payload.priority === 'number' ? payload.priority : 0,
+				deadline: (payload.deadline ?? null) as string | null,
+				parent_id: payload.parent_id ?? null
 			});
-			todos = todos.map((t) => (t.id === updated.id ? updated : t));
+			return;
+		}
+
+		const node = findTodo(todos, id);
+		if (!node) return;
+		const body: UpdateTodoBody = { expected_updated_at: node.updated_at };
+		// Allow only the public-surface fields to pass through; reminder_at /
+		// recurrence_* / tag_ids from the modal are silently dropped.
+		const allowed = ['title', 'description', 'priority', 'deadline', 'is_completed'] as const;
+		const bodyAny = body as unknown as Record<string, unknown>;
+		for (const key of allowed) {
+			if (key in data) {
+				bodyAny[key] = data[key];
+			}
+		}
+		try {
+			const updated = await publicFolderApi.updateTodo(pubId, id, body);
+			todos = replaceTodo(todos, updated);
 		} catch (e) {
 			if (e instanceof SharedFolderError && e.status === 409) {
 				showToast('Someone else just edited this. Refreshing...');
@@ -150,8 +255,27 @@
 		}
 	}
 
+	async function createTodo(body: CreateTodoBody) {
+		try {
+			const todo = await publicFolderApi.createTodo(pubId, body);
+			todos = insertTodo(todos, todo);
+		} catch (e) {
+			showToast(e instanceof Error ? e.message : 'Failed to create todo');
+		}
+	}
+
+	function handleTopLevelCreated(payload: Todo) {
+		void createTodo({
+			title: payload.title,
+			description: payload.description,
+			priority: payload.priority,
+			deadline: payload.deadline ?? null,
+			parent_id: null
+		});
+	}
+
 	async function handleReorder(orderedIds: string[]) {
-		// Apply optimistic ordering locally first
+		// Optimistic local reorder for top-level only (matches main UI behavior)
 		const items = orderedIds.map((id, index) => ({ id, sort_order: index }));
 		const completed = todos.filter((t) => t.is_completed);
 		const reorderedIncomplete = orderedIds
@@ -172,11 +296,11 @@
 	<title>{folderName} — Shared Folder</title>
 </svelte:head>
 
-<div class="min-h-screen bg-white dark:bg-zinc-900">
+<div class="min-h-screen bg-background text-foreground">
 	{#if phase === 'loading'}
 		<div class="flex h-screen items-center justify-center">
 			<div
-				class="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"
+				class="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent"
 			></div>
 		</div>
 	{:else if phase === 'error'}
@@ -187,9 +311,9 @@
 		<div class="flex h-screen items-center justify-center px-4">
 			<div class="w-full max-w-sm">
 				<div class="mb-6 text-center">
-					<Lock class="mx-auto mb-4 h-12 w-12 text-zinc-400" />
-					<h1 class="text-xl font-semibold text-zinc-900 dark:text-white">Password Protected</h1>
-					<p class="mt-2 text-sm text-zinc-500">Enter password to access this folder.</p>
+					<Lock class="mx-auto mb-4 h-12 w-12 text-muted" />
+					<h1 class="text-xl font-semibold">Password Protected</h1>
+					<p class="mt-2 text-sm text-muted">Enter password to access this folder.</p>
 					{#if error}
 						<p class="mt-2 text-sm text-red-500">{error}</p>
 					{/if}
@@ -200,12 +324,12 @@
 						bind:value={passwordInput}
 						placeholder="Password"
 						required
-						class="h-10 w-full rounded-lg border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+						class="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
 					/>
 					<button
 						type="submit"
 						disabled={passwordSubmitting}
-						class="h-10 w-full rounded-lg bg-blue-500 text-sm font-medium text-white hover:bg-blue-600 disabled:opacity-60"
+						class="h-10 w-full rounded-lg bg-accent text-sm font-medium text-black hover:opacity-90 disabled:opacity-60"
 					>
 						{passwordSubmitting ? 'Unlocking...' : 'Unlock'}
 					</button>
@@ -213,73 +337,58 @@
 			</div>
 		</div>
 	{:else if phase === 'loaded'}
-		<article class="mx-auto max-w-3xl px-6 py-10">
-			<header class="mb-6 flex items-center justify-between gap-3">
-				<div>
-					<h1 class="text-2xl font-bold text-zinc-900 dark:text-white">{folderName}</h1>
-					<p class="mt-1 text-xs text-zinc-500">
-						{isEditable
-							? 'Anyone with this link can edit todos in this folder.'
-							: 'View-only shared folder.'}
+		<div class="mx-auto flex h-screen max-w-3xl flex-col">
+			<header class="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+				<div class="min-w-0">
+					<h1 class="truncate text-lg font-semibold">{folderName}</h1>
+					<p class="text-xs text-muted">
+						{isEditable ? 'Editable share — anyone with the link can change todos.' : 'Read-only share.'}
 					</p>
 				</div>
-				<button
-					onclick={refresh}
-					class="flex h-9 w-9 items-center justify-center rounded-full border border-zinc-300 text-zinc-500 hover:text-zinc-800 dark:border-zinc-700 dark:hover:text-zinc-200"
-					aria-label="Refresh"
-				>
-					<RefreshCw size={14} />
-				</button>
+				<div class="flex items-center gap-1">
+					{#if isEditable}
+						<button
+							onclick={() => (reorderMode = !reorderMode)}
+							class="flex items-center gap-1 rounded-md px-2 py-1 text-sm {reorderMode
+								? 'bg-accent/15 text-accent'
+								: 'text-muted hover:text-foreground'}"
+							title="Toggle drag to reorder"
+						>
+							<ArrowUpDown class="h-3.5 w-3.5" />
+						</button>
+					{/if}
+					<button
+						onclick={refresh}
+						class="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:text-foreground"
+						aria-label="Refresh"
+					>
+						<RefreshCw size={14} />
+					</button>
+				</div>
 			</header>
 
-			{#if isEditable}
-				<form
-					onsubmit={handleCreate}
-					class="mb-6 flex items-center gap-2 rounded-lg border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-800/50"
-				>
-					<button
-						type="submit"
-						disabled={!newTitle.trim() || creating}
-						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-40"
-						aria-label="Add todo"
-					>
-						<Plus size={16} />
-					</button>
-					<input
-						type="text"
-						bind:value={newTitle}
-						placeholder="New todo..."
-						class="h-8 flex-1 rounded-md border border-zinc-300 bg-white px-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-					/>
-					<select
-						bind:value={newPriority}
-						class="h-8 rounded-md border border-zinc-300 bg-white px-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-						aria-label="Priority"
-					>
-						<option value={0}>No priority</option>
-						<option value={1}>Low</option>
-						<option value={2}>Medium</option>
-						<option value={3}>High</option>
-					</select>
-				</form>
-			{/if}
+			<div class="flex-1 overflow-y-auto p-4">
+				{#if isEditable}
+					<div class="mb-4">
+						<TodoCreateForm oncreated={handleTopLevelCreated} />
+					</div>
+				{/if}
 
-			<div class="rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-				<PublicTodoList
-					{todos}
-					editable={isEditable}
+				<TodoList
+					todos={adaptedTodos}
 					ontoggle={handleToggle}
+					onupdate={handleUpdate}
 					ondelete={handleDelete}
-					oneditTitle={handleEditTitle}
 					onreorder={isEditable ? handleReorder : undefined}
+					reorderMode={isEditable && reorderMode}
 				/>
 			</div>
-		</article>
+		</div>
 	{/if}
 
 	{#if toast}
 		<div
-			class="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-800 shadow-lg dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+			class="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-border bg-background px-4 py-3 text-sm shadow-lg"
 		>
 			{toast}
 		</div>

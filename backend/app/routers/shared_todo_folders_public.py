@@ -98,7 +98,7 @@ async def access_shared_folder(
     return SharedTodoFolderViewResponse(
         folder_name=share.todo_folder.name,
         is_editable=share.is_editable,
-        todos=[SharedFolderTodoResponse.model_validate(t) for t in todos],
+        todos=[SharedFolderTodoResponse(**t) for t in todos],
     )
 
 
@@ -115,7 +115,7 @@ async def list_shared_todos(
 ) -> list[SharedFolderTodoResponse]:
     """Re-fetch todos in the shared folder (idempotent, no view counted)."""
     todos = await list_todos_in_share(db, ctx.share)
-    return [SharedFolderTodoResponse.model_validate(t) for t in todos]
+    return [SharedFolderTodoResponse(**t) for t in todos]
 
 
 # -- Mutations (editable mode only) -----------------------------------------
@@ -132,7 +132,7 @@ async def create_shared_todo(
     db: AsyncSession = Depends(get_db),
 ) -> SharedFolderTodoResponse:
     todo = await create_todo_in_share(db, ctx.share, payload)
-    return SharedFolderTodoResponse.model_validate(todo)
+    return SharedFolderTodoResponse(**todo)
 
 
 @router.put(
@@ -158,7 +158,7 @@ async def update_shared_todo(
     db: AsyncSession = Depends(get_db),
 ) -> SharedFolderTodoResponse:
     todo = await update_todo_in_share(db, ctx.share, todo_id, payload)
-    return SharedFolderTodoResponse.model_validate(todo)
+    return SharedFolderTodoResponse(**todo)
 
 
 @router.post(
@@ -172,7 +172,7 @@ async def toggle_shared_todo(
     db: AsyncSession = Depends(get_db),
 ) -> SharedFolderTodoResponse:
     todo = await toggle_todo_in_share(db, ctx.share, todo_id, payload.expected_updated_at)
-    return SharedFolderTodoResponse.model_validate(todo)
+    return SharedFolderTodoResponse(**todo)
 
 
 @router.delete(

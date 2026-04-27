@@ -7,6 +7,7 @@
 
 export interface SharedFolderTodo {
 	id: string;
+	parent_id: string | null;
 	title: string;
 	description: string | null;
 	is_completed: boolean;
@@ -16,6 +17,7 @@ export interface SharedFolderTodo {
 	sort_order: number;
 	created_at: string;
 	updated_at: string;
+	children: SharedFolderTodo[];
 }
 
 export interface SharedFolderCheck {
@@ -61,6 +63,25 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 	return (await res.json()) as T;
 }
 
+export interface CreateTodoBody {
+	title: string;
+	description?: string | null;
+	priority?: number;
+	deadline?: string | null;
+	parent_id?: string | null;
+	sort_order?: number;
+}
+
+export interface UpdateTodoBody {
+	expected_updated_at: string;
+	title?: string;
+	description?: string | null;
+	priority?: number;
+	deadline?: string | null;
+	is_completed?: boolean;
+	sort_order?: number;
+}
+
 export const publicFolderApi = {
 	check: (pubId: string) => apiFetch<SharedFolderCheck>(`/api/pub/folder/${pubId}/check`),
 
@@ -73,28 +94,13 @@ export const publicFolderApi = {
 	listTodos: (pubId: string) =>
 		apiFetch<SharedFolderTodo[]>(`/api/pub/folder/${pubId}/todos`),
 
-	createTodo: (
-		pubId: string,
-		body: { title: string; description?: string; priority?: number; deadline?: string | null }
-	) =>
+	createTodo: (pubId: string, body: CreateTodoBody) =>
 		apiFetch<SharedFolderTodo>(`/api/pub/folder/${pubId}/todos`, {
 			method: 'POST',
 			body: JSON.stringify(body)
 		}),
 
-	updateTodo: (
-		pubId: string,
-		todoId: string,
-		body: {
-			expected_updated_at: string;
-			title?: string;
-			description?: string | null;
-			priority?: number;
-			deadline?: string | null;
-			is_completed?: boolean;
-			sort_order?: number;
-		}
-	) =>
+	updateTodo: (pubId: string, todoId: string, body: UpdateTodoBody) =>
 		apiFetch<SharedFolderTodo>(`/api/pub/folder/${pubId}/todos/${todoId}`, {
 			method: 'PUT',
 			body: JSON.stringify(body)
